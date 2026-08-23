@@ -8,8 +8,10 @@ export function MiniPlayer() {
   if (!room) return null;
 
   return (
-    <div className="paper shrink-0 border-t border-border/70 bg-card/90 px-3 py-2 backdrop-blur">
-      <div className="z-2 mx-auto flex max-w-3xl items-center gap-2">
+    <div className="paper relative shrink-0 border-t border-ink/15 bg-card/95 px-3 py-2 backdrop-blur">
+      <span className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-terracotta via-mustard to-terracotta opacity-80" aria-hidden />
+      <div className="z-2 mx-auto flex max-w-3xl items-center gap-2.5">
+
         <button
           type="button"
           onClick={toggle}

@@ -54,13 +54,18 @@ function Home() {
       <TopBar />
 
       <div className="flex min-h-0 flex-1 flex-col px-3 pb-2 sm:px-5">
-        <div className="flex shrink-0 items-center justify-between gap-2 py-2">
-          <p className="text-[12px] text-muted-foreground">
-            {scenes.length} kamre khule hain — tap kar ke andar aa jao
-          </p>
+        <div className="flex shrink-0 items-center justify-between gap-3 py-2.5">
+          <div className="min-w-0">
+            <p className="signage-text truncate text-[15px] leading-tight sm:text-lg">
+              Aaj kis kamre mein baithoge?
+            </p>
+            <p className="truncate text-[11.5px] text-muted-foreground">
+              {scenes.length} kamre khule hain — tap kar ke andar aa jao
+            </p>
+          </div>
           <Link
             to="/my-dhaba"
-            className="rounded-full border border-border/70 px-2.5 py-1 text-[12px] font-medium hover:bg-accent/40"
+            className="shrink-0 rounded-full border border-ink/20 bg-card px-3 py-1.5 text-[12px] font-semibold shadow-tile transition-colors hover:bg-accent hover:text-accent-foreground"
           >
             My Dhaba
           </Link>
@@ -68,39 +73,40 @@ function Home() {
 
         {tiles.length === 0 ? (
           <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 text-center">
-            <p className="font-signage text-lg font-bold">Yahan abhi sannata hai</p>
+            <p className="signage-text text-lg">Yahan abhi sannata hai</p>
             <p className="max-w-xs text-sm text-muted-foreground">
               No rooms are live right now. Thodi der mein wapas aana.
             </p>
           </div>
         ) : (
-          <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-3 gap-2 sm:gap-3 md:grid-cols-3">
+          <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-3 gap-2.5 sm:gap-3.5 md:grid-cols-3">
             {visible.map((t, i) => (
               <SceneCard key={t.scene?.slug ?? i} scene={t.scene!} />
             ))}
           </div>
         )}
 
+
         {pages > 1 && (
-          <div className="flex shrink-0 items-center justify-center gap-3 pt-2">
+          <div className="flex shrink-0 items-center justify-center gap-3 pt-2.5">
             <button
               type="button"
               aria-label="Previous page"
               onClick={() => setPage((p) => Math.max(0, p - 1))}
               disabled={safePage === 0}
-              className="flex size-8 items-center justify-center rounded-full border border-border/70 disabled:opacity-40"
+              className="flex size-8 items-center justify-center rounded-full border border-ink/20 bg-card shadow-tile transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-35 disabled:shadow-none"
             >
               <ChevronLeft className="size-4" aria-hidden />
             </button>
-            <div className="flex gap-1.5">
+            <div className="flex items-center gap-2 rounded-full border border-ink/15 bg-card px-3 py-1.5">
               {Array.from({ length: pages }).map((_, i) => (
                 <button
                   key={i}
                   type="button"
                   aria-label={`Page ${i + 1}`}
                   onClick={() => setPage(i)}
-                  className={`size-2 rounded-full transition-colors ${
-                    i === safePage ? "bg-primary" : "bg-border"
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    i === safePage ? "w-5 bg-primary" : "w-2 bg-ink/20 hover:bg-ink/35"
                   }`}
                 />
               ))}
@@ -110,12 +116,13 @@ function Home() {
               aria-label="Next page"
               onClick={() => setPage((p) => Math.min(pages - 1, p + 1))}
               disabled={safePage >= pages - 1}
-              className="flex size-8 items-center justify-center rounded-full border border-border/70 disabled:opacity-40"
+              className="flex size-8 items-center justify-center rounded-full border border-ink/20 bg-card shadow-tile transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-35 disabled:shadow-none"
             >
               <ChevronRight className="size-4" aria-hidden />
             </button>
           </div>
         )}
+
       </div>
 
       <MiniPlayer />

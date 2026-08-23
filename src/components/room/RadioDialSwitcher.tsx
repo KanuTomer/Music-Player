@@ -30,7 +30,7 @@ export function RadioDialSwitcher({
         onClick={() => setOpen((o) => !o)}
         aria-label="Switch room"
         aria-expanded={open}
-        className="flex size-10 items-center justify-center rounded-full border border-border/70 bg-background/80 backdrop-blur transition-transform hover:rotate-45"
+        className="flex size-10 items-center justify-center rounded-full border border-cream/25 bg-night/45 text-cream backdrop-blur transition-transform hover:rotate-45 hover:bg-night/65"
       >
         <Radio className="size-4" aria-hidden />
       </button>

@@ -35,10 +35,10 @@ export function OneLinerCaption({
       aria-live="polite"
       className="pointer-events-none absolute top-16 left-1/2 z-20 w-[min(92vw,32rem)] -translate-x-1/2 px-2"
     >
-      <div className="paper animate-in fade-in slide-in-from-bottom-2 rounded-lg border border-border/60 bg-background/85 px-3 py-2 text-center shadow-tile backdrop-blur-sm duration-700">
-        <p className="z-2 text-[13px] leading-snug font-medium">{current.text_en}</p>
+      <div className="animate-in fade-in slide-in-from-bottom-2 rounded-xl border border-cream/20 bg-night/60 px-3.5 py-2 text-center shadow-lift backdrop-blur-sm duration-700">
+        <p className="text-[13px] leading-snug font-medium text-cream">{current.text_en}</p>
         {current.text_hi && (
-          <p className="z-2 text-[12px] leading-snug text-muted-foreground">
+          <p className="font-deva text-[12px] leading-snug text-cream/65">
             {current.text_hi}
           </p>
         )}
