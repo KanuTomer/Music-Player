@@ -145,15 +145,19 @@ export function ControlCluster({
           <SkipBack className="size-4" aria-hidden />
         </Button>
 
-        <div className="relative flex h-14 min-w-0 items-center justify-center gap-5 overflow-hidden rounded-sm border-2 border-ink/60 bg-night px-4 shadow-inner sm:h-16 sm:gap-10">
+        <div className={`cassette-window relative flex h-14 min-w-0 items-center justify-center gap-5 overflow-hidden rounded-sm border-2 border-ink/60 bg-night px-4 shadow-inner sm:h-16 sm:gap-10 ${isPlaying ? "cassette-running" : ""}`}>
           <div className="pointer-events-none absolute inset-x-5 top-1.5 h-px bg-cream/15" aria-hidden />
           {["left", "right"].map((side) => (
-            <span key={side} className={`cassette-reel relative flex size-10 items-center justify-center rounded-full border-[5px] border-cream/75 bg-ink ${isPlaying ? "cassette-reel-playing" : ""}`} aria-hidden>
-              <span className="absolute h-full w-1 bg-ink" />
-              <span className="absolute h-1 w-full bg-ink" />
-              <span className="relative size-2 rounded-full bg-cinema-gold" />
+            <span key={side} className={`cassette-spool cassette-spool-${side} relative flex size-11 items-center justify-center rounded-full border-2 border-cream/35 bg-cinema`} aria-hidden>
+              <span className={`cassette-reel relative flex size-9 items-center justify-center rounded-full border-[3px] border-cinema-cream bg-ink ${isPlaying ? "cassette-reel-playing" : ""}`}>
+                <span className="cassette-reel-hole cassette-reel-hole-a" />
+                <span className="cassette-reel-hole cassette-reel-hole-b" />
+                <span className="cassette-reel-hole cassette-reel-hole-c" />
+                <span className="relative z-10 size-2.5 rounded-full border-2 border-ink bg-cinema-gold" />
+              </span>
             </span>
           ))}
+          <span className="cassette-tape absolute left-[calc(50%-2.75rem)] right-[calc(50%-2.75rem)] bottom-2 h-0.5 bg-cinema-clay" aria-hidden />
           <div className="absolute bottom-0 left-1/2 h-3 w-24 -translate-x-1/2 border-x border-t border-cream/25 bg-ink" aria-hidden />
         </div>
 
