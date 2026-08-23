@@ -33,11 +33,13 @@ type PlayerState = {
   musicReady: boolean;
   musicBlocked: boolean;
   ambienceVolume: number;
+  ambienceEnabled: boolean;
   openRoom: (room: RoomPayload) => void;
   toggle: () => void;
   next: () => void;
   start: () => void;
   setAmbience: (v: number) => void;
+  toggleAmbience: () => void;
   fadeForThemeChange: () => Promise<void>;
   leave: () => void;
 };
@@ -94,6 +96,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [musicReady, setMusicReady] = useState(false);
   const [musicBlocked, setMusicBlocked] = useState(false);
   const [ambienceVolume, setAmbienceVol] = useState(0.7);
+  const [ambienceEnabled, setAmbienceEnabled] = useState(true);
 
   const playlist = useMemo(
     () => (room ? forDaypart(room.tracks, daypart) : []),
@@ -194,15 +197,19 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!room || needsGate) return;
     const keys = sceneAmbience[room.scene.slug] ?? ["chatter", "fan"];
-    startAmbience(keys, ambienceVolume);
+    startAmbience(keys, ambienceEnabled ? ambienceVolume : 0);
     return () => stopAmbience();
     // ambienceVolume handled separately so we don't rebuild the graph on slider drags
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room?.scene.slug, needsGate]);
 
   useEffect(() => {
-    setAmbienceVolume(ambienceVolume);
-  }, [ambienceVolume]);
+    setAmbienceVolume(ambienceEnabled ? ambienceVolume : 0);
+  }, [ambienceEnabled, ambienceVolume]);
+
+  const toggleAmbience = useCallback(() => {
+    setAmbienceEnabled((enabled) => !enabled);
+  }, []);
 
   useEffect(() => {
     if (needsGate || !musicReady) return;
@@ -275,11 +282,13 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     musicReady,
     musicBlocked,
     ambienceVolume,
+    ambienceEnabled,
     openRoom,
     toggle,
     next,
     start,
     setAmbience: setAmbienceVol,
+    toggleAmbience,
     fadeForThemeChange,
     leave,
   };

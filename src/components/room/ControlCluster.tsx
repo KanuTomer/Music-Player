@@ -1,4 +1,4 @@
-import { ExternalLink, Pause, Play, SkipForward, Volume2 } from "lucide-react";
+import { ExternalLink, Pause, Play, SkipForward, Volume2, VolumeX } from "lucide-react";
 import { useState } from "react";
 import type { Track } from "@/lib/rooms.functions";
 import { Slider } from "@/components/ui/slider";
@@ -21,7 +21,9 @@ export function ControlCluster({
   onToggle,
   onNext,
   ambience,
+  ambienceEnabled,
   onAmbience,
+  onToggleAmbience,
   musicBlocked,
 }: {
   track: Track | null;
@@ -29,7 +31,9 @@ export function ControlCluster({
   onToggle: () => void;
   onNext: () => void;
   ambience: number;
+  ambienceEnabled: boolean;
   onAmbience: (v: number) => void;
+  onToggleAmbience: () => void;
   musicBlocked: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -74,12 +78,26 @@ export function ControlCluster({
           </p>
         </button>
 
-        <div className="hidden w-32 items-center gap-2 sm:flex">
-          <Volume2 className="size-4 shrink-0 text-cream/70" aria-hidden />
+        <button
+          type="button"
+          onClick={onToggleAmbience}
+          aria-label={ambienceEnabled ? "Turn off theme sound" : "Turn on theme sound"}
+          title={ambienceEnabled ? "Theme sound on" : "Theme sound off"}
+          className={`flex size-9 shrink-0 items-center justify-center rounded-full border transition-colors ${
+            ambienceEnabled
+              ? "border-accent/60 bg-accent/15 text-accent"
+              : "border-cream/25 text-cream/65 hover:bg-cream/15"
+          }`}
+        >
+          {ambienceEnabled ? <Volume2 className="size-4" aria-hidden /> : <VolumeX className="size-4" aria-hidden />}
+        </button>
+
+        <div className={`hidden w-24 items-center gap-2 transition-opacity sm:flex ${ambienceEnabled ? "opacity-100" : "pointer-events-none opacity-35"}`}>
           <Slider
             value={[Math.round(ambience * 100)]}
             max={100}
             step={1}
+            disabled={!ambienceEnabled}
             aria-label="Ambience volume"
             onValueChange={(v) => onAmbience((v[0] ?? 0) / 100)}
           />

@@ -10,11 +10,9 @@ import { useRoomSocial } from "@/hooks/useRoomSocial";
 import { playGag } from "@/lib/ambience";
 import { ControlCluster } from "@/components/room/ControlCluster";
 import { OneLinerCaption } from "@/components/room/OneLinerCaption";
-import { FloatingEmojiLayer } from "@/components/room/FloatingEmojiLayer";
 import { ThemeSwitcher } from "@/components/room/ThemeSwitcher";
 import { ISTClock } from "@/components/ISTClock";
-
-const REACTIONS = ["👏", "❤️", "🔥"];
+import nightBusVideo from "@/assets/theme-night-bus-moving.mp4.asset.json";
 
 function gagFor(slug: string) {
   if (slug === "raat-ki-bus") return "horn";
@@ -64,17 +62,31 @@ export function RoomExperience({
 
   return (
     <div className={`room-scene-enter relative h-dvh w-full overflow-hidden ${scene.is_dark ? "room-dark" : ""}`}>
-      <img
-        key={scene.art_key}
-        src={artFor(scene.art_key)}
-        alt={`${scene.title_en} — ${scene.hook}`}
-        width={1536}
-        height={1024}
-        fetchPriority="high"
-        className={`absolute inset-0 size-full object-cover transition-[transform,opacity] duration-[12s] ${
-          active ? "scale-105" : "scale-100"
-        }`}
-      />
+      {scene.slug === "raat-ki-bus" ? (
+        <video
+          key={scene.art_key}
+          src={nightBusVideo.url}
+          poster={artFor(scene.art_key)}
+          autoPlay
+          muted
+          loop
+          playsInline
+          aria-label={`${scene.title_en} — moving night bus view`}
+          className="bus-journey absolute inset-0 size-full object-cover"
+        />
+      ) : (
+        <img
+          key={scene.art_key}
+          src={artFor(scene.art_key)}
+          alt={`${scene.title_en} — ${scene.hook}`}
+          width={1536}
+          height={1024}
+          fetchPriority="high"
+          className={`absolute inset-0 size-full object-cover transition-[transform,opacity] duration-[12s] ${
+            active ? "scale-105" : "scale-100"
+          }`}
+        />
+      )}
       {scene.slug === "doordarshan-shaam" && (
         <div className="scanlines pointer-events-none absolute inset-0 opacity-20" aria-hidden />
       )}
@@ -132,20 +144,9 @@ export function RoomExperience({
       </div>
 
       <OneLinerCaption lines={lines} active={active} />
-      <FloatingEmojiLayer items={social.floating} />
 
-      <div className="absolute right-3 bottom-28 z-30 flex flex-col items-center gap-2 sm:bottom-24">
-        {REACTIONS.map((emoji) => (
-          <button
-            key={emoji}
-            type="button"
-            onClick={() => social.react(emoji)}
-            aria-label={`React with ${emoji}`}
-            className="flex size-11 items-center justify-center rounded-full border border-cream/25 bg-night/45 text-xl backdrop-blur transition-transform hover:scale-110 hover:bg-night/65 active:scale-90"
-          >
-            {emoji}
-          </button>
-        ))}
+      {scene.gag_label && (
+        <div className="absolute right-3 bottom-28 z-30 sm:bottom-24">
         {scene.gag_label && (
           <button
             type="button"
@@ -155,7 +156,8 @@ export function RoomExperience({
             {scene.gag_label}
           </button>
         )}
-      </div>
+        </div>
+      )}
 
       <div className="pointer-events-none absolute inset-x-0 bottom-3 z-30 flex justify-center px-3">
         <ControlCluster
@@ -164,7 +166,9 @@ export function RoomExperience({
           onToggle={player.toggle}
           onNext={player.next}
           ambience={player.ambienceVolume}
+          ambienceEnabled={player.ambienceEnabled}
           onAmbience={player.setAmbience}
+          onToggleAmbience={player.toggleAmbience}
           musicBlocked={player.musicBlocked}
         />
       </div>
