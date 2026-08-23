@@ -22,7 +22,7 @@ export function ThemeSwitcher({
         value={currentSlug}
         disabled={transitioning}
         onInput={(event) => {
-          const slug = event.target.value;
+          const slug = event.currentTarget.value;
           if (slug === currentSlug) return;
           setTransitioning(true);
           void player.fadeForThemeChange();
