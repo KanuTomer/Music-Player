@@ -414,19 +414,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  // ambience follows the room, but only after the user has tapped play once
+  // Ambience (procedural theme background sound) is disabled product-wide.
   useEffect(() => {
-    if (!room || needsGate) return;
-    const keys = sceneAmbience[room.scene.slug] ?? ["chatter", "fan"];
-    startAmbience(keys, ambienceEnabled ? ambienceVolume : 0);
-    return () => stopAmbience();
-    // ambienceVolume handled separately so we don't rebuild the graph on slider drags
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setAmbienceVolume(0);
+    stopAmbience();
   }, [room?.scene.slug, needsGate]);
 
-  useEffect(() => {
-    setAmbienceVolume(ambienceEnabled ? ambienceVolume : 0);
-  }, [ambienceEnabled, ambienceVolume]);
 
   const toggleAmbience = useCallback(() => {
     setAmbienceEnabled((enabled) => !enabled);
