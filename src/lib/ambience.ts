@@ -264,10 +264,145 @@ function buildLayer(key: string, c: AudioContext, out: GainNode): Layer {
         gain: g,
       };
     }
+    case "sizzle": {
+      const l = filteredNoise(c, out, { type: "bandpass", freq: 2600, q: 0.5, gain: 0.09 });
+      l.nodes.push(...wobble(c, l.gain, 1.3, 0.05));
+      l.timers.push(
+        every(5200, 3800, () => burst(c, out, { freq: 3400, q: 1.2, dur: 0.5, gain: 0.09 })),
+      );
+      return l;
+    }
+    case "horns": {
+      const g = c.createGain();
+      g.gain.value = 1;
+      g.connect(out);
+      return {
+        nodes: [g],
+        timers: [
+          every(9000, 7000, () => {
+            const base = 380 + Math.random() * 160;
+            blip(c, g, { freq: base, dur: 0.35, type: "square", gain: 0.05 });
+            blip(c, g, { freq: base * 1.25, dur: 0.35, type: "square", gain: 0.035 });
+          }),
+        ],
+        gain: g,
+      };
+    }
+    case "clatter": {
+      const g = c.createGain();
+      g.gain.value = 1;
+      g.connect(out);
+      return {
+        nodes: [g],
+        timers: [
+          every(4000, 3000, () => {
+            burst(c, g, { freq: 2400 + Math.random() * 1800, q: 8, dur: 0.09, gain: 0.07 });
+          }),
+        ],
+        gain: g,
+      };
+    }
+    case "keyboard": {
+      const g = c.createGain();
+      g.gain.value = 1;
+      g.connect(out);
+      const runOfKeys = () => {
+        const n = 3 + Math.floor(Math.random() * 7);
+        for (let i = 0; i < n; i++) {
+          window.setTimeout(
+            () => burst(c, g, { freq: 2800 + Math.random() * 1200, q: 5, dur: 0.035, gain: 0.05 }),
+            i * (70 + Math.random() * 90),
+          );
+        }
+      };
+      return { nodes: [g], timers: [every(2200, 1600, runOfKeys)], gain: g };
+    }
+    case "phone": {
+      const g = c.createGain();
+      g.gain.value = 1;
+      g.connect(out);
+      const ring = () => {
+        for (let i = 0; i < 2; i++) {
+          window.setTimeout(() => {
+            blip(c, g, { freq: 1180, dur: 0.4, type: "sine", gain: 0.035 });
+            blip(c, g, { freq: 1480, dur: 0.4, type: "sine", gain: 0.03 });
+          }, i * 900);
+        }
+      };
+      return { nodes: [g], timers: [every(26000, 18000, ring)], gain: g };
+    }
+    case "hammer": {
+      const g = c.createGain();
+      g.gain.value = 1;
+      g.connect(out);
+      const strikes = () => {
+        const n = 2 + Math.floor(Math.random() * 4);
+        for (let i = 0; i < n; i++) {
+          window.setTimeout(() => {
+            burst(c, g, { freq: 1700, q: 3, dur: 0.09, gain: 0.11 });
+            blip(c, g, { freq: 160, dur: 0.12, type: "sine", gain: 0.07, slideTo: 90 });
+          }, i * (420 + Math.random() * 180));
+        }
+      };
+      return { nodes: [g], timers: [every(5200, 3400, strikes)], gain: g };
+    }
+    case "crt": {
+      const l = filteredNoise(c, out, { type: "highpass", freq: 5200, gain: 0.05 });
+      const osc = c.createOscillator();
+      osc.type = "sine";
+      osc.frequency.value = 15700;
+      const g = c.createGain();
+      g.gain.value = 0.012;
+      osc.connect(g).connect(out);
+      osc.start();
+      l.nodes.push(osc, g);
+      return l;
+    }
+    case "announce": {
+      const g = c.createGain();
+      g.gain.value = 1;
+      g.connect(out);
+      const announce = () => {
+        blip(c, g, { freq: 880, dur: 0.5, type: "sine", gain: 0.05 });
+        window.setTimeout(
+          () => blip(c, g, { freq: 660, dur: 0.7, type: "sine", gain: 0.045 }),
+          520,
+        );
+        // muffled PA voice: bandlimited noise pulses
+        for (let i = 0; i < 6; i++) {
+          window.setTimeout(
+            () => burst(c, g, { freq: 700, q: 2.2, dur: 0.28, gain: 0.05 }),
+            1500 + i * (340 + Math.random() * 200),
+          );
+        }
+      };
+      return { nodes: [g], timers: [every(24000, 14000, announce)], gain: g };
+    }
+    case "stamp": {
+      const g = c.createGain();
+      g.gain.value = 1;
+      g.connect(out);
+      return {
+        nodes: [g],
+        timers: [
+          every(8000, 6000, () => {
+            blip(c, g, { freq: 220, dur: 0.1, type: "sine", gain: 0.09, slideTo: 110 });
+            burst(c, g, { freq: 900, q: 2, dur: 0.08, gain: 0.06 });
+          }),
+        ],
+        gain: g,
+      };
+    }
+    case "cicada": {
+      const l = filteredNoise(c, out, { type: "bandpass", freq: 4200, q: 6, gain: 0.05 });
+      l.nodes.push(...wobble(c, l.gain, 8, 0.03));
+      return l;
+    }
     default:
       return filteredNoise(c, out, { type: "lowpass", freq: 700, gain: 0.12 });
   }
 }
+
 
 export function startAmbience(keys: string[], volume: number) {
   const c = audioContext();

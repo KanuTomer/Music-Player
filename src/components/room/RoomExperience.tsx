@@ -171,7 +171,12 @@ export function RoomExperience({
         </p>
       </div>
 
-      <OneLinerCaption lines={lines} active={active} />
+      <OneLinerCaption
+        lines={lines}
+        active={active}
+        trackKey={player.nowPlaying?.title ?? player.track?.title ?? null}
+      />
+
 
       {scene.gag_label && (
         <div className="absolute right-3 bottom-28 z-30 sm:bottom-24">
