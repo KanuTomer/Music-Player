@@ -17,6 +17,7 @@ function spotifySearch(t: Track) {
 
 export function ControlCluster({
   track,
+  isCuratedPlaylist,
   isPlaying,
   onToggle,
   onNext,
@@ -27,6 +28,7 @@ export function ControlCluster({
   musicBlocked,
 }: {
   track: Track | null;
+  isCuratedPlaylist: boolean;
   isPlaying: boolean;
   onToggle: () => void;
   onNext: () => void;
@@ -69,10 +71,12 @@ export function ControlCluster({
           className="min-w-0 flex-1 rounded-lg px-2 py-1 text-left transition-colors hover:bg-cream/10"
         >
           <p className="truncate text-[13px] leading-tight font-semibold text-cream">
-            {track ? track.title : "Ambience only"}
+            {isCuratedPlaylist ? "Theme playlist" : track ? track.title : "Ambience only"}
           </p>
           <p className="truncate text-[11px] leading-tight text-cream/65">
-            {track
+            {isCuratedPlaylist
+              ? "Curated on YouTube"
+              : track
               ? [track.artist, track.year].filter(Boolean).join(" · ")
               : "Sun rahe ho? Ye kamre ki hawa hai."}
           </p>
@@ -104,7 +108,7 @@ export function ControlCluster({
         </div>
       </div>
 
-      {expanded && track && (
+      {expanded && track && !isCuratedPlaylist && (
         <div className="z-2 mt-2 flex flex-wrap items-center gap-2 border-t border-cream/20 pt-2 text-[11px]">
           <span className="text-cream/65">Listen to the full track:</span>
           <a

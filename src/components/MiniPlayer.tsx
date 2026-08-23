@@ -4,7 +4,7 @@ import { usePlayer } from "@/lib/player";
 
 /** Persistent now-playing bar shown when the user navigates away from a room. */
 export function MiniPlayer() {
-  const { room, track, isPlaying, toggle, leave } = usePlayer();
+  const { room, track, isPlaying, isCuratedPlaylist, toggle, leave } = usePlayer();
   if (!room) return null;
 
   return (
@@ -29,7 +29,7 @@ export function MiniPlayer() {
             {room.scene.title_en}
           </p>
           <p className="truncate text-[11px] leading-tight text-muted-foreground">
-            {track ? track.title : room.scene.title_hi}
+            {isCuratedPlaylist ? "Theme playlist · YouTube" : track ? track.title : room.scene.title_hi}
           </p>
         </div>
         <Link
