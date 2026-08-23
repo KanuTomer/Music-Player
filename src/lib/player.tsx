@@ -26,6 +26,7 @@ type YTPlayer = {
   getVideoData: () => { video_id?: string; title?: string; author?: string };
   getPlaylistIndex: () => number;
   getPlaylist: () => string[] | null;
+  getPlayerState: () => number;
   destroy: () => void;
 };
 
@@ -287,7 +288,26 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
               playlistStartRef.current.set(playlistId, nextStart);
               p.loadPlaylist({ list: playlistId, listType: "playlist", index: nextStart });
-              if (!autoplay) p.pauseVideo();
+              if (autoplay) {
+                // A rebuilt embed sometimes cues without starting; nudge it a
+                // few times so a theme switch always begins playing.
+                setIsPlaying(true);
+                p.playVideo();
+                [400, 1200, 2200].forEach((delay) =>
+                  window.setTimeout(() => {
+                    const cur = playerRef.current;
+                    if (!cur) return;
+                    try {
+                      if (typeof cur.getPlayerState === "function" && cur.getPlayerState() === 1) return;
+                      cur.playVideo();
+                    } catch {
+                      /* noop */
+                    }
+                  }, delay),
+                );
+              } else {
+                p.pauseVideo();
+              }
             } else if (autoplay) {
               p.playVideo();
             }
