@@ -36,19 +36,20 @@ export function artFor(key: string): string {
 
 /** Which procedural ambience layers each room runs. */
 export const sceneAmbience: Record<string, string[]> = {
-  "rail-yatra": ["train", "chatter", "fan"],
-  "nai-ki-dukaan": ["fan", "chatter", "snip"],
-  "raat-ki-bus": ["engine", "wind"],
-  "sarkari-daftar": ["fan", "paper", "chatter"],
-  "doordarshan-shaam": ["hum", "chatter"],
+  "rail-yatra": ["train", "announce", "chatter", "fan"],
+  "nai-ki-dukaan": ["fan", "snip", "chatter", "hum"],
+  "raat-ki-bus": ["engine", "wind", "horns", "night"],
+  "sarkari-daftar": ["fan", "paper", "stamp", "chatter"],
+  "doordarshan-shaam": ["crt", "hum", "chatter", "cicada"],
   "chaya-kada": ["rain", "chatter", "kettle"],
   "para-adda": ["chatter", "street"],
-  "highway-dhaba": ["night", "fire", "truck"],
-  "sainik-dhaba": ["night", "fire", "truck"],
-  "chai-ki-tapri": ["kettle", "chatter", "street"],
-  "raj-mistri": ["chatter", "street", "fan"],
-  "bhojpuriya-devara": ["night", "chatter", "street"],
-  "corporate-majdoor": ["fan", "chatter", "hum"],
+  "highway-dhaba": ["night", "fire", "sizzle", "truck", "horns", "clatter"],
+  "sainik-dhaba": ["night", "fire", "sizzle", "truck", "horns", "clatter"],
+  "chai-ki-tapri": ["kettle", "clatter", "street", "chatter"],
+  "raj-mistri": ["hammer", "street", "chatter", "horns"],
+  "bhojpuriya-devara": ["dhol", "night", "chatter", "street"],
+  "corporate-majdoor": ["keyboard", "phone", "fan", "hum", "chatter"],
   "ganpati-pandal": ["crowd", "dhol"],
   "tamil-saloon": ["fan", "street", "snip"],
 };
+
