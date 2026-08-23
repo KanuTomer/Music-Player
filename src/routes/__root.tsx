@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { PlayerProvider } from "../lib/player";
 import { Toaster } from "../components/ui/sonner";
+import { SupportModal } from "../components/SupportModal";
 
 function NotFoundComponent() {
   return (
@@ -132,6 +133,7 @@ function RootComponent() {
       <PlayerProvider>
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <Outlet />
+        <SupportModal />
       </PlayerProvider>
       <Toaster position="top-center" />
     </QueryClientProvider>
