@@ -1,5 +1,5 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { Heart } from "lucide-react";
+import { DoorClosed } from "lucide-react";
 import { getRoom, listScenes } from "@/lib/rooms.functions";
 import { RoomExperience } from "@/components/room/RoomExperience";
 
@@ -51,7 +51,7 @@ function RoomPage() {
 function RoomNotFound() {
   return (
     <div className="flex h-dvh flex-col items-center justify-center gap-3 px-6 text-center">
-      <Heart className="size-6 text-primary" aria-hidden />
+      <DoorClosed className="size-6 text-primary" aria-hidden />
       <p className="font-signage text-xl font-bold">Ye kamra band hai</p>
       <p className="max-w-sm text-sm text-muted-foreground">
         This room does not exist — maybe it was remixed away.

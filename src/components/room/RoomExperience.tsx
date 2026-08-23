@@ -1,6 +1,6 @@
-import { Link } from "@tanstack/react-router";
+
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Heart, Share2, Sparkles } from "lucide-react";
+import { Share2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import type { RoomPayload, Scene } from "@/lib/rooms.functions";
 import { artFor } from "@/lib/scene-art";
@@ -175,13 +175,6 @@ export function RoomExperience({
           >
             <Share2 className="size-4" aria-hidden />
           </button>
-          <Link
-            to="/my-dhaba"
-            aria-label="My Dhaba — saved rooms"
-            className="flex size-10 items-center justify-center rounded-full border border-cream/25 bg-night/45 text-cream backdrop-blur transition-colors hover:bg-night/70"
-          >
-            <Heart className="size-4" aria-hidden />
-          </Link>
         </div>
       </div>
 
