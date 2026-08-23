@@ -7,8 +7,6 @@ import {
   SkipForward,
   Volume1,
   Volume2,
-  VolumeX,
-  Waves,
 } from "lucide-react";
 import { useState } from "react";
 import type { Track } from "@/lib/rooms.functions";
@@ -110,7 +108,7 @@ export function ControlCluster({
           <p className="truncate font-cinema-display text-base leading-tight text-ink sm:text-lg">{title}</p>
           <p className="mt-1 truncate text-[11px] font-semibold text-ink/70 sm:text-xs">
             {musicBlocked ? (
-              "गीत उपलब्ध नहीं है — माहौल की आवाज़ चल रही है।"
+              "गीत अभी उपलब्ध नहीं है — कृपया अगला गीत चुनें।"
             ) : (
               <><span className="text-terracotta">कलाकार</span> · {artistDetails}</>
             )}
