@@ -145,21 +145,54 @@ export function ControlCluster({
           <SkipBack className="size-4" aria-hidden />
         </Button>
 
-        <div className={`cassette-window relative flex h-14 min-w-0 items-center justify-center gap-5 overflow-hidden rounded-sm border-2 border-ink/60 bg-night px-4 shadow-inner sm:h-16 sm:gap-10 ${isPlaying ? "cassette-running" : ""}`}>
-          <div className="pointer-events-none absolute inset-x-5 top-1.5 h-px bg-cream/15" aria-hidden />
-          {["left", "right"].map((side) => (
-            <span key={side} className={`cassette-spool cassette-spool-${side} relative flex size-11 items-center justify-center rounded-full border-2 border-cream/35 bg-cinema`} aria-hidden>
-              <span className={`cassette-reel relative flex size-9 items-center justify-center rounded-full border-[3px] border-cinema-cream bg-ink ${isPlaying ? "cassette-reel-playing" : ""}`}>
-                <span className="cassette-reel-hole cassette-reel-hole-a" />
-                <span className="cassette-reel-hole cassette-reel-hole-b" />
-                <span className="cassette-reel-hole cassette-reel-hole-c" />
-                <span className="relative z-10 size-2.5 rounded-full border-2 border-ink bg-cinema-gold" />
+        <div
+          className={`cassette-shell relative h-24 min-w-0 overflow-hidden rounded-[6px] border-2 border-ink/70 bg-night px-3 py-2 shadow-inner sm:h-28 ${isPlaying ? "cassette-running" : ""}`}
+        >
+          {/* corner screws */}
+          <span className="cassette-screw left-1.5 top-1.5" aria-hidden />
+          <span className="cassette-screw right-1.5 top-1.5" aria-hidden />
+          <span className="cassette-screw left-1.5 bottom-1.5" aria-hidden />
+          <span className="cassette-screw right-1.5 bottom-1.5" aria-hidden />
+
+          {/* paper label with the clear hub window cut into it */}
+          <div className="relative mx-auto h-full max-w-[26rem] rounded-[3px] bg-cinema-cream px-2 pt-1.5 shadow-tile">
+            <div className="flex items-center justify-between">
+              <span className="h-[3px] flex-1 bg-terracotta/80" aria-hidden />
+              <span className="px-2 font-cinema-display text-[10px] tracking-[0.18em] text-ink/70">
+                SAINIK DHABA
               </span>
-            </span>
-          ))}
-          <span className="cassette-tape absolute left-[calc(50%-2.75rem)] right-[calc(50%-2.75rem)] bottom-2 h-0.5 bg-cinema-clay" aria-hidden />
-          <div className="absolute bottom-0 left-1/2 h-3 w-24 -translate-x-1/2 border-x border-t border-cream/25 bg-ink" aria-hidden />
+              <span className="h-[3px] flex-1 bg-mustard/90" aria-hidden />
+            </div>
+
+            <div className="cassette-window relative mx-auto mt-1.5 flex h-[3.1rem] items-center justify-center gap-8 rounded-[3px] border border-ink/50 bg-night/95 px-4 sm:h-[3.6rem] sm:gap-12">
+              <span className="cassette-tape absolute inset-x-6 bottom-1.5 h-[3px] bg-cinema-clay" aria-hidden />
+              {["left", "right"].map((side) => (
+                <span
+                  key={side}
+                  className={`cassette-spool cassette-spool-${side} relative flex size-10 items-center justify-center rounded-full border-2 border-cream/30 bg-cinema sm:size-11`}
+                  aria-hidden
+                >
+                  <span
+                    className={`cassette-reel relative flex size-7 items-center justify-center rounded-full border-[3px] border-cinema-cream bg-ink sm:size-8 ${isPlaying ? "cassette-reel-playing" : ""}`}
+                  >
+                    <span className="cassette-reel-hole cassette-reel-hole-a" />
+                    <span className="cassette-reel-hole cassette-reel-hole-b" />
+                    <span className="cassette-reel-hole cassette-reel-hole-c" />
+                    <span className="relative z-10 size-2 rounded-full border-2 border-ink bg-cinema-gold" />
+                  </span>
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* head + capstan openings along the bottom edge */}
+          <div className="absolute inset-x-0 bottom-0 flex items-end justify-center gap-3" aria-hidden>
+            <span className="h-2.5 w-4 rounded-t-[2px] border-x border-t border-cream/25 bg-ink" />
+            <span className="h-3 w-10 rounded-t-[2px] border-x border-t border-cream/30 bg-ink" />
+            <span className="h-2.5 w-4 rounded-t-[2px] border-x border-t border-cream/25 bg-ink" />
+          </div>
         </div>
+
 
         <Button type="button" variant="ghost" size="icon" onClick={onNext} aria-label="Next track" className="size-10 rounded-full border border-ink/30 text-ink hover:bg-ink/10">
           <SkipForward className="size-4" aria-hidden />
