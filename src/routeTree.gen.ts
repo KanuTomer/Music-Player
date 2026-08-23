@@ -11,7 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as GenerateRouteImport } from './routes/generate'
-import { Route as MyDhabaRouteImport } from './routes/my-dhaba'
 import { Route as RoomSlugRouteImport } from './routes/room.$slug'
 
 const IndexRoute = IndexRouteImport.update({
@@ -24,11 +23,6 @@ const GenerateRoute = GenerateRouteImport.update({
   path: '/generate',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MyDhabaRoute = MyDhabaRouteImport.update({
-  id: '/my-dhaba',
-  path: '/my-dhaba',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const RoomSlugRoute = RoomSlugRouteImport.update({
   id: '/room/$slug',
   path: '/room/$slug',
@@ -38,34 +32,30 @@ const RoomSlugRoute = RoomSlugRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/generate': typeof GenerateRoute
-  '/my-dhaba': typeof MyDhabaRoute
   '/room/$slug': typeof RoomSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/generate': typeof GenerateRoute
-  '/my-dhaba': typeof MyDhabaRoute
   '/room/$slug': typeof RoomSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/generate': typeof GenerateRoute
-  '/my-dhaba': typeof MyDhabaRoute
   '/room/$slug': typeof RoomSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/generate' | '/my-dhaba' | '/room/$slug'
+  fullPaths: '/' | '/generate' | '/room/$slug'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/generate' | '/my-dhaba' | '/room/$slug'
-  id: '__root__' | '/' | '/generate' | '/my-dhaba' | '/room/$slug'
+  to: '/' | '/generate' | '/room/$slug'
+  id: '__root__' | '/' | '/generate' | '/room/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   GenerateRoute: typeof GenerateRoute
-  MyDhabaRoute: typeof MyDhabaRoute
   RoomSlugRoute: typeof RoomSlugRoute
 }
 
@@ -85,13 +75,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GenerateRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/my-dhaba': {
-      id: '/my-dhaba'
-      path: '/my-dhaba'
-      fullPath: '/my-dhaba'
-      preLoaderRoute: typeof MyDhabaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/room/$slug': {
       id: '/room/$slug'
       path: '/room/$slug'
@@ -105,7 +88,6 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   GenerateRoute: GenerateRoute,
-  MyDhabaRoute: MyDhabaRoute,
   RoomSlugRoute: RoomSlugRoute,
 }
 export const routeTree = rootRouteImport
