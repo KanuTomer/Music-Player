@@ -83,7 +83,7 @@ export function ControlCluster({
 
   const liveTitle = readableTitle(nowPlaying.title);
   const title = liveTitle ?? track?.title ?? "Tuning in…";
-  const subtitle =
+  const artistDetails =
     subtitleFrom(nowPlaying.title, nowPlaying.channel) ??
     ([track?.artist, track?.year].filter(Boolean).join(" · ") || "गीत की जानकारी आ रही है…");
 
@@ -98,22 +98,27 @@ export function ControlCluster({
   return (
     <div className="pointer-events-auto w-[min(96vw,50rem)] rounded-lg border-2 border-ink/70 bg-cinema-cream/95 p-2.5 text-ink shadow-lift backdrop-blur-sm sm:p-3">
       <div className="flex items-center gap-3 border-b border-ink/20 pb-2.5">
-        <span className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-sm border border-ink/30 bg-night sm:size-14" aria-hidden>
+        <span className="relative flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-sm border-2 border-ink/40 bg-night shadow-tile sm:size-[4.5rem]">
           {nowPlaying.videoId ? (
             <img
-              src={`https://i.ytimg.com/vi/${nowPlaying.videoId}/default.jpg`}
-              alt=""
+              key={nowPlaying.videoId}
+              src={`https://i.ytimg.com/vi/${nowPlaying.videoId}/mqdefault.jpg`}
+              alt={`${title} cover art`}
               className="size-full object-cover"
             />
           ) : (
-            <Music2 className="size-5 text-cream/70" />
+            <Music2 className="size-5 text-cream/70" aria-hidden />
           )}
         </span>
 
         <div className="min-w-0 flex-1">
           <p className="truncate font-cinema-display text-base leading-tight text-ink sm:text-lg">{title}</p>
-          <p className="mt-0.5 truncate text-[11px] font-medium text-ink/65 sm:text-xs">
-            {musicBlocked ? "गीत उपलब्ध नहीं है — माहौल की आवाज़ चल रही है।" : subtitle}
+          <p className="mt-1 truncate text-[11px] font-semibold text-ink/70 sm:text-xs">
+            {musicBlocked ? (
+              "गीत उपलब्ध नहीं है — माहौल की आवाज़ चल रही है।"
+            ) : (
+              <><span className="text-terracotta">कलाकार</span> · {artistDetails}</>
+            )}
           </p>
           {!musicBlocked && (nowPlaying.videoId || track) && (
             <p
