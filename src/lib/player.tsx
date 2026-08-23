@@ -334,86 +334,37 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const cueRoomPlaylist = useCallback((slug: string, autoplay: boolean) => {
-    const p = playerRef.current;
-    const playlistId = scenePlaylists[slug];
-    if (!p || !playlistId) return false;
+  const cueRoomPlaylist = useCallback(
+    (slug: string, autoplay: boolean) => {
+      const playlistId = scenePlaylists[slug];
+      if (!playlistId) return false;
 
-    try {
-      console.log("[dbg] cue", slug, playlistId, loadedPlaylistRef.current);
-      if (loadedPlaylistRef.current !== playlistId) {
-        loadedPlaylistRef.current = playlistId;
-        const before = (() => {
-          try {
-            return p.getVideoData()?.video_id ?? null;
-          } catch {
-            return null;
-          }
-        })();
-        const load = () => {
-          try {
-            p.loadPlaylist({ list: playlistId, listType: "playlist", index: 0 });
-            if (autoplay) p.playVideo();
-          } catch {
-            /* retry below */
-          }
-        };
-        load();
-        // YouTube silently ignores loadPlaylist while it is still swapping
-        // videos, so confirm the switch actually landed and retry if not.
-        if (playlistRetryRef.current !== null) window.clearInterval(playlistRetryRef.current);
-        let tries = 0;
-        playlistRetryRef.current = window.setInterval(() => {
-          tries += 1;
-          if (loadedPlaylistRef.current !== playlistId || tries > 5) {
-            if (playlistRetryRef.current !== null) window.clearInterval(playlistRetryRef.current);
-            playlistRetryRef.current = null;
-            return;
-          }
-          let current: string | null = null;
-          try {
-            current = p.getVideoData()?.video_id ?? null;
-          } catch {
-            current = null;
-          }
-          if (current && current !== before) {
-            if (playlistRetryRef.current !== null) window.clearInterval(playlistRetryRef.current);
-            playlistRetryRef.current = null;
-            if (autoplay) {
-              try {
-                p.playVideo();
-              } catch {
-                /* noop */
-              }
-            }
-            return;
-          }
-          load();
-        }, 1500);
-      } else if (autoplay) {
-        p.playVideo();
-      }
-      p.setVolume(themeTransitionRef.current ? 0 : Math.round(musicVolumeRef.current * 100));
-      if (!autoplay) p.pauseVideo();
-      if (autoplay && themeTransitionRef.current) {
-        let step = 0;
-        if (volumeTimerRef.current !== null) window.clearInterval(volumeTimerRef.current);
-        volumeTimerRef.current = window.setInterval(() => {
-          step += 1;
-          p.setVolume(Math.round((musicVolumeRef.current * 100 * step) / 8));
-          if (step >= 8) {
-            if (volumeTimerRef.current !== null) window.clearInterval(volumeTimerRef.current);
+      try {
+        if (loadedPlaylistRef.current !== playlistId) {
+          // Swapping the list in place is unreliable, so rebuild the embed
+          // with the new playlist baked into its params.
+          loadedPlaylistRef.current = playlistId;
+          themeTransitionRef.current = false;
+          if (volumeTimerRef.current !== null) {
+            window.clearInterval(volumeTimerRef.current);
             volumeTimerRef.current = null;
-            themeTransitionRef.current = false;
           }
-        }, 100);
+          const built = buildPlayer(playlistId, autoplay);
+          return Boolean(built);
+        }
+        const p = playerRef.current;
+        if (!p) return false;
+        if (autoplay) p.playVideo();
+        else p.pauseVideo();
+        p.setVolume(Math.round(musicVolumeRef.current * 100));
+        return true;
+      } catch {
+        loadedPlaylistRef.current = null;
+        return false;
       }
-      return true;
-    } catch {
-      loadedPlaylistRef.current = null;
-      return false;
-    }
-  }, []);
+    },
+    [buildPlayer],
+  );
 
 
   const openRoom = useCallback(
