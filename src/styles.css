@@ -41,10 +41,16 @@
   --color-ink: var(--ink);
   --color-cream: var(--bg-cream);
   --color-night: var(--bg-night);
+  --color-cinema: var(--cinema);
+  --color-cinema-cream: var(--cinema-cream);
+  --color-cinema-gold: var(--cinema-gold);
+  --color-cinema-clay: var(--cinema-clay);
   --font-display: "Alfa Slab One", "Georgia", serif;
   --font-signage: "Baloo 2", system-ui, sans-serif;
   --font-sans: "Inter", system-ui, sans-serif;
   --font-deva: "Baloo 2", "Noto Sans Devanagari", sans-serif;
+  --font-cinema-display: "DM Serif Display", Georgia, serif;
+  --font-cinema-body: "Fira Sans", system-ui, sans-serif;
   --shadow-tile: 0 10px 24px -12px oklch(0.28 0.06 60 / 0.45);
   --shadow-lift: 0 18px 40px -18px oklch(0.28 0.06 60 / 0.55);
 }
@@ -59,6 +65,10 @@
   --terracotta: oklch(0.523 0.176 38.5);
   --teal-deep: oklch(0.404 0.072 205.5);
   --ink: oklch(0.244 0.021 60);
+  --cinema: oklch(0.2366 0.0104 80.6);
+  --cinema-cream: oklch(0.9321 0.036 89.45);
+  --cinema-gold: oklch(0.7266 0.1374 77.43);
+  --cinema-clay: oklch(0.5135 0.1285 36.58);
 
   --background: var(--bg-cream);
   --foreground: var(--ink);
