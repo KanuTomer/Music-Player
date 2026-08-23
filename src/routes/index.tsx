@@ -38,7 +38,7 @@ export const Route = createFileRoute("/")({
 function Home() {
   const { room, scenes } = Route.useLoaderData();
   if (!room) return <HomeError />;
-  return <RoomExperience room={room} scenes={scenes} />;
+  return <RoomExperience key={room.scene.slug} room={room} scenes={scenes} />;
 }
 
 function HomeSkeleton() {

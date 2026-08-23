@@ -63,7 +63,7 @@ export function RoomExperience({
   const active = !player.needsGate && player.isPlaying;
 
   return (
-    <div className={`relative h-dvh w-full overflow-hidden ${scene.is_dark ? "room-dark" : ""}`}>
+    <div className={`room-scene-enter relative h-dvh w-full overflow-hidden ${scene.is_dark ? "room-dark" : ""}`}>
       <img
         src={artFor(scene.art_key)}
         alt={`${scene.title_en} — ${scene.hook}`}

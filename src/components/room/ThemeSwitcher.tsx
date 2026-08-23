@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Scene } from "@/lib/rooms.functions";
 import { artFor } from "@/lib/scene-art";
+import { usePlayer } from "@/lib/player";
 
 /** Single "Change Theme" button — the room list stays hidden until asked for. */
 export function ThemeSwitcher({
@@ -14,7 +15,9 @@ export function ThemeSwitcher({
   currentSlug: string;
 }) {
   const navigate = useNavigate();
+  const player = usePlayer();
   const [open, setOpen] = useState(false);
+  const [transitioning, setTransitioning] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -66,11 +69,15 @@ export function ThemeSwitcher({
                 <button
                   key={s.slug}
                   type="button"
-                  onClick={() => {
-                    setOpen(false);
-                    if (s.slug !== currentSlug) {
-                      void navigate({ to: "/room/$slug", params: { slug: s.slug } });
+                  disabled={transitioning}
+                  onClick={async () => {
+                    if (s.slug === currentSlug) {
+                      setOpen(false);
+                      return;
                     }
+                    setTransitioning(true);
+                    await player.fadeForThemeChange();
+                    await navigate({ to: "/room/$slug", params: { slug: s.slug } });
                   }}
                   className={`group relative aspect-[4/3] overflow-hidden rounded-xl border text-left transition-transform hover:scale-[1.02] ${
                     s.slug === currentSlug ? "border-accent" : "border-cream/15"
@@ -103,6 +110,9 @@ export function ThemeSwitcher({
               ))}
             </div>
           </div>
+          {transitioning && (
+            <div className="theme-transition-cover pointer-events-auto fixed inset-0 z-[70] bg-night" aria-label="Changing theme" />
+          )}
         </div>,
         document.body,
       )}
