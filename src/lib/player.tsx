@@ -126,6 +126,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const volumeTimerRef = useRef<number | null>(null);
   const resolvedRef = useRef<Map<string, string>>(new Map());
   const loadedPlaylistRef = useRef<string | null>(null);
+  const playlistStartRef = useRef<Map<string, number>>(new Map());
   const [room, setRoom] = useState<RoomPayload | null>(null);
   const [daypart, setDaypart] = useState<Daypart>(() => currentDaypart());
   const [index, setIndex] = useState(0);
@@ -255,7 +256,24 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           if (!p) return;
           try {
             p.setVolume(Math.round(musicVolumeRef.current * 100));
-            if (autoplay) p.playVideo();
+            if (playlistId) {
+              const availableTracks = p.getPlaylist() ?? [];
+              const total = availableTracks.length;
+              const previousStart = playlistStartRef.current.get(playlistId) ?? -1;
+              let nextStart = 0;
+
+              if (total > 1) {
+                do {
+                  nextStart = Math.floor(Math.random() * total);
+                } while (nextStart === previousStart);
+              }
+
+              playlistStartRef.current.set(playlistId, nextStart);
+              p.loadPlaylist({ list: playlistId, listType: "playlist", index: nextStart });
+              if (!autoplay) p.pauseVideo();
+            } else if (autoplay) {
+              p.playVideo();
+            }
           } catch {
             /* noop */
           }
