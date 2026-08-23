@@ -65,10 +65,10 @@
   --terracotta: oklch(0.523 0.176 38.5);
   --teal-deep: oklch(0.404 0.072 205.5);
   --ink: oklch(0.244 0.021 60);
-  --cinema: #211e19;
-  --cinema-cream: #f2e8ce;
-  --cinema-gold: #d69a2d;
-  --cinema-clay: #a3472d;
+  --cinema: oklch(0.2366 0.0104 80.6);
+  --cinema-cream: oklch(0.9321 0.036 89.45);
+  --cinema-gold: oklch(0.7266 0.1374 77.43);
+  --cinema-clay: oklch(0.5135 0.1285 36.58);
 
   --background: var(--bg-cream);
   --foreground: var(--ink);
