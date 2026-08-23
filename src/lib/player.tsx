@@ -10,7 +10,6 @@ import {
 } from "react";
 import { resolveTrackVideo, type RoomPayload, type Track } from "./rooms.functions";
 import { currentDaypart, forDaypart, type Daypart } from "./dayparts";
-import { sceneAmbience } from "./scene-art";
 import { setAmbienceVolume, startAmbience, stopAmbience } from "./ambience";
 
 type YTPlayer = {
@@ -134,8 +133,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [needsGate, setNeedsGate] = useState(true);
   const [musicReady, setMusicReady] = useState(false);
   const [musicBlocked, setMusicBlocked] = useState(false);
-  const [ambienceVolume, setAmbienceVol] = useState(0.7);
-  const [ambienceEnabled, setAmbienceEnabled] = useState(true);
+  const [ambienceVolume, setAmbienceVol] = useState(0);
+  const [ambienceEnabled, setAmbienceEnabled] = useState(false);
   const [musicVolume, setMusicVol] = useState(0.7);
   const musicVolumeRef = useRef(0.7);
   const [nowPlaying, setNowPlaying] = useState<NowPlaying>({
