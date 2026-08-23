@@ -29,7 +29,7 @@ export function MiniPlayer() {
             {room.scene.title_en}
           </p>
           <p className="truncate text-[11px] leading-tight text-muted-foreground">
-            {isCuratedPlaylist ? "Theme playlist · YouTube" : track ? track.title : room.scene.title_hi}
+            {nowPlaying.title ?? track?.title ?? room.scene.title_hi}
           </p>
         </div>
         <Link
