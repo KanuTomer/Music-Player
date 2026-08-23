@@ -7,7 +7,6 @@ import { artFor } from "@/lib/scene-art";
 import { usePlayer } from "@/lib/player";
 import { forDaypart } from "@/lib/dayparts";
 import { useRoomSocial } from "@/hooks/useRoomSocial";
-import { playGag } from "@/lib/ambience";
 import { ControlCluster } from "@/components/room/ControlCluster";
 import { OneLinerCaption } from "@/components/room/OneLinerCaption";
 import { ThemeSwitcher } from "@/components/room/ThemeSwitcher";
