@@ -38,7 +38,11 @@ export const Route = createFileRoute("/")({
 function Home() {
   const { room, scenes } = Route.useLoaderData();
   if (!room) return <HomeError />;
-  return <RoomExperience room={room} scenes={scenes} />;
+  return (
+    <div className="h-dvh bg-night">
+      <RoomExperience key={room.scene.slug} room={room} scenes={scenes} />
+    </div>
+  );
 }
 
 function HomeSkeleton() {

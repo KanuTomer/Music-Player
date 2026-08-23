@@ -38,6 +38,7 @@ type PlayerState = {
   next: () => void;
   start: () => void;
   setAmbience: (v: number) => void;
+  fadeForThemeChange: () => Promise<void>;
   leave: () => void;
 };
 
@@ -82,6 +83,8 @@ function loadYouTubeApi(): Promise<void> {
 export function PlayerProvider({ children }: { children: ReactNode }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<YTPlayer | null>(null);
+  const themeTransitionRef = useRef(false);
+  const volumeTimerRef = useRef<number | null>(null);
   const resolvedRef = useRef<Map<string, string>>(new Map());
   const [room, setRoom] = useState<RoomPayload | null>(null);
   const [daypart, setDaypart] = useState<Daypart>(() => currentDaypart());
@@ -154,9 +157,22 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
     try {
       p.loadVideoById(videoId);
-      p.setVolume(70);
+      p.setVolume(themeTransitionRef.current ? 0 : 70);
       if (autoplay) p.playVideo();
       else p.pauseVideo();
+      if (autoplay && themeTransitionRef.current) {
+        let step = 0;
+        if (volumeTimerRef.current !== null) window.clearInterval(volumeTimerRef.current);
+        volumeTimerRef.current = window.setInterval(() => {
+          step += 1;
+          p.setVolume(Math.round((70 * step) / 8));
+          if (step >= 8) {
+            if (volumeTimerRef.current !== null) window.clearInterval(volumeTimerRef.current);
+            volumeTimerRef.current = null;
+            themeTransitionRef.current = false;
+          }
+        }, 100);
+      }
     } catch {
       setMusicBlocked(true);
     }
@@ -220,6 +236,27 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setIndex((i) => (playlist.length ? (i + 1) % playlist.length : 0));
   }, [playlist.length]);
 
+  const fadeForThemeChange = useCallback(() => {
+    themeTransitionRef.current = true;
+    setAmbienceVolume(0);
+    const p = playerRef.current;
+    if (!p || !isPlaying) return Promise.resolve();
+
+    if (volumeTimerRef.current !== null) window.clearInterval(volumeTimerRef.current);
+    return new Promise<void>((resolve) => {
+      let step = 7;
+      volumeTimerRef.current = window.setInterval(() => {
+        step -= 1;
+        p.setVolume(Math.max(0, step * 10));
+        if (step <= 0) {
+          if (volumeTimerRef.current !== null) window.clearInterval(volumeTimerRef.current);
+          volumeTimerRef.current = null;
+          resolve();
+        }
+      }, 45);
+    });
+  }, [isPlaying]);
+
   const leave = useCallback(() => {
     setRoom(null);
     setNeedsGate(true);
@@ -243,6 +280,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     next,
     start,
     setAmbience: setAmbienceVol,
+    fadeForThemeChange,
     leave,
   };
 
