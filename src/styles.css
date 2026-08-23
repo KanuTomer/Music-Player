@@ -326,8 +326,64 @@
   }
 }
 
+@keyframes cassette-tape-travel {
+  to {
+    background-position: 10px 0;
+  }
+}
+
 .cassette-reel-playing {
-  animation: cassette-spin 2.8s linear infinite;
+  animation: cassette-spin 1.4s linear infinite;
+  will-change: transform;
+}
+
+.cassette-reel-hole {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0.42rem;
+  height: 0.68rem;
+  margin-left: -0.21rem;
+  margin-top: -0.34rem;
+  border-radius: 999px;
+  background: var(--color-cinema-gold);
+  transform-origin: 50% 0.34rem;
+}
+
+.cassette-reel-hole-a {
+  transform: rotate(0deg) translateY(-0.65rem);
+}
+
+.cassette-reel-hole-b {
+  transform: rotate(120deg) translateY(-0.65rem);
+}
+
+.cassette-reel-hole-c {
+  transform: rotate(240deg) translateY(-0.65rem);
+}
+
+.cassette-spool-left {
+  box-shadow: inset 0 0 0 0.28rem var(--color-ink);
+}
+
+.cassette-spool-right {
+  box-shadow: inset 0 0 0 0.14rem var(--color-ink);
+}
+
+.cassette-tape {
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--color-cinema-clay) 0,
+    var(--color-cinema-clay) 5px,
+    var(--color-cinema-gold) 5px,
+    var(--color-cinema-gold) 7px
+  );
+  background-size: 10px 100%;
+  opacity: 0.75;
+}
+
+.cassette-running .cassette-tape {
+  animation: cassette-tape-travel 0.45s linear infinite;
 }
 
 @utility animate-drift-up {
