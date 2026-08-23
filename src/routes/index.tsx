@@ -1,24 +1,190 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { listScenes, type Scene } from "@/lib/rooms.functions";
+import { GenerateCard, SceneCard } from "@/components/SceneCard";
+import { TopBar } from "@/components/TopBar";
+import { MiniPlayer } from "@/components/MiniPlayer";
+import { Skeleton } from "@/components/ui/skeleton";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
+const TITLE = "Sainik Dhaba — an always-on radio for the places India grew up in";
+const DESC =
+  "Tap into a 90s barbershop, a night bus, a railway platform or a sarkari daftar. Ambient sound, illustrated scenes and in-character chatter — no signup.";
+
 export const Route = createFileRoute("/")({
-  component: Index,
+  loader: () => listScenes(),
+  head: () => ({
+    meta: [
+      { title: TITLE },
+      { name: "description", content: DESC },
+      { property: "og:title", content: TITLE },
+      { property: "og:description", content: DESC },
+    ],
+  }),
+  component: Home,
+  pendingComponent: HomeSkeleton,
+  errorComponent: HomeError,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+const CHIPS = [
+  { key: "all", label: "All rooms" },
+  { key: "tier1", label: "Everyday" },
+  { key: "regional", label: "Regional" },
+] as const;
+
+function usePageSize() {
+  // 6 tiles on mobile portrait (2x3), 9 on desktop (3x3) — never scrolls.
+  const [size, setSize] = useState(6);
+  useMemo(() => {
+    if (typeof window === "undefined") return;
+    const apply = () => setSize(window.innerWidth >= 768 ? 9 : 6);
+    apply();
+    window.addEventListener("resize", apply);
+  }, []);
+  return size;
+}
+
+function Home() {
+  const scenes = Route.useLoaderData();
+  const [chip, setChip] = useState<string>("all");
+  const [page, setPage] = useState(0);
+  const pageSize = usePageSize();
+
+  const tiles = useMemo(() => {
+    const filtered =
+      chip === "all" ? scenes : scenes.filter((s: Scene) => s.category === chip);
+    return [{ generate: true } as const, ...filtered.map((s) => ({ scene: s }))];
+  }, [chip, scenes]);
+
+  const pages = Math.max(1, Math.ceil(tiles.length / pageSize));
+  const safePage = Math.min(page, pages - 1);
+  const visible = tiles.slice(safePage * pageSize, safePage * pageSize + pageSize);
+
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
+    <div className="flex h-dvh flex-col overflow-hidden">
+      <TopBar />
+
+      <div className="flex min-h-0 flex-1 flex-col px-3 pb-2 sm:px-5">
+        <div className="flex shrink-0 items-center justify-between gap-2 py-2">
+          <div className="flex gap-1.5">
+            {CHIPS.map((c) => (
+              <button
+                key={c.key}
+                type="button"
+                onClick={() => {
+                  setChip(c.key);
+                  setPage(0);
+                }}
+                aria-pressed={chip === c.key}
+                className={`rounded-full border px-2.5 py-1 text-[12px] font-medium transition-colors ${
+                  chip === c.key
+                    ? "border-transparent bg-primary text-primary-foreground"
+                    : "border-border/70 hover:bg-accent/40"
+                }`}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+          <Link
+            to="/my-dhaba"
+            className="rounded-full border border-border/70 px-2.5 py-1 text-[12px] font-medium hover:bg-accent/40"
+          >
+            My Dhaba
+          </Link>
+        </div>
+
+        {tiles.length === 1 ? (
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 text-center">
+            <p className="font-signage text-lg font-bold">Yahan abhi sannata hai</p>
+            <p className="max-w-xs text-sm text-muted-foreground">
+              No rooms in this category yet. Generate your own and it will live here.
+            </p>
+            <div className="mt-2 h-40 w-32">
+              <GenerateCard />
+            </div>
+          </div>
+        ) : (
+          <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-3 gap-2 sm:gap-3 md:grid-cols-3">
+            {visible.map((t, i) =>
+              "generate" in t ? (
+                <GenerateCard key="generate" />
+              ) : (
+                <SceneCard key={t.scene?.slug ?? i} scene={t.scene!} />
+              ),
+            )}
+          </div>
+        )}
+
+        {pages > 1 && (
+          <div className="flex shrink-0 items-center justify-center gap-3 pt-2">
+            <button
+              type="button"
+              aria-label="Previous page"
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              disabled={safePage === 0}
+              className="flex size-8 items-center justify-center rounded-full border border-border/70 disabled:opacity-40"
+            >
+              <ChevronLeft className="size-4" aria-hidden />
+            </button>
+            <div className="flex gap-1.5">
+              {Array.from({ length: pages }).map((_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  aria-label={`Page ${i + 1}`}
+                  onClick={() => setPage(i)}
+                  className={`size-2 rounded-full transition-colors ${
+                    i === safePage ? "bg-primary" : "bg-border"
+                  }`}
+                />
+              ))}
+            </div>
+            <button
+              type="button"
+              aria-label="Next page"
+              onClick={() => setPage((p) => Math.min(pages - 1, p + 1))}
+              disabled={safePage >= pages - 1}
+              className="flex size-8 items-center justify-center rounded-full border border-border/70 disabled:opacity-40"
+            >
+              <ChevronRight className="size-4" aria-hidden />
+            </button>
+          </div>
+        )}
+      </div>
+
+      <MiniPlayer />
+    </div>
+  );
+}
+
+function HomeSkeleton() {
+  return (
+    <div className="flex h-dvh flex-col overflow-hidden">
+      <TopBar />
+      <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-3 gap-2 p-3 sm:gap-3 sm:p-5 md:grid-cols-3">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Skeleton key={i} className="size-full rounded-xl" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function HomeError() {
+  return (
+    <div className="flex h-dvh flex-col items-center justify-center gap-3 px-6 text-center">
+      <p className="font-signage text-xl font-bold">Line kat gayi</p>
+      <p className="max-w-sm text-sm text-muted-foreground">
+        The rooms could not be loaded. Ek baar phir koshish karein?
+      </p>
+      <button
+        type="button"
+        onClick={() => window.location.reload()}
+        className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+      >
+        Retry
+      </button>
     </div>
   );
 }
