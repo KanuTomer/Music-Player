@@ -1,0 +1,250 @@
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import type { RoomPayload, Track } from "./rooms.functions";
+import { currentDaypart, forDaypart, type Daypart } from "./dayparts";
+import { sceneAmbience } from "./scene-art";
+import { setAmbienceVolume, startAmbience, stopAmbience } from "./ambience";
+
+type YTPlayer = {
+  loadPlaylist: (o: { list: string; listType: string }) => void;
+  loadVideoById: (id: string) => void;
+  playVideo: () => void;
+  pauseVideo: () => void;
+  nextVideo: () => void;
+  setVolume: (v: number) => void;
+  destroy: () => void;
+};
+
+type PlayerState = {
+  room: RoomPayload | null;
+  daypart: Daypart;
+  playlist: Track[];
+  track: Track | null;
+  isPlaying: boolean;
+  needsGate: boolean;
+  musicReady: boolean;
+  musicBlocked: boolean;
+  ambienceVolume: number;
+  openRoom: (room: RoomPayload) => void;
+  toggle: () => void;
+  next: () => void;
+  start: () => void;
+  setAmbience: (v: number) => void;
+  leave: () => void;
+};
+
+const PlayerContext = createContext<PlayerState | null>(null);
+
+declare global {
+  interface Window {
+    YT?: { Player: new (el: HTMLElement, opts: unknown) => YTPlayer };
+    onYouTubeIframeAPIReady?: () => void;
+  }
+}
+
+function loadYouTubeApi(): Promise<void> {
+  if (typeof window === "undefined") return Promise.resolve();
+  if (window.YT?.Player) return Promise.resolve();
+  return new Promise((resolve) => {
+    const existing = document.getElementById("yt-iframe-api");
+    if (!existing) {
+      const s = document.createElement("script");
+      s.id = "yt-iframe-api";
+      s.src = "https://www.youtube.com/iframe_api";
+      document.head.appendChild(s);
+    }
+    const prev = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => {
+      prev?.();
+      resolve();
+    };
+    const poll = window.setInterval(() => {
+      if (window.YT?.Player) {
+        window.clearInterval(poll);
+        resolve();
+      }
+    }, 250);
+    window.setTimeout(() => {
+      window.clearInterval(poll);
+      resolve();
+    }, 8000);
+  });
+}
+
+export function PlayerProvider({ children }: { children: ReactNode }) {
+  const hostRef = useRef<HTMLDivElement | null>(null);
+  const playerRef = useRef<YTPlayer | null>(null);
+  const [room, setRoom] = useState<RoomPayload | null>(null);
+  const [daypart, setDaypart] = useState<Daypart>(() => currentDaypart());
+  const [index, setIndex] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [needsGate, setNeedsGate] = useState(true);
+  const [musicReady, setMusicReady] = useState(false);
+  const [musicBlocked, setMusicBlocked] = useState(false);
+  const [ambienceVolume, setAmbienceVol] = useState(0.7);
+
+  const playlist = useMemo(
+    () => (room ? forDaypart(room.tracks, daypart) : []),
+    [room, daypart],
+  );
+  const track = playlist[index % Math.max(playlist.length, 1)] ?? null;
+
+  // IST daypart ticks over while a room is left running for hours
+  useEffect(() => {
+    const t = window.setInterval(() => setDaypart(currentDaypart()), 60000);
+    return () => window.clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadYouTubeApi().then(() => {
+      if (cancelled || !hostRef.current || playerRef.current || !window.YT?.Player) return;
+      playerRef.current = new window.YT.Player(hostRef.current, {
+        height: "1",
+        width: "1",
+        playerVars: { autoplay: 0, controls: 0, playsinline: 1 },
+        events: {
+          onReady: () => setMusicReady(true),
+          onError: () => {
+            setMusicBlocked(true);
+            playerRef.current?.nextVideo();
+          },
+          onStateChange: (e: { data: number }) => {
+            if (e.data === 1) {
+              setIsPlaying(true);
+              setMusicBlocked(false);
+            }
+            if (e.data === 2) setIsPlaying(false);
+          },
+        },
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const cueTrack = useCallback((t: Track | null, autoplay: boolean) => {
+    const p = playerRef.current;
+    if (!p || !t) return;
+    try {
+      if (t.youtube_id) p.loadVideoById(t.youtube_id);
+      else if (t.search_query)
+        p.loadPlaylist({ list: t.search_query, listType: "search" });
+      p.setVolume(70);
+      if (autoplay) p.playVideo();
+      else p.pauseVideo();
+    } catch {
+      setMusicBlocked(true);
+    }
+  }, []);
+
+  const openRoom = useCallback(
+    (next: RoomPayload) => {
+      setRoom((prev) => {
+        if (prev?.scene.slug === next.scene.slug) return prev;
+        setIndex(0);
+        return next;
+      });
+    },
+    [],
+  );
+
+  // ambience follows the room, but only after the user has tapped play once
+  useEffect(() => {
+    if (!room || needsGate) return;
+    const keys = sceneAmbience[room.scene.slug] ?? ["chatter", "fan"];
+    startAmbience(keys, ambienceVolume);
+    return () => stopAmbience();
+    // ambienceVolume handled separately so we don't rebuild the graph on slider drags
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [room?.scene.slug, needsGate]);
+
+  useEffect(() => {
+    setAmbienceVolume(ambienceVolume);
+  }, [ambienceVolume]);
+
+  useEffect(() => {
+    if (needsGate || !musicReady) return;
+    cueTrack(track, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [track?.id, musicReady, needsGate]);
+
+  const start = useCallback(() => {
+    setNeedsGate(false);
+    setIsPlaying(true);
+    playerRef.current?.playVideo();
+  }, []);
+
+  const toggle = useCallback(() => {
+    if (needsGate) {
+      start();
+      return;
+    }
+    if (isPlaying) {
+      playerRef.current?.pauseVideo();
+      setIsPlaying(false);
+      setAmbienceVolume(0);
+    } else {
+      playerRef.current?.playVideo();
+      setIsPlaying(true);
+      setAmbienceVolume(ambienceVolume);
+    }
+  }, [ambienceVolume, isPlaying, needsGate, start]);
+
+  const next = useCallback(() => {
+    setIndex((i) => (playlist.length ? (i + 1) % playlist.length : 0));
+  }, [playlist.length]);
+
+  const leave = useCallback(() => {
+    setRoom(null);
+    setNeedsGate(true);
+    setIsPlaying(false);
+    stopAmbience();
+    playerRef.current?.pauseVideo();
+  }, []);
+
+  const value: PlayerState = {
+    room,
+    daypart,
+    playlist,
+    track,
+    isPlaying,
+    needsGate,
+    musicReady,
+    musicBlocked,
+    ambienceVolume,
+    openRoom,
+    toggle,
+    next,
+    start,
+    setAmbience: setAmbienceVol,
+    leave,
+  };
+
+  return (
+    <PlayerContext.Provider value={value}>
+      {children}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed -left-[9999px] top-0 h-px w-px overflow-hidden"
+      >
+        <div ref={hostRef} />
+      </div>
+    </PlayerContext.Provider>
+  );
+}
+
+export function usePlayer(): PlayerState {
+  const ctx = useContext(PlayerContext);
+  if (!ctx) throw new Error("usePlayer must be used inside PlayerProvider");
+  return ctx;
+}
