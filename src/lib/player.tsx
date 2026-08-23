@@ -32,6 +32,7 @@ const scenePlaylists: Record<string, string> = {
   "raat-ki-bus": "PL8xy2vgHsFJjhGJJnwp8mspv27hN4K_Bg",
   "sarkari-daftar": "PLWaM5_jNo2Bb7ip1ytNk2haslBA-eMHuk",
   "doordarshan-shaam": "PL5614CFEE77DE9D5F",
+  "bhojpuriya-devara": "PLJ3M6AoVR-gZtOkB4v-_XgzYQz_6UQssJ",
 };
 
 type PlayerState = {
