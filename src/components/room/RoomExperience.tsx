@@ -33,13 +33,6 @@ const sceneVideos: Record<string, string> = {
   "corporate-majdoor": corporateMajdoorVideo.url,
 };
 
-function gagFor(slug: string) {
-  if (slug === "raat-ki-bus") return "horn";
-  if (slug === "ganpati-pandal") return "bell";
-  if (slug === "sarkari-daftar") return "thud";
-  return "snip";
-}
-
 export function RoomExperience({
   room,
   scenes,
@@ -50,7 +43,6 @@ export function RoomExperience({
   const { scene, oneliners } = room;
   const player = usePlayer();
   const social = useRoomSocial(`scene:${scene.slug}`);
-  const [gagKind] = useState(() => gagFor(scene.slug));
   const sceneVideo = sceneVideos[scene.slug];
   const sceneVideoRef = useRef<HTMLVideoElement | null>(null);
 
