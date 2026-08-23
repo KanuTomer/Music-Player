@@ -119,21 +119,21 @@ export function RoomExperience({
         aria-hidden
       />
 
-      {/* top row: live pill · change theme · share */}
-      <div className="absolute inset-x-0 top-0 z-50 flex items-center justify-between gap-2 p-3">
-        <div className="flex items-center gap-2 rounded-full border border-cream/20 bg-night/45 px-3 py-1.5 backdrop-blur">
+      {/* top row: live pill · theme dropdown · share */}
+      <div className="absolute inset-x-0 top-0 z-50 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 p-2 sm:gap-3 sm:p-3">
+        <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-cream/20 bg-night/45 px-2.5 py-1.5 backdrop-blur sm:gap-2 sm:px-3">
           <span className="animate-bulb inline-block size-1.5 rounded-full bg-accent" aria-hidden />
-          <span className="text-[12px] font-semibold text-cream">{social.listeners}</span>
-          <span className="text-[11px] text-cream/60">sun rahe hain</span>
+          <span className="text-[12px] font-semibold text-cream tabular-nums">{social.listeners}</span>
+          <span className="hidden text-[11px] text-cream/60 sm:inline">sun rahe hain</span>
           <span className="hidden text-cream/30 sm:inline">·</span>
           <ISTClock inherit className="hidden items-center gap-1.5 text-[11px] text-cream/65 sm:flex" />
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center justify-center">
           <ThemeSwitcher scenes={scenes} currentSlug={scene.slug} />
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           <button
             type="button"
             onClick={share}
@@ -151,6 +151,7 @@ export function RoomExperience({
           </Link>
         </div>
       </div>
+
 
       {/* room title, signage-style, centred */}
       <div className="pointer-events-none absolute inset-x-0 top-[16dvh] z-20 px-6 text-center">
