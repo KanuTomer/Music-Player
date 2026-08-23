@@ -99,15 +99,18 @@ export function ControlCluster({
     <div className="pointer-events-auto w-[min(96vw,50rem)] rounded-lg border-2 border-ink/70 bg-cinema-cream/95 p-2.5 text-ink shadow-lift backdrop-blur-sm sm:p-3">
       <div className="flex items-center gap-3 border-b border-ink/20 pb-2.5">
         <span className="relative flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-sm border-2 border-ink/40 bg-night shadow-tile sm:size-[4.5rem]">
-          {nowPlaying.videoId ? (
+          {nowPlaying.videoId || track?.youtube_id ? (
             <img
-              key={nowPlaying.videoId}
-              src={`https://i.ytimg.com/vi/${nowPlaying.videoId}/mqdefault.jpg`}
+              key={nowPlaying.videoId ?? track?.youtube_id}
+              src={`https://i.ytimg.com/vi/${nowPlaying.videoId ?? track?.youtube_id}/mqdefault.jpg`}
               alt={`${title} cover art`}
               className="size-full object-cover"
             />
           ) : (
-            <Music2 className="size-5 text-cream/70" aria-hidden />
+            <span className="flex size-full flex-col items-center justify-center bg-terracotta text-cinema-cream" aria-label="Cover art loading">
+              <Music2 className="size-5" aria-hidden />
+              <span className="mt-1 font-vintage-deva text-[9px]">संगीत</span>
+            </span>
           )}
         </span>
 
