@@ -1,5 +1,5 @@
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Share2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import type { RoomPayload, Scene } from "@/lib/rooms.functions";
@@ -7,7 +7,6 @@ import { artFor } from "@/lib/scene-art";
 import { usePlayer } from "@/lib/player";
 import { forDaypart } from "@/lib/dayparts";
 import { useRoomSocial } from "@/hooks/useRoomSocial";
-import { playGag } from "@/lib/ambience";
 import { ControlCluster } from "@/components/room/ControlCluster";
 import { OneLinerCaption } from "@/components/room/OneLinerCaption";
 import { ThemeSwitcher } from "@/components/room/ThemeSwitcher";
@@ -34,13 +33,6 @@ const sceneVideos: Record<string, string> = {
   "corporate-majdoor": corporateMajdoorVideo.url,
 };
 
-function gagFor(slug: string) {
-  if (slug === "raat-ki-bus") return "horn";
-  if (slug === "ganpati-pandal") return "bell";
-  if (slug === "sarkari-daftar") return "thud";
-  return "snip";
-}
-
 export function RoomExperience({
   room,
   scenes,
@@ -51,7 +43,6 @@ export function RoomExperience({
   const { scene, oneliners } = room;
   const player = usePlayer();
   const social = useRoomSocial(`scene:${scene.slug}`);
-  const [gagKind] = useState(() => gagFor(scene.slug));
   const sceneVideo = sceneVideos[scene.slug];
   const sceneVideoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -195,20 +186,6 @@ export function RoomExperience({
         trackKey={player.nowPlaying?.title ?? player.track?.title ?? null}
       />
 
-
-      {scene.gag_label && (
-        <div className="absolute right-3 bottom-28 z-30 sm:bottom-24">
-        {scene.gag_label && (
-          <button
-            type="button"
-            onClick={() => playGag(gagKind)}
-            className="rounded-full border border-cream/25 bg-night/45 px-2.5 py-1 text-[11px] font-semibold text-cream backdrop-blur transition-colors hover:bg-accent hover:text-accent-foreground"
-          >
-            {scene.gag_label}
-          </button>
-        )}
-        </div>
-      )}
 
       <div className="pointer-events-none absolute inset-x-0 bottom-3 z-30 flex justify-center px-3">
         <ControlCluster
