@@ -125,6 +125,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const volumeTimerRef = useRef<number | null>(null);
   const resolvedRef = useRef<Map<string, string>>(new Map());
   const loadedPlaylistRef = useRef<string | null>(null);
+  const playlistRetryRef = useRef<number | null>(null);
   const [room, setRoom] = useState<RoomPayload | null>(null);
   const [daypart, setDaypart] = useState<Daypart>(() => currentDaypart());
   const [index, setIndex] = useState(0);
@@ -304,8 +305,54 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
     try {
       if (loadedPlaylistRef.current !== playlistId) {
-        p.loadPlaylist({ list: playlistId, listType: "playlist", index: 0 });
         loadedPlaylistRef.current = playlistId;
+        const before = (() => {
+          try {
+            return p.getVideoData()?.video_id ?? null;
+          } catch {
+            return null;
+          }
+        })();
+        const load = () => {
+          try {
+            p.loadPlaylist({ list: playlistId, listType: "playlist", index: 0 });
+            if (autoplay) p.playVideo();
+          } catch {
+            /* retry below */
+          }
+        };
+        load();
+        // YouTube silently ignores loadPlaylist while it is still swapping
+        // videos, so confirm the switch actually landed and retry if not.
+        if (playlistRetryRef.current !== null) window.clearInterval(playlistRetryRef.current);
+        let tries = 0;
+        playlistRetryRef.current = window.setInterval(() => {
+          tries += 1;
+          if (loadedPlaylistRef.current !== playlistId || tries > 5) {
+            if (playlistRetryRef.current !== null) window.clearInterval(playlistRetryRef.current);
+            playlistRetryRef.current = null;
+            return;
+          }
+          let current: string | null = null;
+          try {
+            current = p.getVideoData()?.video_id ?? null;
+          } catch {
+            current = null;
+          }
+          if (current && current !== before) {
+            if (playlistRetryRef.current !== null) window.clearInterval(playlistRetryRef.current);
+            playlistRetryRef.current = null;
+            if (autoplay) {
+              try {
+                p.playVideo();
+              } catch {
+                /* noop */
+              }
+            }
+            return;
+          }
+          load();
+        }, 1500);
       } else if (autoplay) {
         p.playVideo();
       }

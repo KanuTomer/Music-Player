@@ -1,3 +1,4 @@
+import { useNavigate } from "@tanstack/react-router";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import type { Scene } from "@/lib/rooms.functions";
@@ -11,6 +12,7 @@ export function ThemeSwitcher({
   currentSlug: string;
 }) {
   const player = usePlayer();
+  const navigate = useNavigate();
   const [transitioning, setTransitioning] = useState(false);
   const currentScene = scenes.find((s) => s.slug === currentSlug);
 
@@ -24,9 +26,14 @@ export function ThemeSwitcher({
           const slug = event.currentTarget.value;
           if (slug === currentSlug) return;
           setTransitioning(true);
-          void player.fadeForThemeChange();
-          window.location.assign(`/room/${encodeURIComponent(slug)}`);
+          // client-side navigation keeps the player alive, so playback never
+          // resets back to the "press play" gate
+          void player.fadeForThemeChange().then(async () => {
+            await navigate({ to: "/room/$slug", params: { slug } });
+            setTransitioning(false);
+          });
         }}
+
         className="h-10 w-[9.75rem] appearance-none rounded-full border border-cream/25 bg-night/45 px-3 pr-8 text-xs font-semibold text-cream outline-none backdrop-blur transition-colors hover:bg-night/70 focus:ring-2 focus:ring-accent/70 disabled:opacity-60 sm:w-[12.5rem] sm:text-sm"
       >
         {scenes.map((scene) => (
