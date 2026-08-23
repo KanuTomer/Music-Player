@@ -276,7 +276,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
     try {
       p.loadVideoById(videoId);
-      p.setVolume(themeTransitionRef.current ? 0 : 70);
+      p.setVolume(themeTransitionRef.current ? 0 : Math.round(musicVolumeRef.current * 100));
       if (autoplay) p.playVideo();
       else p.pauseVideo();
       if (autoplay && themeTransitionRef.current) {
@@ -284,7 +284,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         if (volumeTimerRef.current !== null) window.clearInterval(volumeTimerRef.current);
         volumeTimerRef.current = window.setInterval(() => {
           step += 1;
-          p.setVolume(Math.round((70 * step) / 8));
+          p.setVolume(Math.round((musicVolumeRef.current * 100 * step) / 8));
           if (step >= 8) {
             if (volumeTimerRef.current !== null) window.clearInterval(volumeTimerRef.current);
             volumeTimerRef.current = null;
@@ -309,14 +309,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       } else if (autoplay) {
         p.playVideo();
       }
-      p.setVolume(themeTransitionRef.current ? 0 : 70);
+      p.setVolume(themeTransitionRef.current ? 0 : Math.round(musicVolumeRef.current * 100));
       if (!autoplay) p.pauseVideo();
       if (autoplay && themeTransitionRef.current) {
         let step = 0;
         if (volumeTimerRef.current !== null) window.clearInterval(volumeTimerRef.current);
         volumeTimerRef.current = window.setInterval(() => {
           step += 1;
-          p.setVolume(Math.round((70 * step) / 8));
+          p.setVolume(Math.round((musicVolumeRef.current * 100 * step) / 8));
           if (step >= 8) {
             if (volumeTimerRef.current !== null) window.clearInterval(volumeTimerRef.current);
             volumeTimerRef.current = null;
@@ -408,7 +408,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       let step = 7;
       volumeTimerRef.current = window.setInterval(() => {
         step -= 1;
-        p.setVolume(Math.max(0, step * 10));
+        p.setVolume(Math.max(0, Math.round(musicVolumeRef.current * 100 * step / 7)));
         if (step <= 0) {
           if (volumeTimerRef.current !== null) window.clearInterval(volumeTimerRef.current);
           volumeTimerRef.current = null;
@@ -437,11 +437,16 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     musicReady,
     musicBlocked,
     isCuratedPlaylist,
+    nowPlaying,
+    musicVolume,
     ambienceVolume,
     ambienceEnabled,
     openRoom,
     toggle,
     next,
+    previous,
+    seek,
+    setMusicVolume,
     start,
     setAmbience: setAmbienceVol,
     toggleAmbience,
