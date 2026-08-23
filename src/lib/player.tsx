@@ -14,13 +14,24 @@ import { sceneAmbience } from "./scene-art";
 import { setAmbienceVolume, startAmbience, stopAmbience } from "./ambience";
 
 type YTPlayer = {
-  loadPlaylist: (o: { list: string; listType: string }) => void;
+  loadPlaylist: (o: { list: string; listType: "playlist"; index?: number }) => void;
   loadVideoById: (id: string) => void;
   playVideo: () => void;
   pauseVideo: () => void;
   nextVideo: () => void;
   setVolume: (v: number) => void;
   destroy: () => void;
+};
+
+const scenePlaylists: Record<string, string> = {
+  "sainik-dhaba": "PLxyXOYQmKoevrFZwNcodAhyb8K9HVJh6v",
+  "nai-ki-dukaan": "PLRrYJLVviXe3yGN2NIrw0Qj_jEmjQpOKi",
+  "chai-ki-tapri": "PLUByR8i-v0KY",
+  "raj-mistri": "PLd--yIT4E7VcYzwx3iawJLQFdAk9HyAZa",
+  "rail-yatra": "PLluqBUTOXDHUjNguM2wgfaVJhC0OHTTqB",
+  "raat-ki-bus": "PL8xy2vgHsFJjhGJJnwp8mspv27hN4K_Bg",
+  "sarkari-daftar": "PLWaM5_jNo2Bb7ip1ytNk2haslBA-eMHuk",
+  "doordarshan-shaam": "PL5614CFEE77DE9D5F",
 };
 
 type PlayerState = {
@@ -88,6 +99,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const themeTransitionRef = useRef(false);
   const volumeTimerRef = useRef<number | null>(null);
   const resolvedRef = useRef<Map<string, string>>(new Map());
+  const loadedPlaylistRef = useRef<string | null>(null);
   const [room, setRoom] = useState<RoomPayload | null>(null);
   const [daypart, setDaypart] = useState<Daypart>(() => currentDaypart());
   const [index, setIndex] = useState(0);
@@ -181,6 +193,27 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const cueRoomPlaylist = useCallback((slug: string, autoplay: boolean) => {
+    const p = playerRef.current;
+    const playlistId = scenePlaylists[slug];
+    if (!p || !playlistId) return false;
+
+    try {
+      if (loadedPlaylistRef.current !== playlistId) {
+        p.loadPlaylist({ list: playlistId, listType: "playlist", index: 0 });
+        loadedPlaylistRef.current = playlistId;
+      } else if (autoplay) {
+        p.playVideo();
+      }
+      p.setVolume(themeTransitionRef.current ? 0 : 70);
+      if (!autoplay) p.pauseVideo();
+      return true;
+    } catch {
+      loadedPlaylistRef.current = null;
+      return false;
+    }
+  }, []);
+
 
   const openRoom = useCallback(
     (next: RoomPayload) => {
@@ -213,9 +246,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (needsGate || !musicReady) return;
-    void cueTrack(track, true);
+    if (!room || !cueRoomPlaylist(room.scene.slug, true)) void cueTrack(track, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [track?.id, musicReady, needsGate]);
+  }, [room?.scene.slug, musicReady, needsGate]);
 
   const start = useCallback(() => {
     setNeedsGate(false);
@@ -240,8 +273,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, [ambienceVolume, isPlaying, needsGate, start]);
 
   const next = useCallback(() => {
+    if (room && scenePlaylists[room.scene.slug] && playerRef.current) {
+      playerRef.current.nextVideo();
+      return;
+    }
     setIndex((i) => (playlist.length ? (i + 1) % playlist.length : 0));
-  }, [playlist.length]);
+  }, [playlist.length, room]);
 
   const fadeForThemeChange = useCallback(() => {
     themeTransitionRef.current = true;
@@ -266,6 +303,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const leave = useCallback(() => {
     setRoom(null);
+    loadedPlaylistRef.current = null;
     setNeedsGate(true);
     setIsPlaying(false);
     stopAmbience();
