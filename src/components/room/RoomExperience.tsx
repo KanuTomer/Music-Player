@@ -181,6 +181,7 @@ export function RoomExperience({
       <div className="pointer-events-none absolute inset-x-0 bottom-3 z-30 flex justify-center px-3">
         <ControlCluster
           track={player.track}
+          isCuratedPlaylist={player.isCuratedPlaylist}
           isPlaying={player.isPlaying}
           onToggle={player.toggle}
           onNext={player.next}

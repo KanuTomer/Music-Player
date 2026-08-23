@@ -43,6 +43,7 @@ type PlayerState = {
   needsGate: boolean;
   musicReady: boolean;
   musicBlocked: boolean;
+  isCuratedPlaylist: boolean;
   ambienceVolume: number;
   ambienceEnabled: boolean;
   openRoom: (room: RoomPayload) => void;
@@ -115,6 +116,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     [room, daypart],
   );
   const track = playlist[index % Math.max(playlist.length, 1)] ?? null;
+  const isCuratedPlaylist = Boolean(room && scenePlaylists[room.scene.slug]);
 
   // IST daypart ticks over while a room is left running for hours
   useEffect(() => {
@@ -207,6 +209,19 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       }
       p.setVolume(themeTransitionRef.current ? 0 : 70);
       if (!autoplay) p.pauseVideo();
+      if (autoplay && themeTransitionRef.current) {
+        let step = 0;
+        if (volumeTimerRef.current !== null) window.clearInterval(volumeTimerRef.current);
+        volumeTimerRef.current = window.setInterval(() => {
+          step += 1;
+          p.setVolume(Math.round((70 * step) / 8));
+          if (step >= 8) {
+            if (volumeTimerRef.current !== null) window.clearInterval(volumeTimerRef.current);
+            volumeTimerRef.current = null;
+            themeTransitionRef.current = false;
+          }
+        }, 100);
+      }
       return true;
     } catch {
       loadedPlaylistRef.current = null;
@@ -319,6 +334,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     needsGate,
     musicReady,
     musicBlocked,
+    isCuratedPlaylist,
     ambienceVolume,
     ambienceEnabled,
     openRoom,
