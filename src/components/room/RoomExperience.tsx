@@ -196,20 +196,6 @@ export function RoomExperience({
       />
 
 
-      {scene.gag_label && (
-        <div className="absolute right-3 bottom-28 z-30 sm:bottom-24">
-        {scene.gag_label && (
-          <button
-            type="button"
-            onClick={() => playGag(gagKind)}
-            className="rounded-full border border-cream/25 bg-night/45 px-2.5 py-1 text-[11px] font-semibold text-cream backdrop-blur transition-colors hover:bg-accent hover:text-accent-foreground"
-          >
-            {scene.gag_label}
-          </button>
-        )}
-        </div>
-      )}
-
       <div className="pointer-events-none absolute inset-x-0 bottom-3 z-30 flex justify-center px-3">
         <ControlCluster
           track={player.track}
