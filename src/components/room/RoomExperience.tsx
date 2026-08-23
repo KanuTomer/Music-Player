@@ -120,7 +120,7 @@ export function RoomExperience({
       />
 
       {/* top row: live pill · change theme · share */}
-      <div className="absolute inset-x-0 top-0 z-30 flex items-center justify-between gap-2 p-3">
+      <div className="absolute inset-x-0 top-0 z-50 flex items-center justify-between gap-2 p-3">
         <div className="flex items-center gap-2 rounded-full border border-cream/20 bg-night/45 px-3 py-1.5 backdrop-blur">
           <span className="animate-bulb inline-block size-1.5 rounded-full bg-accent" aria-hidden />
           <span className="text-[12px] font-semibold text-cream">{social.listeners}</span>
