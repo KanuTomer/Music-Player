@@ -4,7 +4,7 @@ import { usePlayer } from "@/lib/player";
 
 /** Persistent now-playing bar shown when the user navigates away from a room. */
 export function MiniPlayer() {
-  const { room, track, isPlaying, isCuratedPlaylist, toggle, leave } = usePlayer();
+  const { room, track, isPlaying, nowPlaying, toggle, leave } = usePlayer();
   if (!room) return null;
 
   return (
