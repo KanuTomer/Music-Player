@@ -304,6 +304,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (!p || !playlistId) return false;
 
     try {
+      console.log("[dbg] cue", slug, playlistId, loadedPlaylistRef.current);
       if (loadedPlaylistRef.current !== playlistId) {
         loadedPlaylistRef.current = playlistId;
         const before = (() => {
@@ -381,6 +382,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const openRoom = useCallback(
     (next: RoomPayload) => {
+      console.log("[dbg] openRoom", next.scene.slug);
       setRoom((prev) => {
         if (prev?.scene.slug === next.scene.slug) return prev;
         setIndex(0);
