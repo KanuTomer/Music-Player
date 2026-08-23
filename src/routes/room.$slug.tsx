@@ -102,12 +102,17 @@ function RoomPage() {
           active ? "scale-105" : "scale-100"
         }`}
       />
-      <div className="halftone pointer-events-none absolute inset-0 opacity-25" aria-hidden />
+      <div className="halftone pointer-events-none absolute inset-0 opacity-20" aria-hidden />
       {scene.slug === "doordarshan-shaam" && (
         <div className="scanlines pointer-events-none absolute inset-0 opacity-60" aria-hidden />
       )}
+      <div className="vignette pointer-events-none absolute inset-0" aria-hidden />
       <div
-        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-background/55 via-transparent to-background/70"
+        className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-night/70 to-transparent"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-night/80 to-transparent"
         aria-hidden
       />
 
@@ -117,27 +122,36 @@ function RoomPage() {
           <Link
             to="/"
             aria-label="Back to all rooms"
-            className="flex size-10 items-center justify-center rounded-full border border-border/70 bg-background/80 backdrop-blur"
+            className="flex size-10 items-center justify-center rounded-full border border-cream/25 bg-night/45 text-cream backdrop-blur transition-colors hover:bg-night/65"
           >
             <ArrowLeft className="size-4" aria-hidden />
           </Link>
-          <div className="paper rounded-lg border border-border/60 bg-background/75 px-2.5 py-1 backdrop-blur">
-            <p className="font-signage z-2 text-sm leading-tight font-bold">
-              {scene.title_hi} / {scene.title_en}
+          <div className="rounded-xl border border-cream/20 bg-night/45 px-3 py-1.5 backdrop-blur">
+            <p className="signage-text font-deva text-sm leading-tight text-cream">
+              {scene.title_hi}
+              <span className="ml-1.5 text-[11px] font-semibold tracking-[0.12em] text-cream/60 uppercase">
+                {scene.title_en}
+              </span>
             </p>
-            <p className="z-2 flex items-center gap-2 text-[11px] leading-tight text-muted-foreground">
-              <span>{social.listeners} sun rahe hain</span>
-              <ISTClock />
+            <p className="flex items-center gap-2 text-[11px] leading-tight text-cream/65">
+              <span className="flex items-center gap-1">
+                <span className="animate-bulb inline-block size-1.5 rounded-full bg-accent" />
+                {social.listeners} sun rahe hain
+              </span>
+              <span className="text-cream/35">·</span>
+              <ISTClock inherit className="text-[11px]" />
             </p>
+
           </div>
         </div>
+
 
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={share}
             aria-label="Share this room"
-            className="flex size-10 items-center justify-center rounded-full border border-border/70 bg-background/80 backdrop-blur"
+            className="flex size-10 items-center justify-center rounded-full border border-cream/25 bg-night/45 text-cream backdrop-blur transition-colors hover:bg-night/65"
           >
             <Share2 className="size-4" aria-hidden />
           </button>
@@ -156,7 +170,7 @@ function RoomPage() {
             type="button"
             onClick={() => social.react(emoji)}
             aria-label={`React with ${emoji}`}
-            className="flex size-11 items-center justify-center rounded-full border border-border/70 bg-background/80 text-xl backdrop-blur transition-transform active:scale-90"
+            className="flex size-11 items-center justify-center rounded-full border border-cream/25 bg-night/45 text-xl backdrop-blur transition-transform hover:scale-110 hover:bg-night/65 active:scale-90"
           >
             {emoji}
           </button>
@@ -165,7 +179,7 @@ function RoomPage() {
           <button
             type="button"
             onClick={() => playGag(gagKind)}
-            className="rounded-full border border-border/70 bg-background/80 px-2.5 py-1 text-[11px] font-medium backdrop-blur"
+            className="rounded-full border border-cream/25 bg-night/45 px-2.5 py-1 text-[11px] font-semibold text-cream backdrop-blur transition-colors hover:bg-accent hover:text-accent-foreground"
           >
             {scene.gag_label}
           </button>
@@ -187,24 +201,39 @@ function RoomPage() {
 
       {/* autoplay gate */}
       {player.needsGate && (
-        <div className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 bg-background/70 px-6 text-center backdrop-blur-sm">
-          <p className="font-signage text-2xl leading-tight font-extrabold">
-            {scene.title_hi}
-          </p>
-          <p className="max-w-sm text-sm text-muted-foreground">{scene.hook}</p>
-          <button
-            type="button"
-            onClick={player.start}
-            className="mt-1 flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-lift transition-transform active:scale-95"
-          >
-            <Sparkles className="size-4" aria-hidden />
-            Andar aa jao — press play
-          </button>
-          <p className="text-[11px] text-muted-foreground">
-            Headphones lagao. Ye kamra chalta rahega.
-          </p>
+        <div className="absolute inset-0 z-40 flex flex-col items-center justify-center px-6 text-center">
+          <div
+            className="absolute inset-0 bg-night/72 backdrop-blur-[3px]"
+            aria-hidden
+          />
+          <div className="vignette absolute inset-0" aria-hidden />
+
+          <div className="relative flex w-full max-w-sm flex-col items-center gap-3">
+            <span className="ticket bg-accent px-3 py-[3px] text-[9.5px] font-bold tracking-[0.18em] text-accent-foreground uppercase">
+              {scene.region ?? scene.category} · live
+            </span>
+            <h1 className="signage-text font-deva text-3xl leading-tight text-cream">
+              {scene.title_hi}
+            </h1>
+            <p className="text-[12.5px] font-medium tracking-[0.16em] text-cream/60 uppercase">
+              {scene.title_en}
+            </p>
+            <p className="max-w-xs text-sm leading-relaxed text-cream/80">{scene.hook}</p>
+            <button
+              type="button"
+              onClick={player.start}
+              className="animate-bulb mt-2 flex items-center gap-2 rounded-full bg-accent px-7 py-3.5 text-sm font-bold text-accent-foreground shadow-lift transition-transform hover:scale-[1.03] active:scale-95"
+            >
+              <Sparkles className="size-4" aria-hidden />
+              Andar aa jao — press play
+            </button>
+            <p className="text-[11px] text-cream/55">
+              Headphones lagao. Ye kamra chalta rahega.
+            </p>
+          </div>
         </div>
       )}
+
     </div>
   );
 }
