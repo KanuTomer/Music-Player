@@ -369,7 +369,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const openRoom = useCallback(
     (next: RoomPayload) => {
-      console.log("[dbg] openRoom", next.scene.slug);
       setRoom((prev) => {
         if (prev?.scene.slug === next.scene.slug) return prev;
         setIndex(0);
