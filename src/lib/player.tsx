@@ -50,6 +50,7 @@ const scenePlaylists: Record<string, string> = {
   "sarkari-daftar": "PLJABXrnHALkJHG7vK7QMhJ6_Wxl6OPriF",
   "doordarshan-shaam": "PLiIasA9CetIoIgLf6e_EXMVbAPr-04g6z",
   "bhojpuriya-devara": "PLJ3M6AoVR-gZtOkB4v-_XgzYQz_6UQssJ",
+  "corporate-majdoor": "PLLounUW9rgqHr6YYR7r4oQOIeqdCZ7gO8",
 };
 
 
