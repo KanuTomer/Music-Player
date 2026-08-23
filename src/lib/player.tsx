@@ -19,21 +19,39 @@ type YTPlayer = {
   playVideo: () => void;
   pauseVideo: () => void;
   nextVideo: () => void;
+  previousVideo: () => void;
   setVolume: (v: number) => void;
+  seekTo: (s: number, allowSeekAhead?: boolean) => void;
+  getCurrentTime: () => number;
+  getDuration: () => number;
+  getVideoData: () => { video_id?: string; title?: string; author?: string };
+  getPlaylistIndex: () => number;
+  getPlaylist: () => string[] | null;
   destroy: () => void;
 };
 
+export type NowPlaying = {
+  videoId: string | null;
+  title: string | null;
+  channel: string | null;
+  position: number;
+  duration: number;
+  index: number;
+  total: number;
+};
+
 const scenePlaylists: Record<string, string> = {
-  "sainik-dhaba": "PLxyXOYQmKoevrFZwNcodAhyb8K9HVJh6v",
+  "sainik-dhaba": "PLO1WqL1Pm6ic",
   "nai-ki-dukaan": "PLRrYJLVviXe3yGN2NIrw0Qj_jEmjQpOKi",
   "chai-ki-tapri": "PLUByR8i-v0KY",
   "raj-mistri": "PLd--yIT4E7VcYzwx3iawJLQFdAk9HyAZa",
-  "rail-yatra": "PLluqBUTOXDHUjNguM2wgfaVJhC0OHTTqB",
+  "rail-yatra": "PLQdfb6nEJz_X-0Tkwec2N2Sj83d_DM36d",
   "raat-ki-bus": "PL8xy2vgHsFJjhGJJnwp8mspv27hN4K_Bg",
-  "sarkari-daftar": "PLWaM5_jNo2Bb7ip1ytNk2haslBA-eMHuk",
-  "doordarshan-shaam": "PL5614CFEE77DE9D5F",
+  "sarkari-daftar": "PLJABXrnHALkJHG7vK7QMhJ6_Wxl6OPriF",
+  "doordarshan-shaam": "PLx99j5cYmjF6IyvaICVMuC_SY7SNo0Rwo",
   "bhojpuriya-devara": "PLJ3M6AoVR-gZtOkB4v-_XgzYQz_6UQssJ",
 };
+
 
 type PlayerState = {
   room: RoomPayload | null;
