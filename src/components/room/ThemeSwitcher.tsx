@@ -25,7 +25,10 @@ export function ThemeSwitcher({
           const slug = event.target.value;
           if (slug === currentSlug) return;
           setTransitioning(true);
-          await player.fadeForThemeChange();
+          await Promise.race([
+            player.fadeForThemeChange(),
+            new Promise<void>((resolve) => window.setTimeout(resolve, 450)),
+          ]);
           await navigate({ to: "/room/$slug", params: { slug } });
         }}
         className="h-10 w-[9.75rem] appearance-none rounded-full border border-cream/25 bg-night/45 px-3 pr-8 text-xs font-semibold text-cream outline-none backdrop-blur transition-colors hover:bg-night/70 focus:ring-2 focus:ring-accent/70 disabled:opacity-60 sm:w-[12.5rem] sm:text-sm"
