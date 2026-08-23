@@ -14,6 +14,7 @@ import { useState } from "react";
 import type { Track } from "@/lib/rooms.functions";
 import type { NowPlaying } from "@/lib/player";
 import { Slider } from "@/components/ui/slider";
+import { Button } from "@/components/ui/button";
 
 const NOISE =
   /\b(official\s*(music\s*)?(video|audio|lyrical|lyric)?|full\s*(video\s*)?song|lyrical(\s*video)?|hd|4k|remastered|audio|video song|with lyrics)\b/gi;
@@ -84,7 +85,7 @@ export function ControlCluster({
   const title = liveTitle ?? track?.title ?? "Tuning in…";
   const subtitle =
     subtitleFrom(nowPlaying.title, nowPlaying.channel) ??
-    ([track?.artist, track?.year].filter(Boolean).join(" · ") || "Ambience only");
+    ([track?.artist, track?.year].filter(Boolean).join(" · ") || "गीत की जानकारी आ रही है…");
 
   const duration = nowPlaying.duration;
   const progress = duration > 0 ? Math.min(100, (nowPlaying.position / duration) * 100) : 0;
@@ -95,75 +96,57 @@ export function ControlCluster({
     : null;
 
   return (
-    <div className="pointer-events-auto w-[min(96vw,44rem)] rounded-2xl border border-cream/20 bg-night/60 px-3 py-2.5 text-cream shadow-lift backdrop-blur-md">
-      <div className="z-2 flex items-center gap-2.5">
-        <span
-          className={`relative flex size-10 shrink-0 items-center justify-center rounded-xl border border-cream/20 bg-cream/10 ${
-            isPlaying ? "animate-pulse" : ""
-          }`}
-          aria-hidden
-        >
+    <div className="pointer-events-auto w-[min(96vw,50rem)] rounded-lg border-2 border-ink/70 bg-cinema-cream/95 p-2.5 text-ink shadow-lift backdrop-blur-sm sm:p-3">
+      <div className="flex items-center gap-3 border-b border-ink/20 pb-2.5">
+        <span className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-sm border border-ink/30 bg-night sm:size-14" aria-hidden>
           {nowPlaying.videoId ? (
             <img
               src={`https://i.ytimg.com/vi/${nowPlaying.videoId}/default.jpg`}
               alt=""
-              className="size-full rounded-xl object-cover"
+              className="size-full object-cover"
             />
           ) : (
-            <Music2 className="size-4 text-cream/70" />
+            <Music2 className="size-5 text-cream/70" />
           )}
         </span>
 
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[13.5px] leading-tight font-semibold text-cream">{title}</p>
-          <p className="truncate text-[11px] leading-tight text-cream/65">
-            {musicBlocked ? "Music unavailable here — ambience is still playing." : subtitle}
+          <p className="truncate font-cinema-display text-base leading-tight text-ink sm:text-lg">{title}</p>
+          <p className="mt-0.5 truncate text-[11px] font-medium text-ink/65 sm:text-xs">
+            {musicBlocked ? "गीत उपलब्ध नहीं है — माहौल की आवाज़ चल रही है।" : subtitle}
           </p>
         </div>
-
-        <div className="flex shrink-0 items-center gap-1.5">
-          <button
-            type="button"
-            onClick={onPrevious}
-            aria-label="Previous track"
-            className="flex size-8 items-center justify-center rounded-full border border-cream/25 text-cream transition-colors hover:bg-cream/15"
-          >
-            <SkipBack className="size-3.5" aria-hidden />
-          </button>
-          <button
-            type="button"
-            onClick={onToggle}
-            aria-label={isPlaying ? "Pause" : "Play"}
-            className="flex size-10 items-center justify-center rounded-full bg-accent text-accent-foreground shadow-tile transition-transform hover:scale-105 active:scale-95"
-          >
-            {isPlaying ? <Pause className="size-4" aria-hidden /> : <Play className="size-4" aria-hidden />}
-          </button>
-          <button
-            type="button"
-            onClick={onNext}
-            aria-label="Next track"
-            className="flex size-8 items-center justify-center rounded-full border border-cream/25 text-cream transition-colors hover:bg-cream/15"
-          >
-            <SkipForward className="size-3.5" aria-hidden />
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowMix((s) => !s)}
-            aria-expanded={showMix}
-            aria-label="Sound mix"
-            className={`flex size-8 items-center justify-center rounded-full border transition-colors ${
-              showMix
-                ? "border-accent/60 bg-accent/15 text-accent"
-                : "border-cream/25 text-cream/75 hover:bg-cream/15"
-            }`}
-          >
-            <Volume2 className="size-3.5" aria-hidden />
-          </button>
-        </div>
+        {isCuratedPlaylist && nowPlaying.total > 0 && (
+          <span className="shrink-0 text-[10px] font-semibold tabular-nums text-ink/50">
+            {nowPlaying.index + 1}/{nowPlaying.total}
+          </span>
+        )}
       </div>
 
-      <div className="z-2 mt-2 flex items-center gap-2">
-        <span className="w-8 shrink-0 text-right text-[10px] tabular-nums text-cream/55">
+      <div className="mt-2.5 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 sm:gap-4">
+        <Button type="button" variant="ghost" size="icon" onClick={onPrevious} aria-label="Previous track" className="size-10 rounded-full border border-ink/30 text-ink hover:bg-ink/10">
+          <SkipBack className="size-4" aria-hidden />
+        </Button>
+
+        <div className="relative flex h-14 min-w-0 items-center justify-center gap-5 overflow-hidden rounded-sm border-2 border-ink/60 bg-night px-4 shadow-inner sm:h-16 sm:gap-10">
+          <div className="pointer-events-none absolute inset-x-5 top-1.5 h-px bg-cream/15" aria-hidden />
+          {["left", "right"].map((side) => (
+            <span key={side} className={`cassette-reel relative flex size-10 items-center justify-center rounded-full border-[5px] border-cream/75 bg-ink ${isPlaying ? "cassette-reel-playing" : ""}`} aria-hidden>
+              <span className="absolute h-full w-1 bg-ink" />
+              <span className="absolute h-1 w-full bg-ink" />
+              <span className="relative size-2 rounded-full bg-cinema-gold" />
+            </span>
+          ))}
+          <div className="absolute bottom-0 left-1/2 h-3 w-24 -translate-x-1/2 border-x border-t border-cream/25 bg-ink" aria-hidden />
+        </div>
+
+        <Button type="button" variant="ghost" size="icon" onClick={onNext} aria-label="Next track" className="size-10 rounded-full border border-ink/30 text-ink hover:bg-ink/10">
+          <SkipForward className="size-4" aria-hidden />
+        </Button>
+      </div>
+
+      <div className="mt-2.5 flex items-center gap-2">
+        <span className="w-8 shrink-0 text-right text-[10px] tabular-nums text-ink/55">
           {clock(nowPlaying.position)}
         </span>
         <button
@@ -174,27 +157,28 @@ export function ControlCluster({
             const rect = e.currentTarget.getBoundingClientRect();
             onSeek(((e.clientX - rect.left) / rect.width) * duration);
           }}
-          className="group relative h-2.5 flex-1 rounded-full"
+          className="group relative h-3 flex-1 rounded-full"
         >
-          <span className="absolute inset-x-0 top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-cream/20" />
+          <span className="absolute inset-x-0 top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-ink/20" />
           <span
-            className="absolute left-0 top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-accent transition-[width]"
+            className="absolute left-0 top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-terracotta transition-[width]"
             style={{ width: `${progress}%` }}
           />
         </button>
-        <span className="w-8 shrink-0 text-[10px] tabular-nums text-cream/55">{clock(duration)}</span>
-        {isCuratedPlaylist && nowPlaying.total > 0 && (
-          <span className="hidden shrink-0 text-[10px] tabular-nums text-cream/45 sm:inline">
-            {nowPlaying.index + 1}/{nowPlaying.total}
-          </span>
-        )}
+        <span className="w-8 shrink-0 text-[10px] tabular-nums text-ink/55">{clock(duration)}</span>
+        <Button type="button" onClick={onToggle} aria-label={isPlaying ? "Pause" : "Play"} size="icon" className="size-11 rounded-full bg-terracotta text-primary-foreground shadow-tile hover:bg-terracotta/90">
+          {isPlaying ? <Pause className="size-4" aria-hidden /> : <Play className="size-4" aria-hidden />}
+        </Button>
+        <Button type="button" variant="ghost" size="icon" onClick={() => setShowMix((s) => !s)} aria-expanded={showMix} aria-label="Sound mix" className={`size-9 rounded-full border border-ink/25 ${showMix ? "bg-mustard text-ink" : "text-ink/70 hover:bg-ink/10"}`}>
+          <Volume2 className="size-4" aria-hidden />
+        </Button>
         {watchUrl && (
           <a
             href={watchUrl}
             target="_blank"
             rel="noreferrer"
             aria-label="Open on YouTube"
-            className="shrink-0 text-cream/55 transition-colors hover:text-cream"
+            className="shrink-0 text-ink/55 transition-colors hover:text-ink"
           >
             <ExternalLink className="size-3.5" aria-hidden />
           </a>
@@ -202,10 +186,10 @@ export function ControlCluster({
       </div>
 
       {showMix && (
-        <div className="z-2 mt-2 grid gap-2 border-t border-cream/20 pt-2 sm:grid-cols-2">
+        <div className="mt-2.5 grid gap-2.5 border-t border-ink/20 pt-2.5 sm:grid-cols-2">
           <div className="flex items-center gap-2">
-            <Volume1 className="size-3.5 shrink-0 text-cream/65" aria-hidden />
-            <span className="w-14 shrink-0 text-[10.5px] text-cream/65">Music</span>
+            <Volume1 className="size-3.5 shrink-0 text-ink/65" aria-hidden />
+            <span className="w-14 shrink-0 text-[10.5px] text-ink/65">Music</span>
             <Slider
               value={[Math.round(musicVolume * 100)]}
               max={100}
@@ -219,7 +203,7 @@ export function ControlCluster({
               type="button"
               onClick={onToggleAmbience}
               aria-label={ambienceEnabled ? "Turn off theme sound" : "Turn on theme sound"}
-              className={`shrink-0 ${ambienceEnabled ? "text-accent" : "text-cream/45"}`}
+              className={`shrink-0 ${ambienceEnabled ? "text-terracotta" : "text-ink/45"}`}
             >
               {ambienceEnabled ? (
                 <Waves className="size-3.5" aria-hidden />
@@ -227,7 +211,7 @@ export function ControlCluster({
                 <VolumeX className="size-3.5" aria-hidden />
               )}
             </button>
-            <span className="w-14 shrink-0 text-[10.5px] text-cream/65">Ambience</span>
+            <span className="w-14 shrink-0 text-[10.5px] text-ink/65">Ambience</span>
             <Slider
               value={[Math.round(ambience * 100)]}
               max={100}

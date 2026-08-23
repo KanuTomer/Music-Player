@@ -320,6 +320,16 @@
   }
 }
 
+@keyframes cassette-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.cassette-reel-playing {
+  animation: cassette-spin 2.8s linear infinite;
+}
+
 @utility animate-drift-up {
   animation: drift-up 2.6s ease-out forwards;
 }
