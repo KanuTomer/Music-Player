@@ -125,7 +125,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const volumeTimerRef = useRef<number | null>(null);
   const resolvedRef = useRef<Map<string, string>>(new Map());
   const loadedPlaylistRef = useRef<string | null>(null);
-  const playlistRetryRef = useRef<number | null>(null);
   const [room, setRoom] = useState<RoomPayload | null>(null);
   const [daypart, setDaypart] = useState<Daypart>(() => currentDaypart());
   const [index, setIndex] = useState(0);
