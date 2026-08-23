@@ -48,7 +48,7 @@ const scenePlaylists: Record<string, string> = {
   "rail-yatra": "PLQdfb6nEJz_X-0Tkwec2N2Sj83d_DM36d",
   "raat-ki-bus": "PL8xy2vgHsFJjhGJJnwp8mspv27hN4K_Bg",
   "sarkari-daftar": "PLJABXrnHALkJHG7vK7QMhJ6_Wxl6OPriF",
-  "doordarshan-shaam": "PLx99j5cYmjF6IyvaICVMuC_SY7SNo0Rwo",
+  "doordarshan-shaam": "PLiIasA9CetIoIgLf6e_EXMVbAPr-04g6z",
   "bhojpuriya-devara": "PLJ3M6AoVR-gZtOkB4v-_XgzYQz_6UQssJ",
 };
 
@@ -226,34 +226,70 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     return () => window.clearInterval(t);
   }, []);
 
+  const buildPlayer = useCallback((playlistId: string | null, autoplay: boolean) => {
+    const host = hostRef.current;
+    if (!host || !window.YT?.Player) return null;
+    try {
+      playerRef.current?.destroy();
+    } catch {
+      /* already gone */
+    }
+    host.innerHTML = "";
+    const el = document.createElement("div");
+    host.appendChild(el);
+    setMusicReady(false);
+    playerRef.current = new window.YT.Player(el, {
+      height: "1",
+      width: "1",
+      playerVars: {
+        autoplay: autoplay ? 1 : 0,
+        controls: 0,
+        playsinline: 1,
+        ...(playlistId ? { list: playlistId, listType: "playlist" } : {}),
+      },
+      events: {
+        onReady: () => {
+          setMusicReady(true);
+          const p = playerRef.current;
+          if (!p) return;
+          try {
+            p.setVolume(Math.round(musicVolumeRef.current * 100));
+            if (autoplay) p.playVideo();
+          } catch {
+            /* noop */
+          }
+        },
+        onError: () => {
+          setMusicBlocked(true);
+          try {
+            playerRef.current?.nextVideo();
+          } catch {
+            /* noop */
+          }
+        },
+        onStateChange: (e: { data: number }) => {
+          if (e.data === 1) {
+            setIsPlaying(true);
+            setMusicBlocked(false);
+          }
+          if (e.data === 2) setIsPlaying(false);
+        },
+      },
+    });
+    return playerRef.current;
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     void loadYouTubeApi().then(() => {
-      if (cancelled || !hostRef.current || playerRef.current || !window.YT?.Player) return;
-      playerRef.current = new window.YT.Player(hostRef.current, {
-        height: "1",
-        width: "1",
-        playerVars: { autoplay: 0, controls: 0, playsinline: 1 },
-        events: {
-          onReady: () => setMusicReady(true),
-          onError: () => {
-            setMusicBlocked(true);
-            setIndex((i) => i + 1);
-          },
-          onStateChange: (e: { data: number }) => {
-            if (e.data === 1) {
-              setIsPlaying(true);
-              setMusicBlocked(false);
-            }
-            if (e.data === 2) setIsPlaying(false);
-          },
-        },
-      });
+      if (cancelled || playerRef.current) return;
+      buildPlayer(null, false);
     });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [buildPlayer]);
+
 
   const cueTrack = useCallback(async (t: Track | null, autoplay: boolean) => {
     const p = playerRef.current;
@@ -297,39 +333,37 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const cueRoomPlaylist = useCallback((slug: string, autoplay: boolean) => {
-    const p = playerRef.current;
-    const playlistId = scenePlaylists[slug];
-    if (!p || !playlistId) return false;
+  const cueRoomPlaylist = useCallback(
+    (slug: string, autoplay: boolean) => {
+      const playlistId = scenePlaylists[slug];
+      if (!playlistId) return false;
 
-    try {
-      if (loadedPlaylistRef.current !== playlistId) {
-        p.loadPlaylist({ list: playlistId, listType: "playlist", index: 0 });
-        loadedPlaylistRef.current = playlistId;
-      } else if (autoplay) {
-        p.playVideo();
-      }
-      p.setVolume(themeTransitionRef.current ? 0 : Math.round(musicVolumeRef.current * 100));
-      if (!autoplay) p.pauseVideo();
-      if (autoplay && themeTransitionRef.current) {
-        let step = 0;
-        if (volumeTimerRef.current !== null) window.clearInterval(volumeTimerRef.current);
-        volumeTimerRef.current = window.setInterval(() => {
-          step += 1;
-          p.setVolume(Math.round((musicVolumeRef.current * 100 * step) / 8));
-          if (step >= 8) {
-            if (volumeTimerRef.current !== null) window.clearInterval(volumeTimerRef.current);
+      try {
+        if (loadedPlaylistRef.current !== playlistId) {
+          // Swapping the list in place is unreliable, so rebuild the embed
+          // with the new playlist baked into its params.
+          loadedPlaylistRef.current = playlistId;
+          themeTransitionRef.current = false;
+          if (volumeTimerRef.current !== null) {
+            window.clearInterval(volumeTimerRef.current);
             volumeTimerRef.current = null;
-            themeTransitionRef.current = false;
           }
-        }, 100);
+          const built = buildPlayer(playlistId, autoplay);
+          return Boolean(built);
+        }
+        const p = playerRef.current;
+        if (!p) return false;
+        if (autoplay) p.playVideo();
+        else p.pauseVideo();
+        p.setVolume(Math.round(musicVolumeRef.current * 100));
+        return true;
+      } catch {
+        loadedPlaylistRef.current = null;
+        return false;
       }
-      return true;
-    } catch {
-      loadedPlaylistRef.current = null;
-      return false;
-    }
-  }, []);
+    },
+    [buildPlayer],
+  );
 
 
   const openRoom = useCallback(
