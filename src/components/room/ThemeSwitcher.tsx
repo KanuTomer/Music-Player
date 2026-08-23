@@ -21,7 +21,7 @@ export function ThemeSwitcher({
         aria-label="Change theme"
         value={currentSlug}
         disabled={transitioning}
-        onChange={(event) => {
+        onInput={(event) => {
           const slug = event.target.value;
           if (slug === currentSlug) return;
           setTransitioning(true);
