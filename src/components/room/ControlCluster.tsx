@@ -57,10 +57,6 @@ export function ControlCluster({
   onSeek,
   musicVolume,
   onMusicVolume,
-  ambience,
-  ambienceEnabled,
-  onAmbience,
-  onToggleAmbience,
   musicBlocked,
 }: {
   track: Track | null;
@@ -73,10 +69,6 @@ export function ControlCluster({
   onSeek: (seconds: number) => void;
   musicVolume: number;
   onMusicVolume: (v: number) => void;
-  ambience: number;
-  ambienceEnabled: boolean;
-  onAmbience: (v: number) => void;
-  onToggleAmbience: () => void;
   musicBlocked: boolean;
 }) {
   const [showMix, setShowMix] = useState(false);

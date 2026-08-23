@@ -10,7 +10,7 @@ import {
 } from "react";
 import { resolveTrackVideo, type RoomPayload, type Track } from "./rooms.functions";
 import { currentDaypart, forDaypart, type Daypart } from "./dayparts";
-import { setAmbienceVolume, startAmbience, stopAmbience } from "./ambience";
+import { setAmbienceVolume, stopAmbience } from "./ambience";
 
 type YTPlayer = {
   loadPlaylist: (o: { list: string; listType: "playlist"; index?: number }) => void;
