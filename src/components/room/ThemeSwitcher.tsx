@@ -12,11 +12,12 @@ export function ThemeSwitcher({
 }) {
   const player = usePlayer();
   const [transitioning, setTransitioning] = useState(false);
+  const currentScene = scenes.find((s) => s.slug === currentSlug);
 
   return (
     <div className="relative">
       <select
-        aria-label="Change theme"
+        aria-label="Theme"
         value={currentSlug}
         disabled={transitioning}
         onChange={(event) => {
@@ -35,6 +36,9 @@ export function ThemeSwitcher({
         ))}
       </select>
       <ChevronDown className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-cream/70" aria-hidden />
+      {currentScene && (
+        <span className="sr-only">{currentScene.title_en}</span>
+      )}
     </div>
   );
 }
