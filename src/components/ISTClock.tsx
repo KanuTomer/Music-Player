@@ -10,10 +10,12 @@ export function ISTClock({
   /** inherit the surrounding text color instead of using page tokens */
   inherit?: boolean;
 }) {
-  const [label, setLabel] = useState(() => istTimeLabel());
-  const [part, setPart] = useState(() => currentDaypart());
+  const [label, setLabel] = useState<string | null>(null);
+  const [part, setPart] = useState<ReturnType<typeof currentDaypart> | null>(null);
 
   useEffect(() => {
+    setLabel(istTimeLabel());
+    setPart(currentDaypart());
     const t = window.setInterval(() => {
       setLabel(istTimeLabel());
       setPart(currentDaypart());
@@ -30,9 +32,11 @@ export function ISTClock({
       )}
     >
       <span className={cn("font-medium", inherit ? "" : "text-foreground")}>
-        {label} IST
+        {label ? `${label} IST` : ""}
       </span>
-      <span className="hidden opacity-70 sm:inline">{daypartLabel[part]}</span>
+      <span className="hidden opacity-70 sm:inline">
+        {part ? daypartLabel[part] : ""}
+      </span>
     </span>
   );
 }
