@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { listScenes, type Scene } from "@/lib/rooms.functions";
-import { GenerateCard, SceneCard } from "@/components/SceneCard";
+import { SceneCard } from "@/components/SceneCard";
 import { TopBar } from "@/components/TopBar";
 import { MiniPlayer } from "@/components/MiniPlayer";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,35 +26,24 @@ export const Route = createFileRoute("/")({
   errorComponent: HomeError,
 });
 
-const CHIPS = [
-  { key: "all", label: "All rooms" },
-  { key: "tier1", label: "Everyday" },
-  { key: "regional", label: "Regional" },
-] as const;
-
 function usePageSize() {
   // 6 tiles on mobile portrait (2x3), 9 on desktop (3x3) — never scrolls.
   const [size, setSize] = useState(6);
-  useMemo(() => {
-    if (typeof window === "undefined") return;
+  useEffect(() => {
     const apply = () => setSize(window.innerWidth >= 768 ? 9 : 6);
     apply();
     window.addEventListener("resize", apply);
+    return () => window.removeEventListener("resize", apply);
   }, []);
   return size;
 }
 
 function Home() {
   const scenes = Route.useLoaderData();
-  const [chip, setChip] = useState<string>("all");
   const [page, setPage] = useState(0);
   const pageSize = usePageSize();
 
-  const tiles = useMemo(() => {
-    const filtered =
-      chip === "all" ? scenes : scenes.filter((s: Scene) => s.category === chip);
-    return [{ generate: true } as const, ...filtered.map((s) => ({ scene: s }))];
-  }, [chip, scenes]);
+  const tiles = useMemo(() => scenes.map((s: Scene) => ({ scene: s })), [scenes]);
 
   const pages = Math.max(1, Math.ceil(tiles.length / pageSize));
   const safePage = Math.min(page, pages - 1);
@@ -66,26 +55,9 @@ function Home() {
 
       <div className="flex min-h-0 flex-1 flex-col px-3 pb-2 sm:px-5">
         <div className="flex shrink-0 items-center justify-between gap-2 py-2">
-          <div className="flex gap-1.5">
-            {CHIPS.map((c) => (
-              <button
-                key={c.key}
-                type="button"
-                onClick={() => {
-                  setChip(c.key);
-                  setPage(0);
-                }}
-                aria-pressed={chip === c.key}
-                className={`rounded-full border px-2.5 py-1 text-[12px] font-medium transition-colors ${
-                  chip === c.key
-                    ? "border-transparent bg-primary text-primary-foreground"
-                    : "border-border/70 hover:bg-accent/40"
-                }`}
-              >
-                {c.label}
-              </button>
-            ))}
-          </div>
+          <p className="text-[12px] text-muted-foreground">
+            {scenes.length} kamre khule hain — tap kar ke andar aa jao
+          </p>
           <Link
             to="/my-dhaba"
             className="rounded-full border border-border/70 px-2.5 py-1 text-[12px] font-medium hover:bg-accent/40"
@@ -94,25 +66,18 @@ function Home() {
           </Link>
         </div>
 
-        {tiles.length === 1 ? (
+        {tiles.length === 0 ? (
           <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 text-center">
             <p className="font-signage text-lg font-bold">Yahan abhi sannata hai</p>
             <p className="max-w-xs text-sm text-muted-foreground">
-              No rooms in this category yet. Generate your own and it will live here.
+              No rooms are live right now. Thodi der mein wapas aana.
             </p>
-            <div className="mt-2 h-40 w-32">
-              <GenerateCard />
-            </div>
           </div>
         ) : (
           <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-3 gap-2 sm:gap-3 md:grid-cols-3">
-            {visible.map((t, i) =>
-              "generate" in t ? (
-                <GenerateCard key="generate" />
-              ) : (
-                <SceneCard key={t.scene?.slug ?? i} scene={t.scene!} />
-              ),
-            )}
+            {visible.map((t, i) => (
+              <SceneCard key={t.scene?.slug ?? i} scene={t.scene!} />
+            ))}
           </div>
         )}
 

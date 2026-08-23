@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
+import { resolveYouTubeId } from "./yt-resolve.server";
 import type { Database } from "@/integrations/supabase/types";
+
 
 export type Scene = {
   id: string;
@@ -68,10 +70,18 @@ export const listScenes = createServerFn({ method: "GET" }).handler(async () => 
   const { data, error } = await publicClient()
     .from("scenes")
     .select(SCENE_COLS)
+    .eq("is_live", true)
     .order("sort_order", { ascending: true });
   if (error) throw new Error(error.message);
   return (data ?? []) as unknown as Scene[];
 });
+
+export const resolveTrackVideo = createServerFn({ method: "GET" })
+  .inputValidator((data: { query: string }) => ({ query: String(data.query) }))
+  .handler(async ({ data }): Promise<{ videoId: string | null }> => {
+    return { videoId: await resolveYouTubeId(data.query) };
+  });
+
 
 export const getRoom = createServerFn({ method: "GET" })
   .inputValidator((data: { slug: string }) => ({ slug: String(data.slug) }))

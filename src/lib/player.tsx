@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { RoomPayload, Track } from "./rooms.functions";
+import { resolveTrackVideo, type RoomPayload, type Track } from "./rooms.functions";
 import { currentDaypart, forDaypart, type Daypart } from "./dayparts";
 import { sceneAmbience } from "./scene-art";
 import { setAmbienceVolume, startAmbience, stopAmbience } from "./ambience";
@@ -82,6 +82,7 @@ function loadYouTubeApi(): Promise<void> {
 export function PlayerProvider({ children }: { children: ReactNode }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<YTPlayer | null>(null);
+  const resolvedRef = useRef<Map<string, string>>(new Map());
   const [room, setRoom] = useState<RoomPayload | null>(null);
   const [daypart, setDaypart] = useState<Daypart>(() => currentDaypart());
   const [index, setIndex] = useState(0);
@@ -115,7 +116,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           onReady: () => setMusicReady(true),
           onError: () => {
             setMusicBlocked(true);
-            playerRef.current?.nextVideo();
+            setIndex((i) => i + 1);
           },
           onStateChange: (e: { data: number }) => {
             if (e.data === 1) {
@@ -132,13 +133,27 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const cueTrack = useCallback((t: Track | null, autoplay: boolean) => {
+  const cueTrack = useCallback(async (t: Track | null, autoplay: boolean) => {
     const p = playerRef.current;
     if (!p || !t) return;
+    let videoId = t.youtube_id ?? resolvedRef.current.get(t.id) ?? null;
+    if (!videoId && t.search_query) {
+      try {
+        const res = await resolveTrackVideo({ data: { query: t.search_query } });
+        if (res.videoId) {
+          resolvedRef.current.set(t.id, res.videoId);
+          videoId = res.videoId;
+        }
+      } catch {
+        /* fall through to ambience-only */
+      }
+    }
+    if (!videoId) {
+      setMusicBlocked(true);
+      return;
+    }
     try {
-      if (t.youtube_id) p.loadVideoById(t.youtube_id);
-      else if (t.search_query)
-        p.loadPlaylist({ list: t.search_query, listType: "search" });
+      p.loadVideoById(videoId);
       p.setVolume(70);
       if (autoplay) p.playVideo();
       else p.pauseVideo();
@@ -146,6 +161,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       setMusicBlocked(true);
     }
   }, []);
+
 
   const openRoom = useCallback(
     (next: RoomPayload) => {
@@ -174,7 +190,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (needsGate || !musicReady) return;
-    cueTrack(track, true);
+    void cueTrack(track, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [track?.id, musicReady, needsGate]);
 

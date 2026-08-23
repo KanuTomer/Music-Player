@@ -1,5 +1,4 @@
 import { Link } from "@tanstack/react-router";
-import { Sparkles } from "lucide-react";
 import { artFor } from "@/lib/scene-art";
 import type { Scene } from "@/lib/rooms.functions";
 
@@ -34,23 +33,6 @@ export function SceneCard({ scene }: { scene: Scene }) {
           {scene.hook}
         </p>
       </div>
-    </Link>
-  );
-}
-
-export function GenerateCard() {
-  return (
-    <Link
-      to="/generate"
-      className="paper group relative flex h-full flex-col items-center justify-center gap-2 overflow-hidden rounded-xl border-2 border-dashed border-primary/50 bg-accent/25 p-3 text-center shadow-tile transition-transform hover:-rotate-[0.6deg] hover:shadow-lift focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-    >
-      <Sparkles className="z-2 size-6 text-primary" aria-hidden />
-      <p className="font-signage z-2 text-[13px] leading-tight font-bold sm:text-sm">
-        Generate your own room
-      </p>
-      <p className="z-2 text-[11px] leading-tight text-muted-foreground">
-        अपना कमरा बनाइए
-      </p>
     </Link>
   );
 }
