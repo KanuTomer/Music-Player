@@ -78,9 +78,12 @@ export function RoomExperience({
   };
 
   const active = !player.needsGate && player.isPlaying;
+  // Scenes that are night-bound by nature keep their own light.
+  const gradeless = scene.slug === "raat-ki-bus";
+  const gradeClass = gradeless ? "" : `grade-${player.daypart}`;
 
   return (
-    <div className={`room-scene-enter relative h-dvh w-full overflow-hidden ${scene.is_dark ? "room-dark" : ""}`}>
+    <div className={`room-scene-enter relative h-dvh w-full overflow-hidden ${gradeClass} ${scene.is_dark ? "room-dark" : ""}`}>
       {sceneVideo ? (
         <video
           key={scene.art_key}
@@ -91,7 +94,7 @@ export function RoomExperience({
           loop
           playsInline
           aria-label={`${scene.title_en} — ambient moving scene`}
-          className="absolute inset-0 size-full object-cover"
+          className="scene-media absolute inset-0 size-full object-cover"
         />
       ) : (
         <img
@@ -101,10 +104,13 @@ export function RoomExperience({
           width={1536}
           height={1024}
           fetchPriority="high"
-          className={`absolute inset-0 size-full object-cover transition-[transform,opacity] duration-[12s] ${
+          className={`scene-media absolute inset-0 size-full object-cover transition-[transform,opacity] duration-[12s] ${
             active ? "scale-105" : "scale-100"
           }`}
         />
+      )}
+      {!gradeless && (
+        <div className="scene-light pointer-events-none absolute inset-0" aria-hidden />
       )}
       {scene.slug === "doordarshan-shaam" && (
         <div className="scanlines pointer-events-none absolute inset-0 opacity-20" aria-hidden />
