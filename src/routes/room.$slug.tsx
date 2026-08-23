@@ -1,18 +1,7 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Heart, Share2, Sparkles } from "lucide-react";
+import { Heart } from "lucide-react";
 import { getRoom, listScenes } from "@/lib/rooms.functions";
-import { artFor } from "@/lib/scene-art";
-import { usePlayer } from "@/lib/player";
-import { forDaypart } from "@/lib/dayparts";
-import { useRoomSocial } from "@/hooks/useRoomSocial";
-import { playGag } from "@/lib/ambience";
-import { ControlCluster } from "@/components/room/ControlCluster";
-import { OneLinerCaption } from "@/components/room/OneLinerCaption";
-import { FloatingEmojiLayer } from "@/components/room/FloatingEmojiLayer";
-import { RadioDialSwitcher } from "@/components/room/RadioDialSwitcher";
-import { ISTClock } from "@/components/ISTClock";
-import { toast } from "sonner";
+import { RoomExperience } from "@/components/room/RoomExperience";
 
 export const Route = createFileRoute("/room/$slug")({
   loader: async ({ params }) => {
@@ -26,7 +15,10 @@ export const Route = createFileRoute("/room/$slug")({
   head: ({ loaderData }) => {
     if (!loaderData) {
       return {
-        meta: [{ title: "Room unavailable — Sainik Dhaba" }, { name: "robots", content: "noindex" }],
+        meta: [
+          { title: "Room unavailable — Sainik Dhaba" },
+          { name: "robots", content: "noindex" },
+        ],
       };
     }
     const { scene } = loaderData.room;
@@ -37,6 +29,8 @@ export const Route = createFileRoute("/room/$slug")({
         { name: "description", content: scene.hook },
         { property: "og:title", content: title },
         { property: "og:description", content: scene.hook },
+        { property: "og:type", content: "website" },
+        { name: "twitter:card", content: "summary_large_image" },
       ],
     };
   },
@@ -45,197 +39,9 @@ export const Route = createFileRoute("/room/$slug")({
   errorComponent: RoomError,
 });
 
-const REACTIONS = ["👏", "❤️", "🔥"];
-
 function RoomPage() {
   const { room, scenes } = Route.useLoaderData();
-  const { scene, oneliners } = room;
-  const player = usePlayer();
-  const social = useRoomSocial(`scene:${scene.slug}`);
-  const [gagKind] = useState(() =>
-    scene.slug === "raat-ki-bus"
-      ? "horn"
-      : scene.slug === "ganpati-pandal"
-        ? "bell"
-        : scene.slug === "sarkari-daftar"
-          ? "thud"
-          : "snip",
-  );
-
-  useEffect(() => {
-    player.openRoom(room);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [room.scene.slug]);
-
-  const lines = useMemo(
-    () => forDaypart(oneliners, player.daypart),
-    [oneliners, player.daypart],
-  );
-
-  const share = async () => {
-    const url = window.location.href;
-    const text = `Main ${scene.title_en} mein baitha hoon — Sainik Dhaba`;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: scene.title_en, text, url });
-        return;
-      } catch {
-        /* user dismissed */
-      }
-    }
-    await navigator.clipboard.writeText(url);
-    toast.success("Link copied — bhej do kisi ko");
-  };
-
-  const active = !player.needsGate && player.isPlaying;
-
-  return (
-    <div
-      className={`relative h-dvh w-full overflow-hidden ${scene.is_dark ? "room-dark" : ""}`}
-    >
-      <img
-        src={artFor(scene.art_key)}
-        alt={`${scene.title_en} — ${scene.hook}`}
-        width={1536}
-        height={1024}
-        className={`absolute inset-0 size-full object-cover transition-transform duration-[12s] ${
-          active ? "scale-105" : "scale-100"
-        }`}
-      />
-      <div className="halftone pointer-events-none absolute inset-0 opacity-20" aria-hidden />
-      {scene.slug === "doordarshan-shaam" && (
-        <div className="scanlines pointer-events-none absolute inset-0 opacity-60" aria-hidden />
-      )}
-      <div className="vignette pointer-events-none absolute inset-0" aria-hidden />
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-night/70 to-transparent"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-night/80 to-transparent"
-        aria-hidden
-      />
-
-      {/* top row */}
-      <div className="absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 p-3">
-        <div className="flex items-center gap-2">
-          <Link
-            to="/"
-            aria-label="Back to all rooms"
-            className="flex size-10 items-center justify-center rounded-full border border-cream/25 bg-night/45 text-cream backdrop-blur transition-colors hover:bg-night/65"
-          >
-            <ArrowLeft className="size-4" aria-hidden />
-          </Link>
-          <div className="rounded-xl border border-cream/20 bg-night/45 px-3 py-1.5 backdrop-blur">
-            <p className="signage-text font-deva text-sm leading-tight text-cream">
-              {scene.title_hi}
-              <span className="ml-1.5 text-[11px] font-semibold tracking-[0.12em] text-cream/60 uppercase">
-                {scene.title_en}
-              </span>
-            </p>
-            <p className="flex items-center gap-2 text-[11px] leading-tight text-cream/65">
-              <span className="flex items-center gap-1">
-                <span className="animate-bulb inline-block size-1.5 rounded-full bg-accent" />
-                {social.listeners} sun rahe hain
-              </span>
-              <span className="text-cream/35">·</span>
-              <ISTClock inherit className="text-[11px]" />
-            </p>
-
-          </div>
-        </div>
-
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={share}
-            aria-label="Share this room"
-            className="flex size-10 items-center justify-center rounded-full border border-cream/25 bg-night/45 text-cream backdrop-blur transition-colors hover:bg-night/65"
-          >
-            <Share2 className="size-4" aria-hidden />
-          </button>
-          <RadioDialSwitcher scenes={scenes} currentSlug={scene.slug} />
-        </div>
-      </div>
-
-      <OneLinerCaption lines={lines} active={active} />
-      <FloatingEmojiLayer items={social.floating} />
-
-      {/* reactions + gag */}
-      <div className="absolute right-3 bottom-28 z-30 flex flex-col items-center gap-2 sm:bottom-24">
-        {REACTIONS.map((emoji) => (
-          <button
-            key={emoji}
-            type="button"
-            onClick={() => social.react(emoji)}
-            aria-label={`React with ${emoji}`}
-            className="flex size-11 items-center justify-center rounded-full border border-cream/25 bg-night/45 text-xl backdrop-blur transition-transform hover:scale-110 hover:bg-night/65 active:scale-90"
-          >
-            {emoji}
-          </button>
-        ))}
-        {scene.gag_label && (
-          <button
-            type="button"
-            onClick={() => playGag(gagKind)}
-            className="rounded-full border border-cream/25 bg-night/45 px-2.5 py-1 text-[11px] font-semibold text-cream backdrop-blur transition-colors hover:bg-accent hover:text-accent-foreground"
-          >
-            {scene.gag_label}
-          </button>
-        )}
-      </div>
-
-      {/* control cluster */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-3 z-30 flex justify-center px-3">
-        <ControlCluster
-          track={player.track}
-          isPlaying={player.isPlaying}
-          onToggle={player.toggle}
-          onNext={player.next}
-          ambience={player.ambienceVolume}
-          onAmbience={player.setAmbience}
-          musicBlocked={player.musicBlocked}
-        />
-      </div>
-
-      {/* autoplay gate */}
-      {player.needsGate && (
-        <div className="absolute inset-0 z-40 flex flex-col items-center justify-center px-6 text-center">
-          <div
-            className="absolute inset-0 bg-night/72 backdrop-blur-[3px]"
-            aria-hidden
-          />
-          <div className="vignette absolute inset-0" aria-hidden />
-
-          <div className="relative flex w-full max-w-sm flex-col items-center gap-3">
-            <span className="ticket bg-accent px-3 py-[3px] text-[9.5px] font-bold tracking-[0.18em] text-accent-foreground uppercase">
-              {scene.region ?? scene.category} · live
-            </span>
-            <h1 className="signage-text font-deva text-3xl leading-tight text-cream">
-              {scene.title_hi}
-            </h1>
-            <p className="text-[12.5px] font-medium tracking-[0.16em] text-cream/60 uppercase">
-              {scene.title_en}
-            </p>
-            <p className="max-w-xs text-sm leading-relaxed text-cream/80">{scene.hook}</p>
-            <button
-              type="button"
-              onClick={player.start}
-              className="animate-bulb mt-2 flex items-center gap-2 rounded-full bg-accent px-7 py-3.5 text-sm font-bold text-accent-foreground shadow-lift transition-transform hover:scale-[1.03] active:scale-95"
-            >
-              <Sparkles className="size-4" aria-hidden />
-              Andar aa jao — press play
-            </button>
-            <p className="text-[11px] text-cream/55">
-              Headphones lagao. Ye kamra chalta rahega.
-            </p>
-          </div>
-        </div>
-      )}
-
-    </div>
-  );
+  return <RoomExperience room={room} scenes={scenes} />;
 }
 
 function RoomNotFound() {
@@ -250,7 +56,7 @@ function RoomNotFound() {
         to="/"
         className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
       >
-        All rooms
+        Wapas dhaba
       </Link>
     </div>
   );
@@ -259,9 +65,9 @@ function RoomNotFound() {
 function RoomError() {
   return (
     <div className="flex h-dvh flex-col items-center justify-center gap-3 px-6 text-center">
-      <p className="font-signage text-xl font-bold">Signal kamzor hai</p>
+      <p className="font-signage text-xl font-bold">Line kat gayi</p>
       <p className="max-w-sm text-sm text-muted-foreground">
-        We could not tune into this room. Try again in a moment.
+        Kamra load nahi hua. Ek baar phir koshish karein?
       </p>
       <button
         type="button"
