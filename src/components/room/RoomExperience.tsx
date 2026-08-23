@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Heart, Share2, Sparkles } from "lucide-react";
+import { Share2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import type { RoomPayload, Scene } from "@/lib/rooms.functions";
 import { artFor } from "@/lib/scene-art";
