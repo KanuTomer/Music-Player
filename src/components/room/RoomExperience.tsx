@@ -118,6 +118,8 @@ export function RoomExperience({
           muted
           loop
           playsInline
+          disablePictureInPicture
+          onCanPlay={(event) => void event.currentTarget.play().catch(() => undefined)}
           aria-label={`${scene.title_en} — ambient moving scene`}
           className="scene-media absolute inset-0 size-full object-cover"
         />
