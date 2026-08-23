@@ -41,7 +41,11 @@ export const Route = createFileRoute("/room/$slug")({
 
 function RoomPage() {
   const { room, scenes } = Route.useLoaderData();
-  return <RoomExperience key={room.scene.slug} room={room} scenes={scenes} />;
+  return (
+    <div className="h-dvh bg-night">
+      <RoomExperience key={room.scene.slug} room={room} scenes={scenes} />
+    </div>
+  );
 }
 
 function RoomNotFound() {
