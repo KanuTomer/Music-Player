@@ -84,8 +84,7 @@ export function ControlCluster({
   const title = liveTitle ?? track?.title ?? "Tuning in…";
   const subtitle =
     subtitleFrom(nowPlaying.title, nowPlaying.channel) ??
-    [track?.artist, track?.year].filter(Boolean).join(" · ") ||
-    "Ambience only";
+    ([track?.artist, track?.year].filter(Boolean).join(" · ") || "Ambience only");
 
   const duration = nowPlaying.duration;
   const progress = duration > 0 ? Math.min(100, (nowPlaying.position / duration) * 100) : 0;
