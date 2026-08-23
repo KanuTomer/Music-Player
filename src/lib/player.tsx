@@ -134,6 +134,17 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [musicBlocked, setMusicBlocked] = useState(false);
   const [ambienceVolume, setAmbienceVol] = useState(0.7);
   const [ambienceEnabled, setAmbienceEnabled] = useState(true);
+  const [musicVolume, setMusicVol] = useState(0.7);
+  const musicVolumeRef = useRef(0.7);
+  const [nowPlaying, setNowPlaying] = useState<NowPlaying>({
+    videoId: null,
+    title: null,
+    channel: null,
+    position: 0,
+    duration: 0,
+    index: 0,
+    total: 0,
+  });
 
   const playlist = useMemo(
     () => (room ? forDaypart(room.tracks, daypart) : []),
@@ -141,6 +152,73 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   );
   const track = playlist[index % Math.max(playlist.length, 1)] ?? null;
   const isCuratedPlaylist = Boolean(room && scenePlaylists[room.scene.slug]);
+
+  // Poll the hidden YouTube player for real track metadata + progress
+  useEffect(() => {
+    const t = window.setInterval(() => {
+      const p = playerRef.current;
+      if (!p || typeof p.getVideoData !== "function") return;
+      try {
+        const d = p.getVideoData();
+        const list = typeof p.getPlaylist === "function" ? p.getPlaylist() : null;
+        setNowPlaying((prev) => {
+          const nextState: NowPlaying = {
+            videoId: d?.video_id ?? null,
+            title: d?.title ?? null,
+            channel: d?.author ?? null,
+            position: p.getCurrentTime() || 0,
+            duration: p.getDuration() || 0,
+            index: typeof p.getPlaylistIndex === "function" ? p.getPlaylistIndex() : 0,
+            total: list?.length ?? 0,
+          };
+          if (
+            prev.videoId === nextState.videoId &&
+            prev.title === nextState.title &&
+            Math.abs(prev.position - nextState.position) < 0.4 &&
+            prev.duration === nextState.duration &&
+            prev.index === nextState.index &&
+            prev.total === nextState.total
+          ) {
+            return prev;
+          }
+          return nextState;
+        });
+      } catch {
+        /* player not ready yet */
+      }
+    }, 500);
+    return () => window.clearInterval(t);
+  }, []);
+
+  const setMusicVolume = useCallback((v: number) => {
+    const clamped = Math.min(1, Math.max(0, v));
+    musicVolumeRef.current = clamped;
+    setMusicVol(clamped);
+    try {
+      playerRef.current?.setVolume(Math.round(clamped * 100));
+    } catch {
+      /* noop */
+    }
+  }, []);
+
+  const previous = useCallback(() => {
+    const p = playerRef.current;
+    if (!p) return;
+    if (room && scenePlaylists[room.scene.slug]) {
+      p.previousVideo();
+      return;
+    }
+    setIndex((i) => (playlist.length ? (i - 1 + playlist.length) % playlist.length : 0));
+  }, [playlist.length, room]);
+
+  const seek = useCallback((seconds: number) => {
+    try {
+      playerRef.current?.seekTo(Math.max(0, seconds), true);
+    } catch {
+      /* noop */
+    }
+  }, []);
+
 
   // IST daypart ticks over while a room is left running for hours
   useEffect(() => {
