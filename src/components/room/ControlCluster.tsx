@@ -115,6 +115,15 @@ export function ControlCluster({
           <p className="mt-0.5 truncate text-[11px] font-medium text-ink/65 sm:text-xs">
             {musicBlocked ? "गीत उपलब्ध नहीं है — माहौल की आवाज़ चल रही है।" : subtitle}
           </p>
+          {!musicBlocked && (nowPlaying.videoId || track) && (
+            <p
+              key={nowPlaying.videoId ?? track?.id}
+              className="mt-1 font-vintage-deva text-[11px] text-terracotta"
+              aria-live="polite"
+            >
+              अभी बज रहा है
+            </p>
+          )}
         </div>
         {isCuratedPlaylist && nowPlaying.total > 0 && (
           <span className="shrink-0 text-[10px] font-semibold tabular-nums text-ink/50">
