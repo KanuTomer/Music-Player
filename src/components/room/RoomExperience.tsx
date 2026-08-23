@@ -181,10 +181,15 @@ export function RoomExperience({
       <div className="pointer-events-none absolute inset-x-0 bottom-3 z-30 flex justify-center px-3">
         <ControlCluster
           track={player.track}
+          nowPlaying={player.nowPlaying}
           isCuratedPlaylist={player.isCuratedPlaylist}
           isPlaying={player.isPlaying}
           onToggle={player.toggle}
           onNext={player.next}
+          onPrevious={player.previous}
+          onSeek={player.seek}
+          musicVolume={player.musicVolume}
+          onMusicVolume={player.setMusicVolume}
           ambience={player.ambienceVolume}
           ambienceEnabled={player.ambienceEnabled}
           onAmbience={player.setAmbience}
