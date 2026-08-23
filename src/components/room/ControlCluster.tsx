@@ -104,7 +104,7 @@ export function ControlCluster({
               key={nowPlaying.videoId ?? track?.youtube_id}
               src={`https://i.ytimg.com/vi/${nowPlaying.videoId ?? track?.youtube_id}/mqdefault.jpg`}
               alt={`${title} cover art`}
-              className="size-full object-cover"
+              className="size-full animate-fade-in object-cover"
             />
           ) : (
             <span className="flex size-full flex-col items-center justify-center bg-terracotta text-cinema-cream" aria-label="Cover art loading">
@@ -114,7 +114,7 @@ export function ControlCluster({
           )}
         </span>
 
-        <div className="min-w-0 flex-1">
+        <div key={nowPlaying.videoId ?? track?.id ?? "idle"} className="min-w-0 flex-1 animate-fade-in">
           <p className="truncate font-cinema-display text-base leading-tight text-ink sm:text-lg">{title}</p>
           <p className="mt-1 truncate text-[11px] font-semibold text-ink/70 sm:text-xs">
             {musicBlocked ? (
@@ -124,15 +124,12 @@ export function ControlCluster({
             )}
           </p>
           {!musicBlocked && (nowPlaying.videoId || track) && (
-            <p
-              key={nowPlaying.videoId ?? track?.id}
-              className="mt-1 font-vintage-deva text-[11px] text-terracotta"
-              aria-live="polite"
-            >
+            <p className="mt-1 font-vintage-deva text-[11px] text-terracotta" aria-live="polite">
               अभी बज रहा है
             </p>
           )}
         </div>
+
         {isCuratedPlaylist && nowPlaying.total > 0 && (
           <span className="shrink-0 text-[10px] font-semibold tabular-nums text-ink/50">
             {nowPlaying.index + 1}/{nowPlaying.total}
