@@ -48,7 +48,7 @@ const scenePlaylists: Record<string, string> = {
   "rail-yatra": "PLQdfb6nEJz_X-0Tkwec2N2Sj83d_DM36d",
   "raat-ki-bus": "PL8xy2vgHsFJjhGJJnwp8mspv27hN4K_Bg",
   "sarkari-daftar": "PLJABXrnHALkJHG7vK7QMhJ6_Wxl6OPriF",
-  "doordarshan-shaam": "PLx99j5cYmjF6IyvaICVMuC_SY7SNo0Rwo",
+  "doordarshan-shaam": "PLAEwlqYcgTMMgluWozpZO8dJ4ArFjk7Ft",
   "bhojpuriya-devara": "PLJ3M6AoVR-gZtOkB4v-_XgzYQz_6UQssJ",
 };
 
