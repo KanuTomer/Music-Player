@@ -227,34 +227,70 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     return () => window.clearInterval(t);
   }, []);
 
+  const buildPlayer = useCallback((playlistId: string | null, autoplay: boolean) => {
+    const host = hostRef.current;
+    if (!host || !window.YT?.Player) return null;
+    try {
+      playerRef.current?.destroy();
+    } catch {
+      /* already gone */
+    }
+    host.innerHTML = "";
+    const el = document.createElement("div");
+    host.appendChild(el);
+    setMusicReady(false);
+    playerRef.current = new window.YT.Player(el, {
+      height: "1",
+      width: "1",
+      playerVars: {
+        autoplay: autoplay ? 1 : 0,
+        controls: 0,
+        playsinline: 1,
+        ...(playlistId ? { list: playlistId, listType: "playlist" } : {}),
+      },
+      events: {
+        onReady: () => {
+          setMusicReady(true);
+          const p = playerRef.current;
+          if (!p) return;
+          try {
+            p.setVolume(Math.round(musicVolumeRef.current * 100));
+            if (autoplay) p.playVideo();
+          } catch {
+            /* noop */
+          }
+        },
+        onError: () => {
+          setMusicBlocked(true);
+          try {
+            playerRef.current?.nextVideo();
+          } catch {
+            /* noop */
+          }
+        },
+        onStateChange: (e: { data: number }) => {
+          if (e.data === 1) {
+            setIsPlaying(true);
+            setMusicBlocked(false);
+          }
+          if (e.data === 2) setIsPlaying(false);
+        },
+      },
+    });
+    return playerRef.current;
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     void loadYouTubeApi().then(() => {
-      if (cancelled || !hostRef.current || playerRef.current || !window.YT?.Player) return;
-      playerRef.current = new window.YT.Player(hostRef.current, {
-        height: "1",
-        width: "1",
-        playerVars: { autoplay: 0, controls: 0, playsinline: 1 },
-        events: {
-          onReady: () => setMusicReady(true),
-          onError: () => {
-            setMusicBlocked(true);
-            setIndex((i) => i + 1);
-          },
-          onStateChange: (e: { data: number }) => {
-            if (e.data === 1) {
-              setIsPlaying(true);
-              setMusicBlocked(false);
-            }
-            if (e.data === 2) setIsPlaying(false);
-          },
-        },
-      });
+      if (cancelled || playerRef.current) return;
+      buildPlayer(null, false);
     });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [buildPlayer]);
+
 
   const cueTrack = useCallback(async (t: Track | null, autoplay: boolean) => {
     const p = playerRef.current;
