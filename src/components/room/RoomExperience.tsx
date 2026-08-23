@@ -12,7 +12,25 @@ import { ControlCluster } from "@/components/room/ControlCluster";
 import { OneLinerCaption } from "@/components/room/OneLinerCaption";
 import { ThemeSwitcher } from "@/components/room/ThemeSwitcher";
 import { ISTClock } from "@/components/ISTClock";
+import chaiTapriVideo from "@/assets/theme-chai-tapri-moving.mp4.asset.json";
+import deluxeSalonVideo from "@/assets/theme-deluxe-salon-moving.mp4.asset.json";
+import doordarshanVideo from "@/assets/theme-doordarshan-moving.mp4.asset.json";
 import nightBusVideo from "@/assets/theme-night-bus-moving-fixed.mp4.asset.json";
+import railYatraVideo from "@/assets/theme-rail-yatra-moving.mp4.asset.json";
+import rajMistriVideo from "@/assets/theme-raj-mistri-moving.mp4.asset.json";
+import sainikDhabaVideo from "@/assets/theme-sainik-dhaba-moving.mp4.asset.json";
+import sarkariDaftarVideo from "@/assets/theme-sarkari-daftar-moving.mp4.asset.json";
+
+const sceneVideos: Record<string, string> = {
+  "sainik-dhaba": sainikDhabaVideo.url,
+  "nai-ki-dukaan": deluxeSalonVideo.url,
+  "chai-ki-tapri": chaiTapriVideo.url,
+  "raj-mistri": rajMistriVideo.url,
+  "raat-ki-bus": nightBusVideo.url,
+  "sarkari-daftar": sarkariDaftarVideo.url,
+  "doordarshan-shaam": doordarshanVideo.url,
+  "rail-yatra": railYatraVideo.url,
+};
 
 function gagFor(slug: string) {
   if (slug === "raat-ki-bus") return "horn";
@@ -32,6 +50,7 @@ export function RoomExperience({
   const player = usePlayer();
   const social = useRoomSocial(`scene:${scene.slug}`);
   const [gagKind] = useState(() => gagFor(scene.slug));
+  const sceneVideo = sceneVideos[scene.slug];
 
   useEffect(() => {
     player.openRoom(room);
@@ -62,16 +81,16 @@ export function RoomExperience({
 
   return (
     <div className={`room-scene-enter relative h-dvh w-full overflow-hidden ${scene.is_dark ? "room-dark" : ""}`}>
-      {scene.slug === "raat-ki-bus" ? (
+      {sceneVideo ? (
         <video
           key={scene.art_key}
-          src={nightBusVideo.url}
+          src={sceneVideo}
           poster={artFor(scene.art_key)}
           autoPlay
           muted
           loop
           playsInline
-          aria-label={`${scene.title_en} — moving night bus view`}
+          aria-label={`${scene.title_en} — ambient moving scene`}
           className="absolute inset-0 size-full object-cover"
         />
       ) : (
