@@ -11,6 +11,7 @@ import tamilSaloon from "@/assets/scene-tamil-saloon.jpg";
 import chaiKiTapri from "@/assets/theme-chai-tapri-real.jpg";
 import rajMistri from "@/assets/theme-raj-mistri-real.jpg";
 import bhojpuriyaDevara from "@/assets/theme-bhojpuriya-devara-real.jpg.asset.json";
+import corporateMajdoor from "@/assets/theme-corporate-majdoor-real.jpg";
 
 export const sceneArt: Record<string, string> = {
   "rail-yatra": railYatra,
@@ -26,6 +27,7 @@ export const sceneArt: Record<string, string> = {
   "chai-ki-tapri": chaiKiTapri,
   "raj-mistri": rajMistri,
   "bhojpuriya-devara": bhojpuriyaDevara.url,
+  "corporate-majdoor": corporateMajdoor,
 };
 
 export function artFor(key: string): string {
@@ -46,6 +48,7 @@ export const sceneAmbience: Record<string, string[]> = {
   "chai-ki-tapri": ["kettle", "chatter", "street"],
   "raj-mistri": ["chatter", "street", "fan"],
   "bhojpuriya-devara": ["night", "chatter", "street"],
+  "corporate-majdoor": ["fan", "chatter", "hum"],
   "ganpati-pandal": ["crowd", "dhol"],
   "tamil-saloon": ["fan", "street", "snip"],
 };

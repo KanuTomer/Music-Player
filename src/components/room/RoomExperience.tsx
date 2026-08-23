@@ -12,6 +12,7 @@ import { ControlCluster } from "@/components/room/ControlCluster";
 import { OneLinerCaption } from "@/components/room/OneLinerCaption";
 import { ThemeSwitcher } from "@/components/room/ThemeSwitcher";
 import { ISTClock } from "@/components/ISTClock";
+import corporateMajdoorVideo from "@/assets/theme-corporate-majdoor-moving.mp4.asset.json";
 import chaiTapriVideo from "@/assets/theme-chai-tapri-moving.mp4.asset.json";
 import deluxeSalonVideo from "@/assets/theme-deluxe-salon-moving.mp4.asset.json";
 import doordarshanVideo from "@/assets/theme-doordarshan-moving.mp4.asset.json";
@@ -30,6 +31,7 @@ const sceneVideos: Record<string, string> = {
   "sarkari-daftar": sarkariDaftarVideo.url,
   "doordarshan-shaam": doordarshanVideo.url,
   "rail-yatra": railYatraVideo.url,
+  "corporate-majdoor": corporateMajdoorVideo.url,
 };
 
 function gagFor(slug: string) {
