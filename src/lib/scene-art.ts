@@ -1,15 +1,15 @@
-import railYatra from "@/assets/scene-rail-yatra.jpg";
-import barbershop from "@/assets/scene-barbershop.jpg";
-import nightBus from "@/assets/scene-night-bus.jpg";
-import sarkariDaftar from "@/assets/scene-sarkari-daftar.jpg";
-import doordarshan from "@/assets/scene-doordarshan.jpg";
+import railYatra from "@/assets/theme-rail-yatra-real.jpg";
+import barbershop from "@/assets/theme-deluxe-salon-real.jpg";
+import nightBus from "@/assets/theme-night-bus-real.jpg";
+import sarkariDaftar from "@/assets/theme-sarkari-daftar-real.jpg";
+import doordarshan from "@/assets/theme-doordarshan-real.jpg";
 import chayaKada from "@/assets/scene-chaya-kada.jpg";
 import paraAdda from "@/assets/scene-para-adda.jpg";
-import punjabiDhaba from "@/assets/scene-punjabi-dhaba.jpg";
+import punjabiDhaba from "@/assets/theme-sainik-dhaba-real.jpg";
 import ganpatiPandal from "@/assets/scene-ganpati-pandal.jpg";
 import tamilSaloon from "@/assets/scene-tamil-saloon.jpg";
-import chaiKiTapri from "@/assets/scene-chai-ki-tapri.jpg";
-import rajMistri from "@/assets/scene-raj-mistri.jpg";
+import chaiKiTapri from "@/assets/theme-chai-tapri-real.jpg";
+import rajMistri from "@/assets/theme-raj-mistri-real.jpg";
 
 export const sceneArt: Record<string, string> = {
   "rail-yatra": railYatra,

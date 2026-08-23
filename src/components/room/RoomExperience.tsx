@@ -65,17 +65,18 @@ export function RoomExperience({
   return (
     <div className={`room-scene-enter relative h-dvh w-full overflow-hidden ${scene.is_dark ? "room-dark" : ""}`}>
       <img
+        key={scene.art_key}
         src={artFor(scene.art_key)}
         alt={`${scene.title_en} — ${scene.hook}`}
         width={1536}
         height={1024}
-        className={`absolute inset-0 size-full object-cover transition-transform duration-[12s] ${
+        fetchPriority="high"
+        className={`absolute inset-0 size-full object-cover transition-[transform,opacity] duration-[12s] ${
           active ? "scale-105" : "scale-100"
         }`}
       />
-      <div className="halftone pointer-events-none absolute inset-0 opacity-20" aria-hidden />
       {scene.slug === "doordarshan-shaam" && (
-        <div className="scanlines pointer-events-none absolute inset-0 opacity-60" aria-hidden />
+        <div className="scanlines pointer-events-none absolute inset-0 opacity-20" aria-hidden />
       )}
       <div className="vignette pointer-events-none absolute inset-0" aria-hidden />
       <div

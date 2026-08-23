@@ -89,6 +89,8 @@ export function ThemeSwitcher({
                     src={artFor(s.art_key)}
                     alt={`${s.title_en} scene`}
                     loading="lazy"
+                    width={1536}
+                    height={1024}
                     className="size-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.025]"
                   />
                   <span
