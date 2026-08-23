@@ -63,11 +63,16 @@ type PlayerState = {
   musicReady: boolean;
   musicBlocked: boolean;
   isCuratedPlaylist: boolean;
+  nowPlaying: NowPlaying;
+  musicVolume: number;
   ambienceVolume: number;
   ambienceEnabled: boolean;
   openRoom: (room: RoomPayload) => void;
   toggle: () => void;
   next: () => void;
+  previous: () => void;
+  seek: (seconds: number) => void;
+  setMusicVolume: (v: number) => void;
   start: () => void;
   setAmbience: (v: number) => void;
   toggleAmbience: () => void;
