@@ -8,6 +8,8 @@ import paraAdda from "@/assets/scene-para-adda.jpg";
 import punjabiDhaba from "@/assets/scene-punjabi-dhaba.jpg";
 import ganpatiPandal from "@/assets/scene-ganpati-pandal.jpg";
 import tamilSaloon from "@/assets/scene-tamil-saloon.jpg";
+import chaiKiTapri from "@/assets/scene-chai-ki-tapri.jpg";
+import rajMistri from "@/assets/scene-raj-mistri.jpg";
 
 export const sceneArt: Record<string, string> = {
   "rail-yatra": railYatra,
@@ -20,6 +22,8 @@ export const sceneArt: Record<string, string> = {
   "punjabi-dhaba": punjabiDhaba,
   "ganpati-pandal": ganpatiPandal,
   "tamil-saloon": tamilSaloon,
+  "chai-ki-tapri": chaiKiTapri,
+  "raj-mistri": rajMistri,
 };
 
 export function artFor(key: string): string {
@@ -36,6 +40,9 @@ export const sceneAmbience: Record<string, string[]> = {
   "chaya-kada": ["rain", "chatter", "kettle"],
   "para-adda": ["chatter", "street"],
   "highway-dhaba": ["night", "fire", "truck"],
+  "sainik-dhaba": ["night", "fire", "truck"],
+  "chai-ki-tapri": ["kettle", "chatter", "street"],
+  "raj-mistri": ["chatter", "street", "fan"],
   "ganpati-pandal": ["crowd", "dhol"],
   "tamil-saloon": ["fan", "street", "snip"],
 };
