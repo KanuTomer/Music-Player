@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Heart, Share2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import type { RoomPayload, Scene } from "@/lib/rooms.functions";
@@ -53,11 +53,32 @@ export function RoomExperience({
   const social = useRoomSocial(`scene:${scene.slug}`);
   const [gagKind] = useState(() => gagFor(scene.slug));
   const sceneVideo = sceneVideos[scene.slug];
+  const sceneVideoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
     player.openRoom(room);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room.scene.slug]);
+
+  useEffect(() => {
+    const video = sceneVideoRef.current;
+    if (!video || !sceneVideo) return;
+
+    video.muted = true;
+    video.defaultMuted = true;
+    const play = () => void video.play().catch(() => undefined);
+    const resumeWhenVisible = () => {
+      if (document.visibilityState === "visible") play();
+    };
+
+    play();
+    document.addEventListener("visibilitychange", resumeWhenVisible);
+    window.addEventListener("pageshow", play);
+    return () => {
+      document.removeEventListener("visibilitychange", resumeWhenVisible);
+      window.removeEventListener("pageshow", play);
+    };
+  }, [scene.slug, sceneVideo]);
 
   const lines = useMemo(
     () => forDaypart(oneliners, player.daypart),
@@ -88,10 +109,12 @@ export function RoomExperience({
     <div className={`room-scene-enter relative h-dvh w-full overflow-hidden ${gradeClass} ${scene.is_dark ? "room-dark" : ""}`}>
       {sceneVideo ? (
         <video
+          ref={sceneVideoRef}
           key={scene.art_key}
           src={sceneVideo}
           poster={artFor(scene.art_key)}
           autoPlay
+          preload="auto"
           muted
           loop
           playsInline
