@@ -10,8 +10,7 @@ import {
 } from "react";
 import { resolveTrackVideo, type RoomPayload, type Track } from "./rooms.functions";
 import { currentDaypart, forDaypart, type Daypart } from "./dayparts";
-import { sceneAmbience } from "./scene-art";
-import { setAmbienceVolume, startAmbience, stopAmbience } from "./ambience";
+import { setAmbienceVolume, stopAmbience } from "./ambience";
 
 type YTPlayer = {
   loadPlaylist: (o: { list: string; listType: "playlist"; index?: number }) => void;
@@ -134,8 +133,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [needsGate, setNeedsGate] = useState(true);
   const [musicReady, setMusicReady] = useState(false);
   const [musicBlocked, setMusicBlocked] = useState(false);
-  const [ambienceVolume, setAmbienceVol] = useState(0.7);
-  const [ambienceEnabled, setAmbienceEnabled] = useState(true);
+  const [ambienceVolume, setAmbienceVol] = useState(0);
+  const [ambienceEnabled, setAmbienceEnabled] = useState(false);
   const [musicVolume, setMusicVol] = useState(0.7);
   const musicVolumeRef = useRef(0.7);
   const [nowPlaying, setNowPlaying] = useState<NowPlaying>({
@@ -414,19 +413,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  // ambience follows the room, but only after the user has tapped play once
+  // Ambience (procedural theme background sound) is disabled product-wide.
   useEffect(() => {
-    if (!room || needsGate) return;
-    const keys = sceneAmbience[room.scene.slug] ?? ["chatter", "fan"];
-    startAmbience(keys, ambienceEnabled ? ambienceVolume : 0);
-    return () => stopAmbience();
-    // ambienceVolume handled separately so we don't rebuild the graph on slider drags
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setAmbienceVolume(0);
+    stopAmbience();
   }, [room?.scene.slug, needsGate]);
 
-  useEffect(() => {
-    setAmbienceVolume(ambienceEnabled ? ambienceVolume : 0);
-  }, [ambienceEnabled, ambienceVolume]);
 
   const toggleAmbience = useCallback(() => {
     setAmbienceEnabled((enabled) => !enabled);

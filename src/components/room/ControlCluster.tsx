@@ -7,8 +7,6 @@ import {
   SkipForward,
   Volume1,
   Volume2,
-  VolumeX,
-  Waves,
 } from "lucide-react";
 import { useState } from "react";
 import type { Track } from "@/lib/rooms.functions";
@@ -57,10 +55,6 @@ export function ControlCluster({
   onSeek,
   musicVolume,
   onMusicVolume,
-  ambience,
-  ambienceEnabled,
-  onAmbience,
-  onToggleAmbience,
   musicBlocked,
 }: {
   track: Track | null;
@@ -73,10 +67,6 @@ export function ControlCluster({
   onSeek: (seconds: number) => void;
   musicVolume: number;
   onMusicVolume: (v: number) => void;
-  ambience: number;
-  ambienceEnabled: boolean;
-  onAmbience: (v: number) => void;
-  onToggleAmbience: () => void;
   musicBlocked: boolean;
 }) {
   const [showMix, setShowMix] = useState(false);
@@ -118,7 +108,7 @@ export function ControlCluster({
           <p className="truncate font-cinema-display text-base leading-tight text-ink sm:text-lg">{title}</p>
           <p className="mt-1 truncate text-[11px] font-semibold text-ink/70 sm:text-xs">
             {musicBlocked ? (
-              "गीत उपलब्ध नहीं है — माहौल की आवाज़ चल रही है।"
+              "गीत अभी उपलब्ध नहीं है — कृपया अगला गीत चुनें।"
             ) : (
               <><span className="text-terracotta">कलाकार</span> · {artistDetails}</>
             )}
@@ -237,43 +227,19 @@ export function ControlCluster({
       </div>
 
       {showMix && (
-        <div className="mt-2.5 grid gap-2.5 border-t border-ink/20 pt-2.5 sm:grid-cols-2">
-          <div className="flex items-center gap-2">
-            <Volume1 className="size-3.5 shrink-0 text-ink/65" aria-hidden />
-            <span className="w-14 shrink-0 text-[10.5px] text-ink/65">Music</span>
-            <Slider
-              value={[Math.round(musicVolume * 100)]}
-              max={100}
-              step={1}
-              aria-label="Music volume"
-              onValueChange={(v) => onMusicVolume((v[0] ?? 0) / 100)}
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onToggleAmbience}
-              aria-label={ambienceEnabled ? "Turn off theme sound" : "Turn on theme sound"}
-              className={`shrink-0 ${ambienceEnabled ? "text-terracotta" : "text-ink/45"}`}
-            >
-              {ambienceEnabled ? (
-                <Waves className="size-3.5" aria-hidden />
-              ) : (
-                <VolumeX className="size-3.5" aria-hidden />
-              )}
-            </button>
-            <span className="w-14 shrink-0 text-[10.5px] text-ink/65">Ambience</span>
-            <Slider
-              value={[Math.round(ambience * 100)]}
-              max={100}
-              step={1}
-              disabled={!ambienceEnabled}
-              aria-label="Ambience volume"
-              onValueChange={(v) => onAmbience((v[0] ?? 0) / 100)}
-            />
-          </div>
+        <div className="mt-2.5 flex items-center gap-2 border-t border-ink/20 pt-2.5">
+          <Volume1 className="size-3.5 shrink-0 text-ink/65" aria-hidden />
+          <span className="w-14 shrink-0 text-[10.5px] text-ink/65">Music</span>
+          <Slider
+            value={[Math.round(musicVolume * 100)]}
+            max={100}
+            step={1}
+            aria-label="Music volume"
+            onValueChange={(v) => onMusicVolume((v[0] ?? 0) / 100)}
+          />
         </div>
       )}
+
     </div>
   );
 }

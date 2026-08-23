@@ -229,10 +229,6 @@ export function RoomExperience({
           onSeek={player.seek}
           musicVolume={player.musicVolume}
           onMusicVolume={player.setMusicVolume}
-          ambience={player.ambienceVolume}
-          ambienceEnabled={player.ambienceEnabled}
-          onAmbience={player.setAmbience}
-          onToggleAmbience={player.toggleAmbience}
           musicBlocked={player.musicBlocked}
         />
       </div>
