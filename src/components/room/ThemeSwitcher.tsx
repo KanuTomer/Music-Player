@@ -1,14 +1,8 @@
 import { useNavigate } from "@tanstack/react-router";
+import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import type { Scene } from "@/lib/rooms.functions";
 import { usePlayer } from "@/lib/player";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 export function ThemeSwitcher({
   scenes,
@@ -22,33 +16,27 @@ export function ThemeSwitcher({
   const [transitioning, setTransitioning] = useState(false);
 
   return (
-    <Select
-      value={currentSlug}
-      disabled={transitioning}
-      onValueChange={async (slug) => {
-        if (slug === currentSlug) return;
-        setTransitioning(true);
-        await player.fadeForThemeChange();
-        await navigate({ to: "/room/$slug", params: { slug } });
-      }}
-    >
-      <SelectTrigger
+    <div className="relative">
+      <select
         aria-label="Change theme"
-        className="h-10 w-[9.75rem] rounded-full border-cream/25 bg-night/45 px-3 text-xs font-semibold text-cream shadow-none backdrop-blur hover:bg-night/70 sm:w-[12.5rem] sm:text-sm [&>svg]:text-cream/70"
+        value={currentSlug}
+        disabled={transitioning}
+        onChange={async (event) => {
+          const slug = event.target.value;
+          if (slug === currentSlug) return;
+          setTransitioning(true);
+          await player.fadeForThemeChange();
+          await navigate({ to: "/room/$slug", params: { slug } });
+        }}
+        className="h-10 w-[9.75rem] appearance-none rounded-full border border-cream/25 bg-night/45 px-3 pr-8 text-xs font-semibold text-cream outline-none backdrop-blur transition-colors hover:bg-night/70 focus:ring-2 focus:ring-accent/70 disabled:opacity-60 sm:w-[12.5rem] sm:text-sm"
       >
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent className="border-cream/15 bg-night/95 text-cream backdrop-blur-xl">
         {scenes.map((scene) => (
-          <SelectItem
-            key={scene.slug}
-            value={scene.slug}
-            className="py-2.5 font-medium focus:bg-accent focus:text-accent-foreground"
-          >
+          <option key={scene.slug} value={scene.slug} className="bg-night text-cream">
             {scene.title_en}
-          </SelectItem>
+          </option>
         ))}
-      </SelectContent>
-    </Select>
+      </select>
+      <ChevronDown className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-cream/70" aria-hidden />
+    </div>
   );
 }
