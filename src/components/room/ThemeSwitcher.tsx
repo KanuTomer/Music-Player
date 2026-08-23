@@ -1,4 +1,3 @@
-import { useNavigate } from "@tanstack/react-router";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import type { Scene } from "@/lib/rooms.functions";
@@ -11,7 +10,6 @@ export function ThemeSwitcher({
   scenes: Scene[];
   currentSlug: string;
 }) {
-  const navigate = useNavigate();
   const player = usePlayer();
   const [transitioning, setTransitioning] = useState(false);
 
@@ -26,7 +24,7 @@ export function ThemeSwitcher({
           if (slug === currentSlug) return;
           setTransitioning(true);
           void player.fadeForThemeChange();
-          void navigate({ to: "/room/$slug", params: { slug } });
+          window.location.assign(`/room/${encodeURIComponent(slug)}`);
         }}
         className="h-10 w-[9.75rem] appearance-none rounded-full border border-cream/25 bg-night/45 px-3 pr-8 text-xs font-semibold text-cream outline-none backdrop-blur transition-colors hover:bg-night/70 focus:ring-2 focus:ring-accent/70 disabled:opacity-60 sm:w-[12.5rem] sm:text-sm"
       >
