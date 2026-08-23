@@ -12,7 +12,7 @@ import { ControlCluster } from "@/components/room/ControlCluster";
 import { OneLinerCaption } from "@/components/room/OneLinerCaption";
 import { ThemeSwitcher } from "@/components/room/ThemeSwitcher";
 import { ISTClock } from "@/components/ISTClock";
-import nightBusVideo from "@/assets/theme-night-bus-moving.mp4.asset.json";
+import nightBusVideo from "@/assets/theme-night-bus-moving-fixed.mp4.asset.json";
 
 function gagFor(slug: string) {
   if (slug === "raat-ki-bus") return "horn";
@@ -72,7 +72,7 @@ export function RoomExperience({
           loop
           playsInline
           aria-label={`${scene.title_en} — moving night bus view`}
-          className="bus-journey absolute inset-0 size-full object-cover"
+          className="absolute inset-0 size-full object-cover"
         />
       ) : (
         <img
