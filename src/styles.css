@@ -332,3 +332,54 @@
     transition-duration: 0.001ms !important;
   }
 }
+
+/* ---- IST time-of-day lighting grades ---------------------------------- */
+.scene-media {
+  transition: filter 2400ms ease;
+}
+.grade-morning .scene-media {
+  filter: brightness(1.06) saturate(1.02) contrast(0.98) hue-rotate(-4deg);
+}
+.grade-day .scene-media {
+  filter: brightness(1.16) saturate(1.06) contrast(1.02);
+}
+.grade-evening .scene-media {
+  filter: brightness(0.92) saturate(1.12) sepia(0.12);
+}
+.grade-night .scene-media {
+  filter: brightness(0.62) saturate(0.82) contrast(1.06) hue-rotate(6deg);
+}
+
+.scene-light {
+  transition: opacity 2400ms ease, background 2400ms ease;
+  mix-blend-mode: soft-light;
+}
+.grade-morning .scene-light {
+  background: linear-gradient(
+    180deg,
+    oklch(0.92 0.09 82 / 0.5),
+    transparent 62%
+  );
+}
+.grade-day .scene-light {
+  background: radial-gradient(
+    90% 70% at 50% 0%,
+    oklch(0.97 0.05 95 / 0.42),
+    transparent 70%
+  );
+}
+.grade-evening .scene-light {
+  background: linear-gradient(
+    180deg,
+    oklch(0.72 0.16 55 / 0.45),
+    transparent 70%
+  );
+}
+.grade-night .scene-light {
+  background: linear-gradient(
+    180deg,
+    oklch(0.32 0.07 265 / 0.6),
+    oklch(0.22 0.05 265 / 0.35)
+  );
+  mix-blend-mode: multiply;
+}
