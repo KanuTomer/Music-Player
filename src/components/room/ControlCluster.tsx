@@ -1,5 +1,7 @@
 import {
+  ChevronUp,
   ExternalLink,
+  Minus,
   Music2,
   Pause,
   Play,
@@ -8,7 +10,8 @@ import {
   Volume1,
   Volume2,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
 import type { Track } from "@/lib/rooms.functions";
 import type { NowPlaying } from "@/lib/player";
 import { Slider } from "@/components/ui/slider";
