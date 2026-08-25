@@ -7,7 +7,7 @@ const DEFAULT_SLUG = "sainik-dhaba";
 
 const TITLE = "Sainik Dhaba — always-on ambience from the India we grew up in";
 const DESC =
-  "Sit inside a highway dhaba, a deluxe salon, a chai ki tapri or a night bus. Hindi songs, ambient sound and in-character chatter — no signup.";
+  "Sit inside a highway dhaba, a deluxe salon, a chai ki tapri or a night bus. Hindi film songs, moving scenes and in-character chatter — no signup.";
 
 export const Route = createFileRoute("/")({
   loader: async () => {
