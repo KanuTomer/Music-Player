@@ -146,11 +146,11 @@ export function ControlCluster({
           {/* paper label with the clear hub window cut into it */}
           <div className="relative mx-auto h-full max-w-[26rem] rounded-[3px] bg-cinema-cream px-2 pt-1.5 shadow-tile">
             <div className="flex items-center justify-between">
-              <span className="h-[3px] flex-1 bg-terracotta/80" aria-hidden />
-              <span className="px-2 font-cinema-display text-[10px] tracking-[0.18em] text-ink/70">
+              <span className="h-[3px] flex-1 bg-ember/80" aria-hidden />
+              <span className="px-2 font-cinema-display text-[10px] tracking-[0.18em] text-charcoal/75">
                 SAINIK DHABA
               </span>
-              <span className="h-[3px] flex-1 bg-mustard/90" aria-hidden />
+              <span className="h-[3px] flex-1 bg-charcoal-line/60" aria-hidden />
             </div>
 
             <div className="cassette-window relative mx-auto mt-1.5 flex h-[3.1rem] items-center justify-center gap-8 rounded-[3px] border border-ink/50 bg-night/95 px-4 sm:h-[3.6rem] sm:gap-12">
