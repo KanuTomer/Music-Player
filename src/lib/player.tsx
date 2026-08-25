@@ -10,7 +10,6 @@ import {
 } from "react";
 import { resolveTrackVideo, type RoomPayload, type Track } from "./rooms.functions";
 import { currentDaypart, forDaypart, type Daypart } from "./dayparts";
-import { setAmbienceVolume, stopAmbience } from "./ambience";
 
 type YTPlayer = {
   loadPlaylist: (o: { list: string; listType: "playlist"; index?: number }) => void;
@@ -66,8 +65,6 @@ type PlayerState = {
   isCuratedPlaylist: boolean;
   nowPlaying: NowPlaying;
   musicVolume: number;
-  ambienceVolume: number;
-  ambienceEnabled: boolean;
   openRoom: (room: RoomPayload) => void;
   toggle: () => void;
   next: () => void;
@@ -75,8 +72,6 @@ type PlayerState = {
   seek: (seconds: number) => void;
   setMusicVolume: (v: number) => void;
   start: () => void;
-  setAmbience: (v: number) => void;
-  toggleAmbience: () => void;
   fadeForThemeChange: () => Promise<void>;
   leave: () => void;
 };
@@ -134,8 +129,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [needsGate, setNeedsGate] = useState(true);
   const [musicReady, setMusicReady] = useState(false);
   const [musicBlocked, setMusicBlocked] = useState(false);
-  const [ambienceVolume, setAmbienceVol] = useState(0);
-  const [ambienceEnabled, setAmbienceEnabled] = useState(false);
   const [musicVolume, setMusicVol] = useState(0.7);
   const musicVolumeRef = useRef(0.7);
   const [nowPlaying, setNowPlaying] = useState<NowPlaying>({
@@ -359,7 +352,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           videoId = res.videoId;
         }
       } catch {
-        /* fall through to ambience-only */
+        /* no playable video id */
       }
     }
     if (!videoId) {
@@ -433,17 +426,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  // Ambience (procedural theme background sound) is disabled product-wide.
-  useEffect(() => {
-    setAmbienceVolume(0);
-    stopAmbience();
-  }, [room?.scene.slug, needsGate]);
-
-
-  const toggleAmbience = useCallback(() => {
-    setAmbienceEnabled((enabled) => !enabled);
-  }, []);
-
   useEffect(() => {
     if (needsGate || !musicReady) return;
     if (!room || !cueRoomPlaylist(room.scene.slug, true)) void cueTrack(track, true);
@@ -464,13 +446,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (isPlaying) {
       playerRef.current?.pauseVideo();
       setIsPlaying(false);
-      setAmbienceVolume(0);
     } else {
       playerRef.current?.playVideo();
       setIsPlaying(true);
-      setAmbienceVolume(ambienceVolume);
     }
-  }, [ambienceVolume, isPlaying, needsGate, start]);
+  }, [isPlaying, needsGate, start]);
 
   const next = useCallback(() => {
     if (room && scenePlaylists[room.scene.slug] && playerRef.current) {
@@ -482,7 +462,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const fadeForThemeChange = useCallback(() => {
     themeTransitionRef.current = true;
-    setAmbienceVolume(0);
     const p = playerRef.current;
     if (!p || !isPlaying) return Promise.resolve();
 
@@ -506,7 +485,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     loadedPlaylistRef.current = null;
     setNeedsGate(true);
     setIsPlaying(false);
-    stopAmbience();
     playerRef.current?.pauseVideo();
   }, []);
 
@@ -522,8 +500,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     isCuratedPlaylist,
     nowPlaying,
     musicVolume,
-    ambienceVolume,
-    ambienceEnabled,
     openRoom,
     toggle,
     next,
@@ -531,8 +507,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     seek,
     setMusicVolume,
     start,
-    setAmbience: setAmbienceVol,
-    toggleAmbience,
     fadeForThemeChange,
     leave,
   };
