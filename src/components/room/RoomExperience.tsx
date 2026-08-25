@@ -207,29 +207,29 @@ export function RoomExperience({
 
       {player.needsGate && (
         <div className="absolute inset-0 z-40 flex flex-col items-center justify-center px-6 text-center">
-          <div className="absolute inset-0 bg-night/72 backdrop-blur-[3px]" aria-hidden />
+          <div className="absolute inset-0 bg-charcoal/78 backdrop-blur-[4px]" aria-hidden />
           <div className="vignette absolute inset-0" aria-hidden />
 
-          <div className="relative flex w-full max-w-sm flex-col items-center gap-3">
-            <span className="ticket bg-accent px-3 py-[3px] text-[9.5px] font-bold tracking-[0.18em] text-accent-foreground uppercase">
+          <div className="relative flex w-full max-w-sm flex-col items-center gap-3 rounded-2xl border border-cream/10 bg-charcoal/45 px-6 py-8 shadow-lift">
+            <span className="rounded-full border border-ember/50 px-3 py-[3px] text-[9.5px] font-bold tracking-[0.22em] text-ember uppercase">
               {scene.region ?? scene.category} · live
             </span>
             <h2 className="signage-text font-deva text-3xl leading-tight text-cream">
               {scene.title_hi}
             </h2>
-            <p className="text-[12.5px] font-medium tracking-[0.16em] text-cream/60 uppercase">
+            <p className="text-[12.5px] font-medium tracking-[0.22em] text-cream/55 uppercase">
               {scene.title_en}
             </p>
-            <p className="max-w-xs text-sm leading-relaxed text-cream/80">{scene.hook}</p>
+            <p className="max-w-xs text-sm leading-relaxed text-cream/70">{scene.hook}</p>
             <button
               type="button"
               onClick={player.start}
-              className="animate-bulb mt-2 flex items-center gap-2 rounded-full bg-accent px-7 py-3.5 text-sm font-bold text-accent-foreground shadow-lift transition-transform hover:scale-[1.03] active:scale-95"
+              className="mt-2 flex items-center gap-2 rounded-full bg-ember px-7 py-3.5 text-sm font-bold text-charcoal shadow-lift transition-transform hover:scale-[1.03] active:scale-95"
             >
               <Sparkles className="size-4" aria-hidden />
               Andar aa jao — press play
             </button>
-            <p className="text-[11px] text-cream/55">
+            <p className="text-[11px] text-cream/45">
               Headphones lagao. Ye kamra chalta rahega.
             </p>
           </div>
