@@ -145,12 +145,12 @@ export function RoomExperience({
 
       {/* top row: live pill · theme dropdown · share */}
       <div className="absolute inset-x-0 top-0 z-50 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 p-2 sm:gap-3 sm:p-3">
-        <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-cream/20 bg-night/45 px-2.5 py-1.5 backdrop-blur sm:gap-2 sm:px-3">
-          <span className="animate-bulb inline-block size-1.5 rounded-full bg-accent" aria-hidden />
+        <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-cream/12 bg-charcoal/60 px-2.5 py-1.5 backdrop-blur-md sm:gap-2 sm:px-3">
+          <span className="animate-bulb inline-block size-1.5 rounded-full bg-ember" aria-hidden />
           <span className="text-[12px] font-semibold text-cream tabular-nums">{social.listeners}</span>
-          <span className="hidden text-[11px] text-cream/60 sm:inline">sun rahe hain</span>
-          <span className="hidden text-cream/30 sm:inline">·</span>
-          <ISTClock inherit className="hidden items-center gap-1.5 text-[11px] text-cream/65 sm:flex" />
+          <span className="hidden text-[11px] text-cream/55 sm:inline">sun rahe hain</span>
+          <span className="hidden text-cream/25 sm:inline">·</span>
+          <ISTClock inherit className="hidden items-center gap-1.5 text-[11px] text-cream/55 sm:flex" />
         </div>
 
         <div className="flex min-w-0 items-center justify-center">
@@ -162,7 +162,7 @@ export function RoomExperience({
             type="button"
             onClick={share}
             aria-label="Share this room"
-            className="flex size-10 items-center justify-center rounded-full border border-cream/25 bg-night/45 text-cream backdrop-blur transition-colors hover:bg-night/70"
+            className="flex size-10 items-center justify-center rounded-full border border-cream/12 bg-charcoal/60 text-cream/80 backdrop-blur-md transition-colors hover:bg-charcoal/85 hover:text-cream"
           >
             <Share2 className="size-4" aria-hidden />
           </button>
@@ -171,14 +171,16 @@ export function RoomExperience({
 
 
       {/* room title, signage-style, centred */}
-      <div className="pointer-events-none absolute inset-x-0 top-[16dvh] z-20 px-6 text-center">
+      <div className="pointer-events-none absolute inset-x-0 top-[15dvh] z-20 flex flex-col items-center px-6 text-center">
         <h1 className="signage-text font-deva text-4xl leading-[1.05] text-cream sm:text-6xl">
           {scene.title_hi}
         </h1>
-        <p className="mt-1 text-[11px] font-semibold tracking-[0.24em] text-cream/60 uppercase sm:text-[13px]">
+        <span className="mt-3 h-[2px] w-16 rounded-full bg-ember/80" aria-hidden />
+        <p className="mt-3 text-[11px] font-semibold tracking-[0.3em] text-cream/55 uppercase sm:text-[13px]">
           {scene.title_en}
         </p>
       </div>
+
 
       <OneLinerCaption
         lines={lines}
@@ -205,29 +207,29 @@ export function RoomExperience({
 
       {player.needsGate && (
         <div className="absolute inset-0 z-40 flex flex-col items-center justify-center px-6 text-center">
-          <div className="absolute inset-0 bg-night/72 backdrop-blur-[3px]" aria-hidden />
+          <div className="absolute inset-0 bg-charcoal/78 backdrop-blur-[4px]" aria-hidden />
           <div className="vignette absolute inset-0" aria-hidden />
 
-          <div className="relative flex w-full max-w-sm flex-col items-center gap-3">
-            <span className="ticket bg-accent px-3 py-[3px] text-[9.5px] font-bold tracking-[0.18em] text-accent-foreground uppercase">
+          <div className="relative flex w-full max-w-sm flex-col items-center gap-3 rounded-2xl border border-cream/10 bg-charcoal/45 px-6 py-8 shadow-lift">
+            <span className="rounded-full border border-ember/50 px-3 py-[3px] text-[9.5px] font-bold tracking-[0.22em] text-ember uppercase">
               {scene.region ?? scene.category} · live
             </span>
             <h2 className="signage-text font-deva text-3xl leading-tight text-cream">
               {scene.title_hi}
             </h2>
-            <p className="text-[12.5px] font-medium tracking-[0.16em] text-cream/60 uppercase">
+            <p className="text-[12.5px] font-medium tracking-[0.22em] text-cream/55 uppercase">
               {scene.title_en}
             </p>
-            <p className="max-w-xs text-sm leading-relaxed text-cream/80">{scene.hook}</p>
+            <p className="max-w-xs text-sm leading-relaxed text-cream/70">{scene.hook}</p>
             <button
               type="button"
               onClick={player.start}
-              className="animate-bulb mt-2 flex items-center gap-2 rounded-full bg-accent px-7 py-3.5 text-sm font-bold text-accent-foreground shadow-lift transition-transform hover:scale-[1.03] active:scale-95"
+              className="mt-2 flex items-center gap-2 rounded-full bg-ember px-7 py-3.5 text-sm font-bold text-charcoal shadow-lift transition-transform hover:scale-[1.03] active:scale-95"
             >
               <Sparkles className="size-4" aria-hidden />
               Andar aa jao — press play
             </button>
-            <p className="text-[11px] text-cream/55">
+            <p className="text-[11px] text-cream/45">
               Headphones lagao. Ye kamra chalta rahega.
             </p>
           </div>
