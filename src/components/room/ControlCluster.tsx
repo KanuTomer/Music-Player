@@ -86,9 +86,9 @@ export function ControlCluster({
     : null;
 
   return (
-    <div className="pointer-events-auto w-[min(96vw,50rem)] rounded-lg border-2 border-ink/70 bg-cinema-cream/95 p-2.5 text-ink shadow-lift backdrop-blur-sm sm:p-3">
-      <div className="flex items-center gap-3 border-b border-ink/20 pb-2.5">
-        <span className="relative flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-sm border-2 border-ink/40 bg-night shadow-tile sm:size-[4.5rem]">
+    <div className="pointer-events-auto w-[min(96vw,44rem)] rounded-xl border border-charcoal-line/60 bg-charcoal/92 p-3 text-cream shadow-lift ring-1 ring-cream/5 backdrop-blur-md sm:p-4">
+      <div className="flex items-center gap-3 border-b border-cream/10 pb-3">
+        <span className="relative flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-cream/15 bg-charcoal-soft sm:size-[4.5rem]">
           {nowPlaying.videoId || track?.youtube_id ? (
             <img
               key={nowPlaying.videoId ?? track?.youtube_id}
@@ -97,7 +97,7 @@ export function ControlCluster({
               className="size-full animate-fade-in object-cover"
             />
           ) : (
-            <span className="flex size-full flex-col items-center justify-center bg-terracotta text-cinema-cream" aria-label="Cover art loading">
+            <span className="flex size-full flex-col items-center justify-center bg-ember/90 text-charcoal" aria-label="Cover art loading">
               <Music2 className="size-5" aria-hidden />
               <span className="mt-1 font-vintage-deva text-[9px]">संगीत</span>
             </span>
@@ -105,27 +105,29 @@ export function ControlCluster({
         </span>
 
         <div key={nowPlaying.videoId ?? track?.id ?? "idle"} className="min-w-0 flex-1 animate-fade-in">
-          <p className="truncate font-cinema-display text-base leading-tight text-ink sm:text-lg">{title}</p>
-          <p className="mt-1 truncate text-[11px] font-semibold text-ink/70 sm:text-xs">
+          <p className="truncate font-cinema-display text-lg leading-tight text-cream sm:text-xl">{title}</p>
+          <p className="mt-1 truncate text-[11px] font-medium text-cream/60 sm:text-xs">
             {musicBlocked ? (
               "गीत अभी उपलब्ध नहीं है — कृपया अगला गीत चुनें।"
             ) : (
-              <><span className="text-terracotta">कलाकार</span> · {artistDetails}</>
+              <><span className="text-ember">कलाकार</span> · {artistDetails}</>
             )}
           </p>
           {!musicBlocked && (nowPlaying.videoId || track) && (
-            <p className="mt-1 font-vintage-deva text-[11px] text-terracotta" aria-live="polite">
+            <p className="mt-1 flex items-center gap-1.5 font-vintage-deva text-[11px] text-ember" aria-live="polite">
+              <span className="animate-bulb inline-block size-1.5 rounded-full bg-ember" aria-hidden />
               अभी बज रहा है
             </p>
           )}
         </div>
 
         {isCuratedPlaylist && nowPlaying.total > 0 && (
-          <span className="shrink-0 text-[10px] font-semibold tabular-nums text-ink/50">
+          <span className="shrink-0 rounded-full border border-cream/15 px-2 py-0.5 text-[10px] font-semibold tabular-nums text-cream/50">
             {nowPlaying.index + 1}/{nowPlaying.total}
           </span>
         )}
       </div>
+
 
       <div className="mt-2.5 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 sm:gap-4">
         <Button type="button" variant="ghost" size="icon" onClick={onPrevious} aria-label="Previous track" className="size-10 rounded-full border border-ink/30 text-ink hover:bg-ink/10">
