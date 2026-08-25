@@ -122,12 +122,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const resolvedRef = useRef<Map<string, string>>(new Map());
   const loadedPlaylistRef = useRef<string | null>(null);
   const playlistStartRef = useRef<Map<string, number>>(new Map());
+  // True whenever the app wants sound; a watchdog keeps the embed honest.
+  const intendPlayRef = useRef(false);
   const [room, setRoom] = useState<RoomPayload | null>(null);
   const [daypart, setDaypart] = useState<Daypart>(() => currentDaypart());
   const [index, setIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [needsGate, setNeedsGate] = useState(true);
   const [musicReady, setMusicReady] = useState(false);
+  const [apiReady, setApiReady] = useState(false);
   const [musicBlocked, setMusicBlocked] = useState(false);
   const [musicVolume, setMusicVol] = useState(0.7);
   const musicVolumeRef = useRef(0.7);
@@ -202,6 +205,24 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     return () => window.clearInterval(t);
   }, []);
 
+
+  // Playback watchdog: while the app intends to play, an embed that sits in
+  // UNSTARTED (-1), PAUSED (2) or CUED (5) is nudged until it really plays.
+  useEffect(() => {
+    const t = window.setInterval(() => {
+      const p = playerRef.current;
+      if (!p || !intendPlayRef.current) return;
+      try {
+        if (typeof p.getPlayerState !== "function") return;
+        const state = p.getPlayerState();
+        if (state === 1 || state === 3) return; // playing / buffering
+        p.playVideo();
+      } catch {
+        /* embed not ready yet */
+      }
+    }, 700);
+    return () => window.clearInterval(t);
+  }, []);
 
   const setMusicVolume = useCallback((v: number) => {
     const clamped = Math.min(1, Math.max(0, v));
@@ -282,26 +303,17 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
               playlistStartRef.current.set(playlistId, nextStart);
               p.loadPlaylist({ list: playlistId, listType: "playlist", index: nextStart });
               if (autoplay) {
-                // A rebuilt embed sometimes cues without starting; nudge it a
-                // few times so a theme switch always begins playing.
+                // A rebuilt embed often cues without starting; the watchdog
+                // below keeps retrying until it is actually playing.
+                intendPlayRef.current = true;
                 setIsPlaying(true);
                 p.playVideo();
-                [400, 1200, 2200].forEach((delay) =>
-                  window.setTimeout(() => {
-                    const cur = playerRef.current;
-                    if (!cur) return;
-                    try {
-                      if (typeof cur.getPlayerState === "function" && cur.getPlayerState() === 1) return;
-                      cur.playVideo();
-                    } catch {
-                      /* noop */
-                    }
-                  }, delay),
-                );
               } else {
+                intendPlayRef.current = false;
                 p.pauseVideo();
               }
             } else if (autoplay) {
+              intendPlayRef.current = true;
               p.playVideo();
             }
           } catch {
@@ -331,13 +343,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     void loadYouTubeApi().then(() => {
-      if (cancelled || playerRef.current) return;
-      buildPlayer(null, false);
+      if (!cancelled) setApiReady(true);
     });
     return () => {
       cancelled = true;
     };
-  }, [buildPlayer]);
+  }, []);
 
 
   const cueTrack = useCallback(async (t: Track | null, autoplay: boolean) => {
@@ -362,6 +373,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     try {
       p.loadVideoById(videoId);
       p.setVolume(themeTransitionRef.current ? 0 : Math.round(musicVolumeRef.current * 100));
+      intendPlayRef.current = autoplay;
       if (autoplay) p.playVideo();
       else p.pauseVideo();
       if (autoplay && themeTransitionRef.current) {
@@ -388,20 +400,24 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       if (!playlistId) return false;
 
       try {
-        if (loadedPlaylistRef.current !== playlistId) {
-          // Swapping the list in place is unreliable, so rebuild the embed
-          // with the new playlist baked into its params.
-          loadedPlaylistRef.current = playlistId;
+        const existing = playerRef.current;
+        // Rebuild only when the list changed or the embed is gone; a fresh
+        // embed reports no playlist until onReady, so don't treat that as a
+        // reason to rebuild (that would loop forever).
+        if (loadedPlaylistRef.current !== playlistId || !existing) {
           themeTransitionRef.current = false;
           if (volumeTimerRef.current !== null) {
             window.clearInterval(volumeTimerRef.current);
             volumeTimerRef.current = null;
           }
           const built = buildPlayer(playlistId, autoplay);
+          // Only remember the list once the embed really exists, so a failed
+          // build can never leave us pointing at a silent player.
+          loadedPlaylistRef.current = built ? playlistId : null;
           return Boolean(built);
         }
-        const p = playerRef.current;
-        if (!p) return false;
+        const p = existing;
+        intendPlayRef.current = autoplay;
         if (autoplay) p.playVideo();
         else p.pauseVideo();
         p.setVolume(Math.round(musicVolumeRef.current * 100));
@@ -427,12 +443,21 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
-    if (needsGate || !musicReady) return;
-    if (!room || !cueRoomPlaylist(room.scene.slug, true)) void cueTrack(track, true);
+    if (needsGate || !apiReady) return;
+    // Curated playlists rebuild the embed themselves, so they must not wait on
+    // a previous embed becoming ready — otherwise a room can stay silent.
+    if (room && cueRoomPlaylist(room.scene.slug, true)) return;
+    if (!playerRef.current) {
+      buildPlayer(null, false);
+      return;
+    }
+    if (!musicReady) return;
+    void cueTrack(track, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [room?.scene.slug, musicReady, needsGate]);
+  }, [room?.scene.slug, apiReady, musicReady, needsGate]);
 
   const start = useCallback(() => {
+    intendPlayRef.current = true;
     setNeedsGate(false);
     setIsPlaying(true);
     playerRef.current?.playVideo();
@@ -444,9 +469,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       return;
     }
     if (isPlaying) {
+      intendPlayRef.current = false;
       playerRef.current?.pauseVideo();
       setIsPlaying(false);
     } else {
+      intendPlayRef.current = true;
       playerRef.current?.playVideo();
       setIsPlaying(true);
     }
@@ -485,6 +512,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     loadedPlaylistRef.current = null;
     setNeedsGate(true);
     setIsPlaying(false);
+    intendPlayRef.current = false;
     playerRef.current?.pauseVideo();
   }, []);
 
