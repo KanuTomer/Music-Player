@@ -129,13 +129,13 @@ export function ControlCluster({
       </div>
 
 
-      <div className="mt-2.5 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 sm:gap-4">
-        <Button type="button" variant="ghost" size="icon" onClick={onPrevious} aria-label="Previous track" className="size-10 rounded-full border border-ink/30 text-ink hover:bg-ink/10">
+      <div className="mt-3 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 sm:gap-4">
+        <Button type="button" variant="ghost" size="icon" onClick={onPrevious} aria-label="Previous track" className="size-10 rounded-full border border-cream/20 text-cream/80 hover:bg-cream/10 hover:text-cream">
           <SkipBack className="size-4" aria-hidden />
         </Button>
 
         <div
-          className={`cassette-shell relative h-24 min-w-0 overflow-hidden rounded-[6px] border-2 border-ink/70 bg-night px-3 py-2 shadow-inner sm:h-28 ${isPlaying ? "cassette-running" : ""}`}
+          className={`cassette-shell relative h-24 min-w-0 overflow-hidden rounded-[6px] border border-cream/15 bg-charcoal-soft px-3 py-2 shadow-inner sm:h-28 ${isPlaying ? "cassette-running" : ""}`}
         >
           {/* corner screws */}
           <span className="cassette-screw left-1.5 top-1.5" aria-hidden />
