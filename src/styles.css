@@ -75,6 +75,12 @@
   --cinema-gold: oklch(0.7266 0.1374 77.43);
   --cinema-clay: oklch(0.5135 0.1285 36.58);
 
+  /* charcoal & ember — deck / chrome rails */
+  --charcoal: oklch(0.196 0 0);
+  --charcoal-soft: oklch(0.266 0 0);
+  --charcoal-line: oklch(0.395 0 0);
+  --ember: oklch(0.653 0.176 39.5);
+
   --background: var(--bg-cream);
   --foreground: var(--ink);
   --card: oklch(0.965 0.026 88);
