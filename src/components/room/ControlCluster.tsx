@@ -73,6 +73,16 @@ export function ControlCluster({
   musicBlocked: boolean;
 }) {
   const [showMix, setShowMix] = useState(false);
+  const [minimized, setMinimized] = useState(false);
+
+  // Remember the user's preferred player size between visits.
+  useEffect(() => {
+    if (window.localStorage.getItem("sd.player.minimized") === "1") setMinimized(true);
+  }, []);
+  useEffect(() => {
+    window.localStorage.setItem("sd.player.minimized", minimized ? "1" : "0");
+  }, [minimized]);
+
 
   const liveTitle = readableTitle(nowPlaying.title);
   const title = liveTitle ?? track?.title ?? "Tuning in…";
