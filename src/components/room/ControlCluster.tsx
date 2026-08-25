@@ -183,13 +183,13 @@ export function ControlCluster({
         </div>
 
 
-        <Button type="button" variant="ghost" size="icon" onClick={onNext} aria-label="Next track" className="size-10 rounded-full border border-ink/30 text-ink hover:bg-ink/10">
+        <Button type="button" variant="ghost" size="icon" onClick={onNext} aria-label="Next track" className="size-10 rounded-full border border-cream/20 text-cream/80 hover:bg-cream/10 hover:text-cream">
           <SkipForward className="size-4" aria-hidden />
         </Button>
       </div>
 
-      <div className="mt-2.5 flex items-center gap-2">
-        <span className="w-8 shrink-0 text-right text-[10px] tabular-nums text-ink/55">
+      <div className="mt-3 flex items-center gap-2">
+        <span className="w-8 shrink-0 text-right text-[10px] tabular-nums text-cream/45">
           {clock(nowPlaying.position)}
         </span>
         <button
@@ -200,19 +200,24 @@ export function ControlCluster({
             const rect = e.currentTarget.getBoundingClientRect();
             onSeek(((e.clientX - rect.left) / rect.width) * duration);
           }}
-          className="group relative h-3 flex-1 rounded-full"
+          className="group relative h-4 flex-1 rounded-full"
         >
-          <span className="absolute inset-x-0 top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-ink/20" />
+          <span className="absolute inset-x-0 top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-cream/15" />
           <span
-            className="absolute left-0 top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-terracotta transition-[width]"
+            className="absolute left-0 top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-ember transition-[width]"
             style={{ width: `${progress}%` }}
           />
+          <span
+            className="absolute top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-ember opacity-0 shadow-tile transition-opacity group-hover:opacity-100"
+            style={{ left: `${progress}%` }}
+            aria-hidden
+          />
         </button>
-        <span className="w-8 shrink-0 text-[10px] tabular-nums text-ink/55">{clock(duration)}</span>
-        <Button type="button" onClick={onToggle} aria-label={isPlaying ? "Pause" : "Play"} size="icon" className="size-11 rounded-full bg-terracotta text-primary-foreground shadow-tile hover:bg-terracotta/90">
+        <span className="w-8 shrink-0 text-[10px] tabular-nums text-cream/45">{clock(duration)}</span>
+        <Button type="button" onClick={onToggle} aria-label={isPlaying ? "Pause" : "Play"} size="icon" className="size-11 rounded-full bg-ember text-charcoal shadow-lift transition-transform hover:bg-ember/90 active:scale-95">
           {isPlaying ? <Pause className="size-4" aria-hidden /> : <Play className="size-4" aria-hidden />}
         </Button>
-        <Button type="button" variant="ghost" size="icon" onClick={() => setShowMix((s) => !s)} aria-expanded={showMix} aria-label="Sound mix" className={`size-9 rounded-full border border-ink/25 ${showMix ? "bg-mustard text-ink" : "text-ink/70 hover:bg-ink/10"}`}>
+        <Button type="button" variant="ghost" size="icon" onClick={() => setShowMix((s) => !s)} aria-expanded={showMix} aria-label="Sound mix" className={`size-9 rounded-full border border-cream/20 ${showMix ? "bg-ember text-charcoal" : "text-cream/70 hover:bg-cream/10 hover:text-cream"}`}>
           <Volume2 className="size-4" aria-hidden />
         </Button>
         {watchUrl && (
@@ -221,7 +226,7 @@ export function ControlCluster({
             target="_blank"
             rel="noreferrer"
             aria-label="Open on YouTube"
-            className="shrink-0 text-ink/55 transition-colors hover:text-ink"
+            className="shrink-0 text-cream/45 transition-colors hover:text-ember"
           >
             <ExternalLink className="size-3.5" aria-hidden />
           </a>
@@ -229,9 +234,9 @@ export function ControlCluster({
       </div>
 
       {showMix && (
-        <div className="mt-2.5 flex items-center gap-2 border-t border-ink/20 pt-2.5">
-          <Volume1 className="size-3.5 shrink-0 text-ink/65" aria-hidden />
-          <span className="w-14 shrink-0 text-[10.5px] text-ink/65">Music</span>
+        <div className="mt-3 flex items-center gap-2 border-t border-cream/10 pt-3">
+          <Volume1 className="size-3.5 shrink-0 text-cream/60" aria-hidden />
+          <span className="w-14 shrink-0 text-[10.5px] text-cream/60">Music</span>
           <Slider
             value={[Math.round(musicVolume * 100)]}
             max={100}
@@ -241,6 +246,7 @@ export function ControlCluster({
           />
         </div>
       )}
+
 
     </div>
   );
