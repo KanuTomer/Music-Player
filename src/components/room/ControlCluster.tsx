@@ -98,7 +98,60 @@ export function ControlCluster({
     ? `https://music.youtube.com/search?q=${encodeURIComponent(track.search_query ?? track.title)}`
     : null;
 
+  const cover = nowPlaying.videoId ?? track?.youtube_id ?? null;
+
+  if (minimized) {
+    return (
+      <div className="pointer-events-auto w-[min(96vw,30rem)] rounded-full border border-charcoal-line/60 bg-charcoal/92 p-2 pr-3 text-cream shadow-lift ring-1 ring-cream/5 backdrop-blur-md">
+        <div className="flex items-center gap-2.5">
+          <span className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-cream/15 bg-charcoal-soft">
+            {cover ? (
+              <img
+                key={cover}
+                src={`https://i.ytimg.com/vi/${cover}/mqdefault.jpg`}
+                alt={`${title} cover art`}
+                className="size-full animate-fade-in object-cover"
+              />
+            ) : (
+              <Music2 className="size-4 text-ember" aria-hidden />
+            )}
+          </span>
+
+          <div key={cover ?? "idle"} className="min-w-0 flex-1 animate-fade-in">
+            <p className="truncate font-cinema-display text-[13px] leading-tight text-cream">{title}</p>
+            <p className="truncate text-[10.5px] text-cream/55">{artistDetails}</p>
+            <span className="mt-1 block h-[2px] w-full overflow-hidden rounded-full bg-cream/15" aria-hidden>
+              <span className="block h-full rounded-full bg-ember" style={{ width: `${progress}%` }} />
+            </span>
+          </div>
+
+          <Button type="button" variant="ghost" size="icon" onClick={onPrevious} aria-label="Previous track" className="size-8 shrink-0 rounded-full text-cream/70 hover:bg-cream/10 hover:text-cream">
+            <SkipBack className="size-3.5" aria-hidden />
+          </Button>
+          <Button type="button" onClick={onToggle} aria-label={isPlaying ? "Pause" : "Play"} size="icon" className="size-9 shrink-0 rounded-full bg-ember text-charcoal hover:bg-ember/90 active:scale-95">
+            {isPlaying ? <Pause className="size-3.5" aria-hidden /> : <Play className="size-3.5" aria-hidden />}
+          </Button>
+          <Button type="button" variant="ghost" size="icon" onClick={onNext} aria-label="Next track" className="size-8 shrink-0 rounded-full text-cream/70 hover:bg-cream/10 hover:text-cream">
+            <SkipForward className="size-3.5" aria-hidden />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => setMinimized(false)}
+            aria-label="Expand player to cassette mode"
+            title="कैसेट मोड"
+            className="size-8 shrink-0 rounded-full border border-cream/20 text-cream/70 hover:bg-cream/10 hover:text-cream"
+          >
+            <ChevronUp className="size-3.5" aria-hidden />
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
+
     <div className="pointer-events-auto w-[min(96vw,44rem)] rounded-xl border border-charcoal-line/60 bg-charcoal/92 p-3 text-cream shadow-lift ring-1 ring-cream/5 backdrop-blur-md sm:p-4">
       <div className="flex items-center gap-3 border-b border-cream/10 pb-3">
         <span className="relative flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-cream/15 bg-charcoal-soft sm:size-[4.5rem]">
