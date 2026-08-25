@@ -45,13 +45,17 @@
   --color-cinema-cream: var(--cinema-cream);
   --color-cinema-gold: var(--cinema-gold);
   --color-cinema-clay: var(--cinema-clay);
-  --font-display: "Alfa Slab One", "Georgia", serif;
-  --font-signage: "Baloo 2", system-ui, sans-serif;
-  --font-sans: "Inter", system-ui, sans-serif;
+  --color-charcoal: var(--charcoal);
+  --color-charcoal-soft: var(--charcoal-soft);
+  --color-charcoal-line: var(--charcoal-line);
+  --color-ember: var(--ember);
+  --font-display: "Abril Fatface", "Georgia", serif;
+  --font-signage: "Cabin", system-ui, sans-serif;
+  --font-sans: "Cabin", system-ui, sans-serif;
   --font-deva: "Baloo 2", "Noto Sans Devanagari", sans-serif;
   --font-vintage-deva: "Tiro Devanagari Hindi", "Noto Serif Devanagari", serif;
-  --font-cinema-display: "DM Serif Display", Georgia, serif;
-  --font-cinema-body: "Fira Sans", system-ui, sans-serif;
+  --font-cinema-display: "Abril Fatface", Georgia, serif;
+  --font-cinema-body: "Cabin", system-ui, sans-serif;
   --shadow-tile: 0 10px 24px -12px oklch(0.28 0.06 60 / 0.45);
   --shadow-lift: 0 18px 40px -18px oklch(0.28 0.06 60 / 0.55);
 }
