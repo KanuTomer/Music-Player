@@ -4,13 +4,7 @@ import { useState } from "react";
 import type { Scene } from "@/lib/rooms.functions";
 import { usePlayer } from "@/lib/player";
 
-export function ThemeSwitcher({
-  scenes,
-  currentSlug,
-}: {
-  scenes: Scene[];
-  currentSlug: string;
-}) {
+export function ThemeSwitcher({ scenes, currentSlug }: { scenes: Scene[]; currentSlug: string }) {
   const player = usePlayer();
   const navigate = useNavigate();
   const [transitioning, setTransitioning] = useState(false);

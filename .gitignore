@@ -16,6 +16,15 @@ dist-ssr
 .nitro
 *.local
 
+# Environment configuration
+.env
+.env.*
+!.env.example
+
+# Deployment and linked-service state
+.vercel/
+supabase/.temp/
+
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars
@@ -30,3 +39,5 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+.vercel
+.env*

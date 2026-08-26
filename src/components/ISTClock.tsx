@@ -34,9 +34,7 @@ export function ISTClock({
       <span className={cn("font-medium", inherit ? "" : "text-foreground")}>
         {label ? `${label} IST` : ""}
       </span>
-      <span className="hidden opacity-70 sm:inline">
-        {part ? daypartLabel[part] : ""}
-      </span>
+      <span className="hidden opacity-70 sm:inline">{part ? daypartLabel[part] : ""}</span>
     </span>
   );
 }

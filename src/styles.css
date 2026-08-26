@@ -174,12 +174,12 @@
     z-index: 1;
     opacity: 0.35;
     mix-blend-mode: multiply;
-    background-image: radial-gradient(
-        oklch(0.55 0.05 70 / 0.16) 0.5px,
-        transparent 0.6px
-      ),
+    background-image:
+      radial-gradient(oklch(0.55 0.05 70 / 0.16) 0.5px, transparent 0.6px),
       radial-gradient(oklch(0.55 0.05 70 / 0.1) 0.5px, transparent 0.6px);
-    background-size: 3px 3px, 7px 7px;
+    background-size:
+      3px 3px,
+      7px 7px;
     background-position:
       0 0,
       2px 3px;
@@ -187,10 +187,7 @@
 }
 
 @utility halftone {
-  background-image: radial-gradient(
-    oklch(0.24 0.02 60 / 0.18) 1px,
-    transparent 1.2px
-  );
+  background-image: radial-gradient(oklch(0.24 0.02 60 / 0.18) 1px, transparent 1.2px);
   background-size: 4px 4px;
 }
 
@@ -226,11 +223,8 @@
 /* corner-notched ticket / bus-stub silhouette */
 @utility ticket {
   --notch: 7px;
-  mask-image: radial-gradient(
-      circle var(--notch) at 0 50%,
-      transparent 99%,
-      #000 100%
-    ),
+  mask-image:
+    radial-gradient(circle var(--notch) at 0 50%, transparent 99%, #000 100%),
     radial-gradient(circle var(--notch) at 100% 50%, transparent 99%, #000 100%);
   mask-composite: intersect;
   -webkit-mask-composite: source-in;
@@ -293,13 +287,21 @@
 }
 
 @keyframes theme-cover-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes room-scene-enter {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @utility theme-transition-cover {
@@ -415,7 +417,6 @@
   animation: cassette-tape-travel 0.45s linear infinite;
 }
 
-
 @utility animate-drift-up {
   animation: drift-up 2.6s ease-out forwards;
 }
@@ -448,36 +449,22 @@
 }
 
 .scene-light {
-  transition: opacity 2400ms ease, background 2400ms ease;
+  transition:
+    opacity 2400ms ease,
+    background 2400ms ease;
   mix-blend-mode: soft-light;
 }
 .grade-morning .scene-light {
-  background: linear-gradient(
-    180deg,
-    oklch(0.92 0.09 82 / 0.5),
-    transparent 62%
-  );
+  background: linear-gradient(180deg, oklch(0.92 0.09 82 / 0.5), transparent 62%);
 }
 .grade-day .scene-light {
-  background: radial-gradient(
-    90% 70% at 50% 0%,
-    oklch(0.97 0.05 95 / 0.42),
-    transparent 70%
-  );
+  background: radial-gradient(90% 70% at 50% 0%, oklch(0.97 0.05 95 / 0.42), transparent 70%);
 }
 .grade-evening .scene-light {
-  background: linear-gradient(
-    180deg,
-    oklch(0.72 0.16 55 / 0.45),
-    transparent 70%
-  );
+  background: linear-gradient(180deg, oklch(0.72 0.16 55 / 0.45), transparent 70%);
 }
 .grade-night .scene-light {
-  background: linear-gradient(
-    180deg,
-    oklch(0.32 0.07 265 / 0.6),
-    oklch(0.22 0.05 265 / 0.35)
-  );
+  background: linear-gradient(180deg, oklch(0.32 0.07 265 / 0.6), oklch(0.22 0.05 265 / 0.35));
   mix-blend-mode: multiply;
 }
 

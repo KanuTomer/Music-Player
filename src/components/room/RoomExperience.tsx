@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo, useRef } from "react";
 import { Share2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
@@ -33,13 +32,7 @@ const sceneVideos: Record<string, string> = {
   "corporate-majdoor": corporateMajdoorVideo.url,
 };
 
-export function RoomExperience({
-  room,
-  scenes,
-}: {
-  room: RoomPayload;
-  scenes: Scene[];
-}) {
+export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Scene[] }) {
   const { scene, oneliners } = room;
   const player = usePlayer();
   const social = useRoomSocial(`scene:${scene.slug}`);
@@ -71,10 +64,7 @@ export function RoomExperience({
     };
   }, [scene.slug, sceneVideo]);
 
-  const lines = useMemo(
-    () => forDaypart(oneliners, player.daypart),
-    [oneliners, player.daypart],
-  );
+  const lines = useMemo(() => forDaypart(oneliners, player.daypart), [oneliners, player.daypart]);
 
   const share = async () => {
     const url = window.location.href;
@@ -97,7 +87,9 @@ export function RoomExperience({
   const gradeClass = gradeless ? "" : `grade-${player.daypart}`;
 
   return (
-    <div className={`room-scene-enter relative h-dvh w-full overflow-hidden ${gradeClass} ${scene.is_dark ? "room-dark" : ""}`}>
+    <div
+      className={`room-scene-enter relative h-dvh w-full overflow-hidden ${gradeClass} ${scene.is_dark ? "room-dark" : ""}`}
+    >
       {sceneVideo ? (
         <video
           ref={sceneVideoRef}
@@ -147,10 +139,15 @@ export function RoomExperience({
       <div className="absolute inset-x-0 top-0 z-50 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 p-2 sm:gap-3 sm:p-3">
         <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-cream/12 bg-charcoal/60 px-2.5 py-1.5 backdrop-blur-md sm:gap-2 sm:px-3">
           <span className="animate-bulb inline-block size-1.5 rounded-full bg-ember" aria-hidden />
-          <span className="text-[12px] font-semibold text-cream tabular-nums">{social.listeners}</span>
+          <span className="text-[12px] font-semibold text-cream tabular-nums">
+            {social.listeners}
+          </span>
           <span className="hidden text-[11px] text-cream/55 sm:inline">sun rahe hain</span>
           <span className="hidden text-cream/25 sm:inline">·</span>
-          <ISTClock inherit className="hidden items-center gap-1.5 text-[11px] text-cream/55 sm:flex" />
+          <ISTClock
+            inherit
+            className="hidden items-center gap-1.5 text-[11px] text-cream/55 sm:flex"
+          />
         </div>
 
         <div className="flex min-w-0 items-center justify-center">
@@ -169,7 +166,6 @@ export function RoomExperience({
         </div>
       </div>
 
-
       {/* room title, signage-style, centred */}
       <div className="pointer-events-none absolute inset-x-0 top-[15dvh] z-20 flex flex-col items-center px-6 text-center">
         <h1 className="signage-text font-deva text-4xl leading-[1.05] text-cream sm:text-6xl">
@@ -181,13 +177,11 @@ export function RoomExperience({
         </p>
       </div>
 
-
       <OneLinerCaption
         lines={lines}
         active={active}
         trackKey={player.nowPlaying?.title ?? player.track?.title ?? null}
       />
-
 
       <div className="pointer-events-none absolute inset-x-0 bottom-3 z-30 flex justify-center px-3">
         <ControlCluster
@@ -229,9 +223,7 @@ export function RoomExperience({
               <Sparkles className="size-4" aria-hidden />
               Andar aa jao — press play
             </button>
-            <p className="text-[11px] text-cream/45">
-              Headphones lagao. Ye kamra chalta rahega.
-            </p>
+            <p className="text-[11px] text-cream/45">Headphones lagao. Ye kamra chalta rahega.</p>
           </div>
         </div>
       )}

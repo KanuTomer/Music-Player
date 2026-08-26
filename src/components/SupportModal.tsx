@@ -61,14 +61,18 @@ export function SupportModal() {
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && dismiss()}>
       <DialogContent className="paper w-[calc(100%-1.5rem)] max-w-sm overflow-hidden rounded-md border-2 border-ink bg-cream p-4 text-ink shadow-lift sm:p-5">
         <DialogHeader className="relative z-10 items-center space-y-2 text-center">
-          <span className="flex size-10 items-center justify-center rounded-full bg-terracotta text-primary-foreground" aria-hidden>
+          <span
+            className="flex size-10 items-center justify-center rounded-full bg-terracotta text-primary-foreground"
+            aria-hidden
+          >
             <Heart className="size-5" />
           </span>
           <DialogTitle className="font-vintage-deva text-2xl leading-tight">
             सैनिक ढाबा को चलता रखें
           </DialogTitle>
           <DialogDescription className="max-w-xs text-center font-cinema-body text-sm leading-relaxed text-ink/75">
-            इस प्लेटफ़ॉर्म को चलाने में काफ़ी सर्वर खर्च आता है। हम इसे बिना विज्ञापन के मुफ़्त रखना चाहते हैं। QR से सहयोग करके हमारा साथ दें।
+            इस प्लेटफ़ॉर्म को चलाने में काफ़ी सर्वर खर्च आता है। हम इसे बिना विज्ञापन के मुफ़्त रखना
+            चाहते हैं। QR से सहयोग करके हमारा साथ दें।
           </DialogDescription>
         </DialogHeader>
 
@@ -87,7 +91,11 @@ export function SupportModal() {
         </p>
 
         <DialogFooter className="relative z-10 sm:justify-center">
-          <Button type="button" onClick={dismiss} className="h-11 w-full rounded-md bg-terracotta text-primary-foreground hover:bg-terracotta/90 sm:w-auto sm:min-w-36">
+          <Button
+            type="button"
+            onClick={dismiss}
+            className="h-11 w-full rounded-md bg-terracotta text-primary-foreground hover:bg-terracotta/90 sm:w-auto sm:min-w-36"
+          >
             अभी नहीं
           </Button>
         </DialogFooter>

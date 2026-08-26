@@ -25,7 +25,13 @@ function readableTitle(raw: string | null) {
   if (!raw) return null;
   const parts = raw
     .split(/[|｜–—]/)
-    .map((p) => p.replace(NOISE, "").replace(/[\[\]()]/g, " ").replace(/\s+/g, " ").trim())
+    .map((p) =>
+      p
+        .replace(NOISE, "")
+        .replace(/[[\]()]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim(),
+    )
     .filter(Boolean);
   return parts[0] ?? raw.trim();
 }
@@ -34,9 +40,18 @@ function subtitleFrom(raw: string | null, channel: string | null) {
   if (!raw) return channel;
   const parts = raw
     .split(/[|｜–—]/)
-    .map((p) => p.replace(NOISE, "").replace(/[\[\]()]/g, " ").replace(/\s+/g, " ").trim())
+    .map((p) =>
+      p
+        .replace(NOISE, "")
+        .replace(/[[\]()]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim(),
+    )
     .filter(Boolean);
-  const rest = parts.slice(1).filter((p) => p.length > 1).slice(0, 2);
+  const rest = parts
+    .slice(1)
+    .filter((p) => p.length > 1)
+    .slice(0, 2);
   return rest.length ? rest.join(" · ") : channel;
 }
 
@@ -83,7 +98,6 @@ export function ControlCluster({
     window.localStorage.setItem("sd.player.minimized", minimized ? "1" : "0");
   }, [minimized]);
 
-
   const liveTitle = readableTitle(nowPlaying.title);
   const title = liveTitle ?? track?.title ?? "Tuning in…";
   const artistDetails =
@@ -95,8 +109,8 @@ export function ControlCluster({
   const watchUrl = nowPlaying.videoId
     ? `https://www.youtube.com/watch?v=${nowPlaying.videoId}`
     : track
-    ? `https://music.youtube.com/search?q=${encodeURIComponent(track.search_query ?? track.title)}`
-    : null;
+      ? `https://music.youtube.com/search?q=${encodeURIComponent(track.search_query ?? track.title)}`
+      : null;
 
   const cover = nowPlaying.videoId ?? track?.youtube_id ?? null;
 
@@ -118,20 +132,52 @@ export function ControlCluster({
           </span>
 
           <div key={cover ?? "idle"} className="min-w-0 flex-1 animate-fade-in">
-            <p className="truncate font-cinema-display text-[13px] leading-tight text-cream">{title}</p>
+            <p className="truncate font-cinema-display text-[13px] leading-tight text-cream">
+              {title}
+            </p>
             <p className="truncate text-[10.5px] text-cream/55">{artistDetails}</p>
-            <span className="mt-1 block h-[2px] w-full overflow-hidden rounded-full bg-cream/15" aria-hidden>
-              <span className="block h-full rounded-full bg-ember" style={{ width: `${progress}%` }} />
+            <span
+              className="mt-1 block h-[2px] w-full overflow-hidden rounded-full bg-cream/15"
+              aria-hidden
+            >
+              <span
+                className="block h-full rounded-full bg-ember"
+                style={{ width: `${progress}%` }}
+              />
             </span>
           </div>
 
-          <Button type="button" variant="ghost" size="icon" onClick={onPrevious} aria-label="Previous track" className="size-8 shrink-0 rounded-full text-cream/70 hover:bg-cream/10 hover:text-cream">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={onPrevious}
+            aria-label="Previous track"
+            className="size-8 shrink-0 rounded-full text-cream/70 hover:bg-cream/10 hover:text-cream"
+          >
             <SkipBack className="size-3.5" aria-hidden />
           </Button>
-          <Button type="button" onClick={onToggle} aria-label={isPlaying ? "Pause" : "Play"} size="icon" className="size-9 shrink-0 rounded-full bg-ember text-charcoal hover:bg-ember/90 active:scale-95">
-            {isPlaying ? <Pause className="size-3.5" aria-hidden /> : <Play className="size-3.5" aria-hidden />}
+          <Button
+            type="button"
+            onClick={onToggle}
+            aria-label={isPlaying ? "Pause" : "Play"}
+            size="icon"
+            className="size-9 shrink-0 rounded-full bg-ember text-charcoal hover:bg-ember/90 active:scale-95"
+          >
+            {isPlaying ? (
+              <Pause className="size-3.5" aria-hidden />
+            ) : (
+              <Play className="size-3.5" aria-hidden />
+            )}
           </Button>
-          <Button type="button" variant="ghost" size="icon" onClick={onNext} aria-label="Next track" className="size-8 shrink-0 rounded-full text-cream/70 hover:bg-cream/10 hover:text-cream">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={onNext}
+            aria-label="Next track"
+            className="size-8 shrink-0 rounded-full text-cream/70 hover:bg-cream/10 hover:text-cream"
+          >
             <SkipForward className="size-3.5" aria-hidden />
           </Button>
           <Button
@@ -151,7 +197,6 @@ export function ControlCluster({
   }
 
   return (
-
     <div className="pointer-events-auto w-[min(96vw,44rem)] rounded-xl border border-charcoal-line/60 bg-charcoal/92 p-3 text-cream shadow-lift ring-1 ring-cream/5 backdrop-blur-md sm:p-4">
       <div className="flex items-center gap-3 border-b border-cream/10 pb-3">
         <span className="relative flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-cream/15 bg-charcoal-soft sm:size-[4.5rem]">
@@ -163,25 +208,41 @@ export function ControlCluster({
               className="size-full animate-fade-in object-cover"
             />
           ) : (
-            <span className="flex size-full flex-col items-center justify-center bg-ember/90 text-charcoal" aria-label="Cover art loading">
+            <span
+              className="flex size-full flex-col items-center justify-center bg-ember/90 text-charcoal"
+              aria-label="Cover art loading"
+            >
               <Music2 className="size-5" aria-hidden />
               <span className="mt-1 font-vintage-deva text-[9px]">संगीत</span>
             </span>
           )}
         </span>
 
-        <div key={nowPlaying.videoId ?? track?.id ?? "idle"} className="min-w-0 flex-1 animate-fade-in">
-          <p className="truncate font-cinema-display text-lg leading-tight text-cream sm:text-xl">{title}</p>
+        <div
+          key={nowPlaying.videoId ?? track?.id ?? "idle"}
+          className="min-w-0 flex-1 animate-fade-in"
+        >
+          <p className="truncate font-cinema-display text-lg leading-tight text-cream sm:text-xl">
+            {title}
+          </p>
           <p className="mt-1 truncate text-[11px] font-medium text-cream/60 sm:text-xs">
             {musicBlocked ? (
               "गीत अभी उपलब्ध नहीं है — कृपया अगला गीत चुनें।"
             ) : (
-              <><span className="text-ember">कलाकार</span> · {artistDetails}</>
+              <>
+                <span className="text-ember">कलाकार</span> · {artistDetails}
+              </>
             )}
           </p>
           {!musicBlocked && (nowPlaying.videoId || track) && (
-            <p className="mt-1 flex items-center gap-1.5 font-vintage-deva text-[11px] text-ember" aria-live="polite">
-              <span className="animate-bulb inline-block size-1.5 rounded-full bg-ember" aria-hidden />
+            <p
+              className="mt-1 flex items-center gap-1.5 font-vintage-deva text-[11px] text-ember"
+              aria-live="polite"
+            >
+              <span
+                className="animate-bulb inline-block size-1.5 rounded-full bg-ember"
+                aria-hidden
+              />
               अभी बज रहा है
             </p>
           )}
@@ -194,9 +255,15 @@ export function ControlCluster({
         )}
       </div>
 
-
       <div className="mt-3 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 sm:gap-4">
-        <Button type="button" variant="ghost" size="icon" onClick={onPrevious} aria-label="Previous track" className="size-10 rounded-full border border-cream/20 text-cream/80 hover:bg-cream/10 hover:text-cream">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onPrevious}
+          aria-label="Previous track"
+          className="size-10 rounded-full border border-cream/20 text-cream/80 hover:bg-cream/10 hover:text-cream"
+        >
           <SkipBack className="size-4" aria-hidden />
         </Button>
 
@@ -220,7 +287,10 @@ export function ControlCluster({
             </div>
 
             <div className="cassette-window relative mx-auto mt-1.5 flex h-[3.1rem] items-center justify-center gap-8 rounded-[3px] border border-ink/50 bg-night/95 px-4 sm:h-[3.6rem] sm:gap-12">
-              <span className="cassette-tape absolute inset-x-6 bottom-1.5 h-[3px] bg-cinema-clay" aria-hidden />
+              <span
+                className="cassette-tape absolute inset-x-6 bottom-1.5 h-[3px] bg-cinema-clay"
+                aria-hidden
+              />
               {["left", "right"].map((side) => (
                 <span
                   key={side}
@@ -241,15 +311,24 @@ export function ControlCluster({
           </div>
 
           {/* head + capstan openings along the bottom edge */}
-          <div className="absolute inset-x-0 bottom-0 flex items-end justify-center gap-3" aria-hidden>
+          <div
+            className="absolute inset-x-0 bottom-0 flex items-end justify-center gap-3"
+            aria-hidden
+          >
             <span className="h-2.5 w-4 rounded-t-[2px] border-x border-t border-cream/25 bg-ink" />
             <span className="h-3 w-10 rounded-t-[2px] border-x border-t border-cream/30 bg-ink" />
             <span className="h-2.5 w-4 rounded-t-[2px] border-x border-t border-cream/25 bg-ink" />
           </div>
         </div>
 
-
-        <Button type="button" variant="ghost" size="icon" onClick={onNext} aria-label="Next track" className="size-10 rounded-full border border-cream/20 text-cream/80 hover:bg-cream/10 hover:text-cream">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onNext}
+          aria-label="Next track"
+          className="size-10 rounded-full border border-cream/20 text-cream/80 hover:bg-cream/10 hover:text-cream"
+        >
           <SkipForward className="size-4" aria-hidden />
         </Button>
       </div>
@@ -279,11 +358,31 @@ export function ControlCluster({
             aria-hidden
           />
         </button>
-        <span className="w-8 shrink-0 text-[10px] tabular-nums text-cream/45">{clock(duration)}</span>
-        <Button type="button" onClick={onToggle} aria-label={isPlaying ? "Pause" : "Play"} size="icon" className="size-11 rounded-full bg-ember text-charcoal shadow-lift transition-transform hover:bg-ember/90 active:scale-95">
-          {isPlaying ? <Pause className="size-4" aria-hidden /> : <Play className="size-4" aria-hidden />}
+        <span className="w-8 shrink-0 text-[10px] tabular-nums text-cream/45">
+          {clock(duration)}
+        </span>
+        <Button
+          type="button"
+          onClick={onToggle}
+          aria-label={isPlaying ? "Pause" : "Play"}
+          size="icon"
+          className="size-11 rounded-full bg-ember text-charcoal shadow-lift transition-transform hover:bg-ember/90 active:scale-95"
+        >
+          {isPlaying ? (
+            <Pause className="size-4" aria-hidden />
+          ) : (
+            <Play className="size-4" aria-hidden />
+          )}
         </Button>
-        <Button type="button" variant="ghost" size="icon" onClick={() => setShowMix((s) => !s)} aria-expanded={showMix} aria-label="Sound mix" className={`size-9 rounded-full border border-cream/20 ${showMix ? "bg-ember text-charcoal" : "text-cream/70 hover:bg-cream/10 hover:text-cream"}`}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={() => setShowMix((s) => !s)}
+          aria-expanded={showMix}
+          aria-label="Sound mix"
+          className={`size-9 rounded-full border border-cream/20 ${showMix ? "bg-ember text-charcoal" : "text-cream/70 hover:bg-cream/10 hover:text-cream"}`}
+        >
           <Volume2 className="size-4" aria-hidden />
         </Button>
         {watchUrl && (
@@ -312,8 +411,6 @@ export function ControlCluster({
           />
         </div>
       )}
-
-
     </div>
   );
 }

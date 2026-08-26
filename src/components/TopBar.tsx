@@ -6,11 +6,7 @@ export function TopBar({ listeners }: { listeners?: number }) {
   return (
     <header className="relative shrink-0">
       <div className="flex h-14 items-center justify-between gap-3 px-3 sm:px-5">
-        <Link
-          to="/"
-          className="group flex items-center gap-2.5"
-          aria-label="Sainik Dhaba home"
-        >
+        <Link to="/" className="group flex items-center gap-2.5" aria-label="Sainik Dhaba home">
           <span className="signboard relative flex size-9 items-center justify-center rounded-lg">
             <Radio className="size-4" aria-hidden />
             <span className="absolute -top-0.5 -right-0.5 flex size-2">
@@ -19,9 +15,7 @@ export function TopBar({ listeners }: { listeners?: number }) {
             </span>
           </span>
           <span className="flex flex-col leading-none">
-            <span className="signage-text text-base tracking-tight sm:text-lg">
-              Sainik Dhaba
-            </span>
+            <span className="signage-text text-base tracking-tight sm:text-lg">Sainik Dhaba</span>
             <span className="text-[9.5px] font-medium tracking-[0.22em] text-muted-foreground uppercase">
               on air · 24 ghante
             </span>
@@ -39,7 +33,10 @@ export function TopBar({ listeners }: { listeners?: number }) {
           <ISTClock />
         </div>
       </div>
-      <div className="h-[3px] w-full bg-gradient-to-r from-terracotta via-mustard to-terracotta opacity-90" aria-hidden />
+      <div
+        className="h-[3px] w-full bg-gradient-to-r from-terracotta via-mustard to-terracotta opacity-90"
+        aria-hidden
+      />
     </header>
   );
 }

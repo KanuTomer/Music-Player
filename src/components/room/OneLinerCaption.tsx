@@ -40,13 +40,10 @@ export function OneLinerCaption({
   // Slow idle cycle so the room still talks between songs.
   useEffect(() => {
     if (!active || lines.length === 0) return;
-    const timer = window.setInterval(
-      () => {
-        setCurrent(pickNext());
-        window.setTimeout(() => setCurrent(null), 15000);
-      },
-      45000,
-    );
+    const timer = window.setInterval(() => {
+      setCurrent(pickNext());
+      window.setTimeout(() => setCurrent(null), 15000);
+    }, 45000);
     return () => window.clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, lines]);

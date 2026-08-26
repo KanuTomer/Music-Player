@@ -11,7 +11,10 @@ export function SceneCard({ scene }: { scene: Scene }) {
       className="group relative flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-ink/15 bg-card text-left shadow-tile transition-all duration-300 hover:-translate-y-0.5 hover:border-accent hover:shadow-lift focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
     >
       {/* painted awning strip */}
-      <span className="absolute inset-x-0 top-0 z-3 h-[3px] bg-gradient-to-r from-terracotta via-mustard to-terracotta" aria-hidden />
+      <span
+        className="absolute inset-x-0 top-0 z-3 h-[3px] bg-gradient-to-r from-terracotta via-mustard to-terracotta"
+        aria-hidden
+      />
 
       <div className="relative min-h-0 flex-1 overflow-hidden">
         <img

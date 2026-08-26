@@ -52,7 +52,6 @@ export const resolveTrackVideo = createServerFn({ method: "GET" })
     return { videoId: await resolveRoomTrack(data.query) };
   });
 
-
 export const getRoom = createServerFn({ method: "GET" })
   .inputValidator((data: { slug: string }) => ({ slug: String(data.slug) }))
   .handler(async ({ data }): Promise<RoomPayload | null> => {
