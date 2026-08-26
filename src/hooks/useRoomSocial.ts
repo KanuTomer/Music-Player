@@ -36,10 +36,7 @@ export function useRoomSocial(roomKey: string | null) {
     seq.current += 1;
     const item = { id: seq.current, emoji, x: 8 + Math.random() * 84 };
     setFloating((f) => [...f.slice(-24), item]);
-    window.setTimeout(
-      () => setFloating((f) => f.filter((r) => r.id !== item.id)),
-      2700,
-    );
+    window.setTimeout(() => setFloating((f) => f.filter((r) => r.id !== item.id)), 2700);
   }, []);
 
   useEffect(() => {

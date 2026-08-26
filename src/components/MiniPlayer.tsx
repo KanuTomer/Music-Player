@@ -9,9 +9,11 @@ export function MiniPlayer() {
 
   return (
     <div className="paper relative shrink-0 border-t border-ink/15 bg-card/95 px-3 py-2 backdrop-blur">
-      <span className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-terracotta via-mustard to-terracotta opacity-80" aria-hidden />
+      <span
+        className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-terracotta via-mustard to-terracotta opacity-80"
+        aria-hidden
+      />
       <div className="z-2 mx-auto flex max-w-3xl items-center gap-2.5">
-
         <button
           type="button"
           onClick={toggle}
@@ -25,9 +27,7 @@ export function MiniPlayer() {
           )}
         </button>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[13px] leading-tight font-semibold">
-            {room.scene.title_en}
-          </p>
+          <p className="truncate text-[13px] leading-tight font-semibold">{room.scene.title_en}</p>
           <p className="truncate text-[11px] leading-tight text-muted-foreground">
             {nowPlaying.title ?? track?.title ?? room.scene.title_hi}
           </p>

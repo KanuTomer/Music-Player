@@ -52,7 +52,6 @@ const scenePlaylists: Record<string, string> = {
   "corporate-majdoor": "PLLounUW9rgqHr6YYR7r4oQOIeqdCZ7gO8",
 };
 
-
 type PlayerState = {
   room: RoomPayload | null;
   daypart: Daypart;
@@ -144,10 +143,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     total: 0,
   });
 
-  const playlist = useMemo(
-    () => (room ? forDaypart(room.tracks, daypart) : []),
-    [room, daypart],
-  );
+  const playlist = useMemo(() => (room ? forDaypart(room.tracks, daypart) : []), [room, daypart]);
   const track = playlist[index % Math.max(playlist.length, 1)] ?? null;
   const isCuratedPlaylist = Boolean(room && scenePlaylists[room.scene.slug]);
 
@@ -205,7 +201,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     return () => window.clearInterval(t);
   }, []);
 
-
   // Playback watchdog: while the app intends to play, an embed that sits in
   // UNSTARTED (-1), PAUSED (2) or CUED (5) is nudged until it really plays.
   useEffect(() => {
@@ -252,7 +247,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       /* noop */
     }
   }, []);
-
 
   // IST daypart ticks over while a room is left running for hours
   useEffect(() => {
@@ -350,7 +344,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-
   const cueTrack = useCallback(async (t: Track | null, autoplay: boolean) => {
     const p = playerRef.current;
     if (!p || !t) return;
@@ -430,17 +423,13 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     [buildPlayer],
   );
 
-
-  const openRoom = useCallback(
-    (next: RoomPayload) => {
-      setRoom((prev) => {
-        if (prev?.scene.slug === next.scene.slug) return prev;
-        setIndex(0);
-        return next;
-      });
-    },
-    [],
-  );
+  const openRoom = useCallback((next: RoomPayload) => {
+    setRoom((prev) => {
+      if (prev?.scene.slug === next.scene.slug) return prev;
+      setIndex(0);
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     if (needsGate || !apiReady) return;
@@ -497,7 +486,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       let step = 7;
       volumeTimerRef.current = window.setInterval(() => {
         step -= 1;
-        p.setVolume(Math.max(0, Math.round(musicVolumeRef.current * 100 * step / 7)));
+        p.setVolume(Math.max(0, Math.round((musicVolumeRef.current * 100 * step) / 7)));
         if (step <= 0) {
           if (volumeTimerRef.current !== null) window.clearInterval(volumeTimerRef.current);
           volumeTimerRef.current = null;

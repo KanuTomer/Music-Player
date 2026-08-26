@@ -52,10 +52,7 @@ export async function fetchRoom(slug: string): Promise<RoomPayload | null> {
       .select("id, title, artist, year, youtube_id, search_query, daypart_tag, sort_order")
       .eq("scene_id", scene.id)
       .order("sort_order", { ascending: true }),
-    client
-      .from("oneliners")
-      .select("id, text_en, text_hi, daypart_tag")
-      .eq("scene_id", scene.id),
+    client.from("oneliners").select("id, text_en, text_hi, daypart_tag").eq("scene_id", scene.id),
   ]);
 
   return {

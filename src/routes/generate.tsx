@@ -27,8 +27,8 @@ function GeneratePage() {
         <Sparkles className="size-6 text-primary" aria-hidden />
         <h1 className="font-signage text-xl font-bold">Ye counter abhi band hai</h1>
         <p className="max-w-sm text-sm text-muted-foreground">
-          Making your own room is parked for a later release. Filhaal ke liye, hand-built
-          kamron mein baith jao.
+          Making your own room is parked for a later release. Filhaal ke liye, hand-built kamron
+          mein baith jao.
         </p>
         <Link
           to="/"

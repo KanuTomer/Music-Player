@@ -31,12 +31,7 @@ export const daypartLabel: Record<Daypart, string> = {
 };
 
 /** Pick items tagged for this daypart, falling back to everything. */
-export function forDaypart<T extends { daypart_tag: string }>(
-  items: T[],
-  daypart: Daypart,
-): T[] {
-  const matched = items.filter(
-    (i) => i.daypart_tag === daypart || i.daypart_tag === "all",
-  );
+export function forDaypart<T extends { daypart_tag: string }>(items: T[], daypart: Daypart): T[] {
+  const matched = items.filter((i) => i.daypart_tag === daypart || i.daypart_tag === "all");
   return matched.length > 0 ? matched : items;
 }
