@@ -485,6 +485,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     return new Promise<void>((resolve) => {
       let step = 7;
       volumeTimerRef.current = window.setInterval(() => {
+        if (typeof p.setVolume !== "function") {
+          if (volumeTimerRef.current !== null) window.clearInterval(volumeTimerRef.current);
+          volumeTimerRef.current = null;
+          resolve();
+          return;
+        }
         step -= 1;
         p.setVolume(Math.max(0, Math.round((musicVolumeRef.current * 100 * step) / 7)));
         if (step <= 0) {
