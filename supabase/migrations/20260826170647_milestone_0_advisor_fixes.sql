@@ -1,0 +1,3 @@
+-- History marker: Milestone 0 applied the committed advisor fixes migration
+-- under this remote timestamp before the repository filenames were finalized.
+-- The advisor changes remain in 20260826170625_milestone_0_advisor_fixes.sql.

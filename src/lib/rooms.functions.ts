@@ -16,6 +16,7 @@ export type Scene = {
   chat_mode: string;
   gag_label: string | null;
   sort_order: number;
+  tags: string[];
 };
 
 export type Track = {

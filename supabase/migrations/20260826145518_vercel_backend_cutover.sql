@@ -1,0 +1,3 @@
+-- History marker: Milestone 0 applied the committed Vercel backend cutover
+-- under this remote timestamp before the repository filenames were finalized.
+-- The schema and seed changes remain in 20260826202350_vercel_backend_cutover.sql.
