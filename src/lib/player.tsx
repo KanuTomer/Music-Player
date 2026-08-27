@@ -10,12 +10,14 @@ import {
 } from "react";
 import { resolveTrackVideo, type RoomPayload, type Track } from "./rooms.functions";
 import { currentDaypart, forDaypart, type Daypart } from "./dayparts";
+import { playlistLifecycleAction } from "./player-lifecycle";
 
 type YTPlayer = {
   loadPlaylist: (o: { list: string; listType: "playlist"; index?: number }) => void;
   loadVideoById: (id: string) => void;
   playVideo: () => void;
   pauseVideo: () => void;
+  stopVideo: () => void;
   nextVideo: () => void;
   previousVideo: () => void;
   setVolume: (v: number) => void;
@@ -29,6 +31,9 @@ type YTPlayer = {
   destroy: () => void;
 };
 
+type YTPlayerEvent = { target: YTPlayer };
+type YTPlayerStateEvent = YTPlayerEvent & { data: number };
+
 export type NowPlaying = {
   videoId: string | null;
   title: string | null;
@@ -38,6 +43,16 @@ export type NowPlaying = {
   index: number;
   total: number;
 };
+
+const emptyNowPlaying = (): NowPlaying => ({
+  videoId: null,
+  title: null,
+  channel: null,
+  position: 0,
+  duration: 0,
+  index: 0,
+  total: 0,
+});
 
 const scenePlaylists: Record<string, string> = {
   "sainik-dhaba": "PLO1WqL1Pm6ic",
@@ -116,6 +131,8 @@ function loadYouTubeApi(): Promise<void> {
 export function PlayerProvider({ children }: { children: ReactNode }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<YTPlayer | null>(null);
+  const playerReadyRef = useRef(false);
+  const playerGenerationRef = useRef(0);
   const themeTransitionRef = useRef(false);
   const volumeTimerRef = useRef<number | null>(null);
   const resolvedRef = useRef<Map<string, string>>(new Map());
@@ -133,15 +150,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [musicBlocked, setMusicBlocked] = useState(false);
   const [musicVolume, setMusicVol] = useState(0.7);
   const musicVolumeRef = useRef(0.7);
-  const [nowPlaying, setNowPlaying] = useState<NowPlaying>({
-    videoId: null,
-    title: null,
-    channel: null,
-    position: 0,
-    duration: 0,
-    index: 0,
-    total: 0,
-  });
+  const [nowPlaying, setNowPlaying] = useState<NowPlaying>(emptyNowPlaying);
 
   const playlist = useMemo(() => (room ? forDaypart(room.tracks, daypart) : []), [room, daypart]);
   const track = playlist[index % Math.max(playlist.length, 1)] ?? null;
@@ -153,7 +162,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const t = window.setInterval(() => {
       const p = playerRef.current;
-      if (!p || typeof p.getVideoData !== "function") return;
+      if (!p || !playerReadyRef.current || typeof p.getVideoData !== "function") return;
       try {
         const d = p.getVideoData();
         const list = typeof p.getPlaylist === "function" ? p.getPlaylist() : null;
@@ -206,7 +215,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const t = window.setInterval(() => {
       const p = playerRef.current;
-      if (!p || !intendPlayRef.current) return;
+      if (!p || !playerReadyRef.current || !intendPlayRef.current) return;
       try {
         if (typeof p.getPlayerState !== "function") return;
         const state = p.getPlayerState();
@@ -232,7 +241,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const previous = useCallback(() => {
     const p = playerRef.current;
-    if (!p) return;
+    if (!p || !playerReadyRef.current) return;
     if (room && scenePlaylists[room.scene.slug]) {
       p.previousVideo();
       return;
@@ -241,6 +250,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, [playlist.length, room]);
 
   const seek = useCallback((seconds: number) => {
+    if (!playerReadyRef.current) return;
     try {
       playerRef.current?.seekTo(Math.max(0, seconds), true);
     } catch {
@@ -257,81 +267,116 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const buildPlayer = useCallback((playlistId: string | null, autoplay: boolean) => {
     const host = hostRef.current;
     if (!host || !window.YT?.Player) return null;
+
+    const generation = playerGenerationRef.current + 1;
+    playerGenerationRef.current = generation;
+    playerReadyRef.current = false;
+    intendPlayRef.current = autoplay;
+
+    const outgoing = playerRef.current;
+    playerRef.current = null;
+    loadedPlaylistRef.current = null;
     try {
-      playerRef.current?.destroy();
+      outgoing?.setVolume(0);
     } catch {
-      /* already gone */
+      /* outgoing embed may already be detached */
     }
-    host.innerHTML = "";
+    try {
+      outgoing?.stopVideo();
+    } catch {
+      /* outgoing embed may already be detached */
+    }
+    try {
+      outgoing?.destroy();
+    } catch {
+      /* outgoing embed may already be detached */
+    }
+
+    host.replaceChildren();
     const el = document.createElement("div");
     host.appendChild(el);
     setMusicReady(false);
-    playerRef.current = new window.YT.Player(el, {
-      height: "1",
-      width: "1",
-      playerVars: {
-        autoplay: autoplay ? 1 : 0,
-        controls: 0,
-        playsinline: 1,
-        ...(playlistId ? { list: playlistId, listType: "playlist" } : {}),
-      },
-      events: {
-        onReady: () => {
-          setMusicReady(true);
-          const p = playerRef.current;
-          if (!p) return;
-          try {
-            p.setVolume(Math.round(musicVolumeRef.current * 100));
-            if (playlistId) {
-              const availableTracks = p.getPlaylist() ?? [];
-              const total = availableTracks.length;
-              const previousStart = playlistStartRef.current.get(playlistId) ?? -1;
-              let nextStart = 0;
+    setMusicBlocked(false);
+    setNowPlaying(emptyNowPlaying());
 
-              if (total > 1) {
-                do {
-                  nextStart = Math.floor(Math.random() * total);
-                } while (nextStart === previousStart);
+    const isCurrent = (candidate: YTPlayer) =>
+      playerGenerationRef.current === generation && playerRef.current === candidate;
+
+    try {
+      const created = new window.YT.Player(el, {
+        height: "1",
+        width: "1",
+        playerVars: {
+          autoplay: autoplay ? 1 : 0,
+          controls: 0,
+          playsinline: 1,
+          ...(playlistId ? { list: playlistId, listType: "playlist" } : {}),
+        },
+        events: {
+          onReady: (event: YTPlayerEvent) => {
+            const p = event.target;
+            if (!isCurrent(p)) return;
+            playerReadyRef.current = true;
+            setMusicReady(true);
+            try {
+              p.setVolume(Math.round(musicVolumeRef.current * 100));
+              if (playlistId) {
+                const availableTracks = p.getPlaylist() ?? [];
+                const total = availableTracks.length;
+                const previousStart = playlistStartRef.current.get(playlistId) ?? -1;
+                let nextStart = 0;
+
+                if (total > 1) {
+                  do {
+                    nextStart = Math.floor(Math.random() * total);
+                  } while (nextStart === previousStart);
+                }
+
+                playlistStartRef.current.set(playlistId, nextStart);
+                p.loadPlaylist({ list: playlistId, listType: "playlist", index: nextStart });
               }
 
-              playlistStartRef.current.set(playlistId, nextStart);
-              p.loadPlaylist({ list: playlistId, listType: "playlist", index: nextStart });
-              if (autoplay) {
-                // A rebuilt embed often cues without starting; the watchdog
-                // below keeps retrying until it is actually playing.
-                intendPlayRef.current = true;
+              if (intendPlayRef.current) {
                 setIsPlaying(true);
                 p.playVideo();
               } else {
-                intendPlayRef.current = false;
+                setIsPlaying(false);
                 p.pauseVideo();
               }
-            } else if (autoplay) {
-              intendPlayRef.current = true;
-              p.playVideo();
+            } catch {
+              if (isCurrent(p)) setMusicBlocked(true);
             }
-          } catch {
-            /* noop */
-          }
+          },
+          onError: (event: YTPlayerEvent) => {
+            const p = event.target;
+            if (!isCurrent(p)) return;
+            setMusicBlocked(true);
+            try {
+              p.nextVideo();
+            } catch {
+              /* noop */
+            }
+          },
+          onStateChange: (event: YTPlayerStateEvent) => {
+            if (!isCurrent(event.target)) return;
+            if (event.data === 1) {
+              setIsPlaying(true);
+              setMusicBlocked(false);
+            }
+            if (event.data === 2) setIsPlaying(false);
+          },
         },
-        onError: () => {
-          setMusicBlocked(true);
-          try {
-            playerRef.current?.nextVideo();
-          } catch {
-            /* noop */
-          }
-        },
-        onStateChange: (e: { data: number }) => {
-          if (e.data === 1) {
-            setIsPlaying(true);
-            setMusicBlocked(false);
-          }
-          if (e.data === 2) setIsPlaying(false);
-        },
-      },
-    });
-    return playerRef.current;
+      });
+      playerRef.current = created;
+      loadedPlaylistRef.current = playlistId;
+      return created;
+    } catch {
+      playerRef.current = null;
+      loadedPlaylistRef.current = null;
+      playerReadyRef.current = false;
+      setMusicBlocked(true);
+      return null;
+    }
   }, []);
 
   useEffect(() => {
@@ -392,32 +437,35 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       const playlistId = scenePlaylists[slug];
       if (!playlistId) return false;
 
+      intendPlayRef.current = autoplay;
+      const existing = playerRef.current;
+      const action = playlistLifecycleAction({
+        requestedPlaylistId: playlistId,
+        loadedPlaylistId: loadedPlaylistRef.current,
+        hasPlayer: Boolean(existing),
+        isReady: playerReadyRef.current,
+      });
+
       try {
-        const existing = playerRef.current;
-        // Rebuild only when the list changed or the embed is gone; a fresh
-        // embed reports no playlist until onReady, so don't treat that as a
-        // reason to rebuild (that would loop forever).
-        if (loadedPlaylistRef.current !== playlistId || !existing) {
+        if (action === "build") {
           themeTransitionRef.current = false;
           if (volumeTimerRef.current !== null) {
             window.clearInterval(volumeTimerRef.current);
             volumeTimerRef.current = null;
           }
-          const built = buildPlayer(playlistId, autoplay);
-          // Only remember the list once the embed really exists, so a failed
-          // build can never leave us pointing at a silent player.
-          loadedPlaylistRef.current = built ? playlistId : null;
-          return Boolean(built);
+          return Boolean(buildPlayer(playlistId, autoplay));
         }
+
+        if (action === "wait" || !existing) return true;
+
         const p = existing;
-        intendPlayRef.current = autoplay;
         if (autoplay) p.playVideo();
         else p.pauseVideo();
         p.setVolume(Math.round(musicVolumeRef.current * 100));
         return true;
       } catch {
-        loadedPlaylistRef.current = null;
-        return false;
+        setMusicBlocked(true);
+        return true;
       }
     },
     [buildPlayer],
@@ -449,7 +497,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     intendPlayRef.current = true;
     setNeedsGate(false);
     setIsPlaying(true);
-    playerRef.current?.playVideo();
+    if (playerReadyRef.current) playerRef.current?.playVideo();
   }, []);
 
   const toggle = useCallback(() => {
@@ -459,17 +507,17 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
     if (isPlaying) {
       intendPlayRef.current = false;
-      playerRef.current?.pauseVideo();
+      if (playerReadyRef.current) playerRef.current?.pauseVideo();
       setIsPlaying(false);
     } else {
       intendPlayRef.current = true;
-      playerRef.current?.playVideo();
+      if (playerReadyRef.current) playerRef.current?.playVideo();
       setIsPlaying(true);
     }
   }, [isPlaying, needsGate, start]);
 
   const next = useCallback(() => {
-    if (room && scenePlaylists[room.scene.slug] && playerRef.current) {
+    if (room && scenePlaylists[room.scene.slug] && playerRef.current && playerReadyRef.current) {
       playerRef.current.nextVideo();
       return;
     }
@@ -505,6 +553,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const leave = useCallback(() => {
     setRoom(null);
     loadedPlaylistRef.current = null;
+    playerReadyRef.current = false;
+    playerGenerationRef.current += 1;
     setNeedsGate(true);
     setIsPlaying(false);
     intendPlayRef.current = false;
