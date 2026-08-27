@@ -1,0 +1,3 @@
+-- History marker: Milestone 0 applied the committed initial schema migration
+-- under this remote timestamp before the repository filenames were finalized.
+-- The schema change itself remains in 20260823081028_e99d998e-43de-433c-8645-0e82844c70ff.sql.

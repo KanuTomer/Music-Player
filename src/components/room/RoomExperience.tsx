@@ -1,43 +1,30 @@
-import { useEffect, useMemo, useRef } from "react";
-import { Share2, Sparkles } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "@tanstack/react-router";
+import { Compass, Home, Share2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import type { RoomPayload, Scene } from "@/lib/rooms.functions";
 import { artFor } from "@/lib/scene-art";
+import { videoForScene } from "@/lib/scene-media";
 import { usePlayer } from "@/lib/player";
 import { forDaypart } from "@/lib/dayparts";
 import { useRoomSocial } from "@/hooks/useRoomSocial";
 import { ControlCluster } from "@/components/room/ControlCluster";
 import { OneLinerCaption } from "@/components/room/OneLinerCaption";
-import { ThemeSwitcher } from "@/components/room/ThemeSwitcher";
+import { JagahExplorer } from "@/components/JagahExplorer";
 import { ISTClock } from "@/components/ISTClock";
-import corporateMajdoorVideo from "@/assets/theme-corporate-majdoor-moving-fixed.mp4.asset.json";
-import chaiTapriVideo from "@/assets/theme-chai-tapri-moving.mp4.asset.json";
-import deluxeSalonVideo from "@/assets/theme-deluxe-salon-moving.mp4.asset.json";
-import doordarshanVideo from "@/assets/theme-doordarshan-moving.mp4.asset.json";
-import nightBusVideo from "@/assets/theme-night-bus-moving-fixed.mp4.asset.json";
-import railYatraVideo from "@/assets/theme-rail-yatra-moving.mp4.asset.json";
-import rajMistriVideo from "@/assets/theme-raj-mistri-moving.mp4.asset.json";
-import sainikDhabaVideo from "@/assets/theme-sainik-dhaba-moving.mp4.asset.json";
-import sarkariDaftarVideo from "@/assets/theme-sarkari-daftar-moving.mp4.asset.json";
-
-const sceneVideos: Record<string, string> = {
-  "sainik-dhaba": sainikDhabaVideo.url,
-  "nai-ki-dukaan": deluxeSalonVideo.url,
-  "chai-ki-tapri": chaiTapriVideo.url,
-  "raj-mistri": rajMistriVideo.url,
-  "raat-ki-bus": nightBusVideo.url,
-  "sarkari-daftar": sarkariDaftarVideo.url,
-  "doordarshan-shaam": doordarshanVideo.url,
-  "rail-yatra": railYatraVideo.url,
-  "corporate-majdoor": corporateMajdoorVideo.url,
-};
+import { useJagahNavigation } from "@/hooks/useJagahNavigation";
 
 export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Scene[] }) {
   const { scene, oneliners } = room;
   const player = usePlayer();
   const social = useRoomSocial(`scene:${scene.slug}`);
-  const sceneVideo = sceneVideos[scene.slug];
+  const sceneVideo = videoForScene(scene.slug);
   const sceneVideoRef = useRef<HTMLVideoElement | null>(null);
+  const [explorerOpen, setExplorerOpen] = useState(false);
+  const { selectScene, switchingSlug } = useJagahNavigation({
+    activeSlug: scene.slug,
+    closeExplorer: () => setExplorerOpen(false),
+  });
 
   useEffect(() => {
     player.openRoom(room);
@@ -135,7 +122,7 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
         aria-hidden
       />
 
-      {/* top row: live pill · theme dropdown · share */}
+      {/* top row: live pill · Explorer · Home and share */}
       <div className="absolute inset-x-0 top-0 z-50 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 p-2 sm:gap-3 sm:p-3">
         <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-cream/12 bg-charcoal/60 px-2.5 py-1.5 backdrop-blur-md sm:gap-2 sm:px-3">
           <span className="animate-bulb inline-block size-1.5 rounded-full bg-ember" aria-hidden />
@@ -151,10 +138,25 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
         </div>
 
         <div className="flex min-w-0 items-center justify-center">
-          <ThemeSwitcher scenes={scenes} currentSlug={scene.slug} />
+          <button
+            type="button"
+            onClick={() => setExplorerOpen(true)}
+            className="flex h-11 min-w-0 items-center gap-2 rounded-full border border-cream/25 bg-night/55 px-3.5 text-[13px] font-semibold text-cream outline-none backdrop-blur transition-colors hover:bg-night/70 focus-visible:ring-2 focus-visible:ring-accent/70 sm:h-10 sm:px-4 sm:text-sm"
+          >
+            <Compass className="size-4 shrink-0" aria-hidden />
+            <span className="truncate">Jagah Explorer</span>
+          </button>
         </div>
 
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <Link
+            to="/"
+            aria-label="Home"
+            className="flex h-10 items-center justify-center gap-2 rounded-full border border-cream/12 bg-charcoal/60 px-3 text-cream/80 backdrop-blur-md transition-colors hover:bg-charcoal/85 hover:text-cream"
+          >
+            <Home className="size-4" aria-hidden />
+            <span className="hidden text-xs font-semibold lg:inline">Home</span>
+          </Link>
           <button
             type="button"
             onClick={share}
@@ -227,6 +229,15 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
           </div>
         </div>
       )}
+
+      <JagahExplorer
+        scenes={scenes}
+        activeSlug={scene.slug}
+        open={explorerOpen}
+        onOpenChange={setExplorerOpen}
+        onSelect={selectScene}
+        switchingSlug={switchingSlug}
+      />
     </div>
   );
 }

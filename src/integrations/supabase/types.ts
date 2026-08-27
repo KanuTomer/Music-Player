@@ -239,6 +239,7 @@ export type Database = {
           slug: string;
           sort_order: number;
           sponsor_id: string | null;
+          tags: string[];
           title_en: string;
           title_hi: string;
         };
@@ -258,6 +259,7 @@ export type Database = {
           slug: string;
           sort_order?: number;
           sponsor_id?: string | null;
+          tags?: string[];
           title_en: string;
           title_hi: string;
         };
@@ -277,6 +279,7 @@ export type Database = {
           slug?: string;
           sort_order?: number;
           sponsor_id?: string | null;
+          tags?: string[];
           title_en?: string;
           title_hi?: string;
         };

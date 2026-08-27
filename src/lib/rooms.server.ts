@@ -24,7 +24,7 @@ function publicClient() {
 }
 
 const SCENE_COLS =
-  "id, slug, title_en, title_hi, hook, description, region, category, palette, art_key, is_dark, chat_mode, gag_label, sort_order";
+  "id, slug, title_en, title_hi, hook, description, region, category, palette, art_key, is_dark, chat_mode, gag_label, sort_order, tags";
 
 export async function fetchScenes(): Promise<Scene[]> {
   const { data, error } = await publicClient()
