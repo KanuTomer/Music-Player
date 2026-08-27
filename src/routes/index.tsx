@@ -186,6 +186,7 @@ function Home() {
         open={explorerOpen}
         onOpenChange={setExplorerOpen}
         onSelect={selectScene}
+        onPlaceholder={setDialog}
         switchingSlug={switchingSlug}
       />
       <InfoPlaceholderDialog
