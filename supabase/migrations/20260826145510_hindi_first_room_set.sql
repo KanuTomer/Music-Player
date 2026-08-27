@@ -1,0 +1,3 @@
+-- History marker: Milestone 0 applied the committed Hindi-first room migration
+-- under this remote timestamp before the repository filenames were finalized.
+-- The data change itself remains in 20260823082459_4e89b607-1421-4f9d-b7f9-400cbdf639d6.sql.

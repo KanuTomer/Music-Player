@@ -1,0 +1,484 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Sainik Dhaba design system — warm, sun-bleached, tactile 90s small-town India.
+ * All colors are oklch. Never hardcode color utilities in components.
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-mustard: var(--mustard);
+  --color-terracotta: var(--terracotta);
+  --color-teal-deep: var(--teal-deep);
+  --color-ink: var(--ink);
+  --color-cream: var(--bg-cream);
+  --color-night: var(--bg-night);
+  --color-cinema: var(--cinema);
+  --color-cinema-cream: var(--cinema-cream);
+  --color-cinema-gold: var(--cinema-gold);
+  --color-cinema-clay: var(--cinema-clay);
+  --color-charcoal: var(--charcoal);
+  --color-charcoal-soft: var(--charcoal-soft);
+  --color-charcoal-line: var(--charcoal-line);
+  --color-ember: var(--ember);
+  --font-display: "Abril Fatface", "Georgia", serif;
+  --font-signage: "Cabin", system-ui, sans-serif;
+  --font-sans: "Cabin", system-ui, sans-serif;
+  --font-deva: "Baloo 2", "Noto Sans Devanagari", sans-serif;
+  --font-vintage-deva: "Tiro Devanagari Hindi", "Noto Serif Devanagari", serif;
+  --font-cinema-display: "Abril Fatface", Georgia, serif;
+  --font-cinema-body: "Cabin", system-ui, sans-serif;
+  --shadow-tile: 0 10px 24px -12px oklch(0.28 0.06 60 / 0.45);
+  --shadow-lift: 0 18px 40px -18px oklch(0.28 0.06 60 / 0.55);
+}
+
+:root {
+  --radius: 0.9rem;
+
+  /* brand rails */
+  --bg-cream: oklch(0.938 0.032 84.5);
+  --bg-night: oklch(0.196 0.021 55);
+  --mustard: oklch(0.762 0.157 76.5);
+  --terracotta: oklch(0.523 0.176 38.5);
+  --teal-deep: oklch(0.404 0.072 205.5);
+  --ink: oklch(0.244 0.021 60);
+  --cinema: oklch(0.2366 0.0104 80.6);
+  --cinema-cream: oklch(0.9321 0.036 89.45);
+  --cinema-gold: oklch(0.7266 0.1374 77.43);
+  --cinema-clay: oklch(0.5135 0.1285 36.58);
+
+  /* charcoal & ember — deck / chrome rails */
+  --charcoal: oklch(0.196 0 0);
+  --charcoal-soft: oklch(0.266 0 0);
+  --charcoal-line: oklch(0.395 0 0);
+  --ember: oklch(0.653 0.176 39.5);
+
+  --background: var(--bg-cream);
+  --foreground: var(--ink);
+  --card: oklch(0.965 0.026 88);
+  --card-foreground: var(--ink);
+  --popover: oklch(0.965 0.026 88);
+  --popover-foreground: var(--ink);
+  --primary: var(--terracotta);
+  --primary-foreground: oklch(0.975 0.02 88);
+  --secondary: oklch(0.895 0.038 84);
+  --secondary-foreground: var(--ink);
+  --muted: oklch(0.895 0.038 84);
+  --muted-foreground: oklch(0.585 0.041 74);
+  --accent: var(--mustard);
+  --accent-foreground: var(--ink);
+  --destructive: oklch(0.55 0.19 27);
+  --destructive-foreground: oklch(0.98 0.01 88);
+  --border: oklch(0.852 0.041 80);
+  --input: oklch(0.852 0.041 80);
+  --ring: var(--mustard);
+}
+
+.dark,
+.room-dark {
+  --background: var(--bg-night);
+  --foreground: oklch(0.945 0.028 86);
+  --card: oklch(0.253 0.026 55);
+  --card-foreground: oklch(0.945 0.028 86);
+  --popover: oklch(0.253 0.026 55);
+  --popover-foreground: oklch(0.945 0.028 86);
+  --primary: var(--mustard);
+  --primary-foreground: oklch(0.221 0.024 55);
+  --secondary: oklch(0.295 0.028 55);
+  --secondary-foreground: oklch(0.945 0.028 86);
+  --muted: oklch(0.295 0.028 55);
+  --muted-foreground: oklch(0.735 0.035 80);
+  --accent: var(--mustard);
+  --accent-foreground: oklch(0.221 0.024 55);
+  --border: oklch(0.945 0.028 86 / 14%);
+  --input: oklch(0.945 0.028 86 / 18%);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html,
+  body,
+  #root {
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  h1,
+  h2,
+  h3,
+  .font-signage {
+    font-family: var(--font-signage);
+    letter-spacing: -0.01em;
+  }
+
+  /* the blog is the documented long-form exception */
+  body:has([data-reading-context]) {
+    overflow: auto;
+  }
+  body:has([data-reading-context]),
+  html:has([data-reading-context]) {
+    height: auto;
+    max-height: none;
+  }
+}
+
+/* paper grain over cream surfaces */
+@utility paper {
+  position: relative;
+  isolation: isolate;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.35;
+    mix-blend-mode: multiply;
+    background-image:
+      radial-gradient(oklch(0.55 0.05 70 / 0.16) 0.5px, transparent 0.6px),
+      radial-gradient(oklch(0.55 0.05 70 / 0.1) 0.5px, transparent 0.6px);
+    background-size:
+      3px 3px,
+      7px 7px;
+    background-position:
+      0 0,
+      2px 3px;
+  }
+}
+
+@utility halftone {
+  background-image: radial-gradient(oklch(0.24 0.02 60 / 0.18) 1px, transparent 1.2px);
+  background-size: 4px 4px;
+}
+
+@utility scanlines {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    oklch(0 0 0 / 0.16) 0px,
+    oklch(0 0 0 / 0.16) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+}
+
+@utility signboard {
+  background: var(--mustard);
+  color: var(--ink);
+  box-shadow:
+    inset 0 0 0 2px oklch(0.24 0.02 60 / 0.55),
+    0 2px 0 0 oklch(0.24 0.02 60 / 0.35);
+}
+
+/* painted dhaba awning stripes */
+@utility awning {
+  background-image: repeating-linear-gradient(
+    115deg,
+    var(--terracotta) 0px,
+    var(--terracotta) 10px,
+    var(--mustard) 10px,
+    var(--mustard) 20px
+  );
+}
+
+/* corner-notched ticket / bus-stub silhouette */
+@utility ticket {
+  --notch: 7px;
+  mask-image:
+    radial-gradient(circle var(--notch) at 0 50%, transparent 99%, #000 100%),
+    radial-gradient(circle var(--notch) at 100% 50%, transparent 99%, #000 100%);
+  mask-composite: intersect;
+  -webkit-mask-composite: source-in;
+}
+
+/* hand-painted signage lettering with a chalk shadow */
+@utility signage-text {
+  font-family: var(--font-signage);
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  text-shadow: 0 1px 0 oklch(0.24 0.02 60 / 0.28);
+}
+
+@utility vignette {
+  background: radial-gradient(
+    120% 90% at 50% 45%,
+    transparent 38%,
+    oklch(0.18 0.02 55 / 0.55) 100%
+  );
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@keyframes bulb-glow {
+  0%,
+  100% {
+    opacity: 0.75;
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 1;
+    filter: brightness(1.25);
+  }
+}
+
+@utility animate-bulb {
+  animation: bulb-glow 2.4s ease-in-out infinite;
+}
+
+@keyframes live-ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  70%,
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+@utility animate-live-ping {
+  animation: live-ping 2s ease-out infinite;
+}
+
+@keyframes theme-cover-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes room-scene-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@utility theme-transition-cover {
+  animation: theme-cover-in 320ms ease-in forwards;
+}
+
+@utility room-scene-enter {
+  animation: room-scene-enter 650ms ease-out both;
+}
+
+@keyframes fan-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes drift-up {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.8);
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-140px) scale(1.15);
+  }
+}
+
+@keyframes cassette-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes cassette-tape-travel {
+  to {
+    background-position: 10px 0;
+  }
+}
+
+.cassette-reel-playing {
+  animation: cassette-spin 1.4s linear infinite;
+  will-change: transform;
+}
+
+.cassette-reel-hole {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0.42rem;
+  height: 0.68rem;
+  margin-left: -0.21rem;
+  margin-top: -0.34rem;
+  border-radius: 999px;
+  background: var(--color-cinema-gold);
+  transform-origin: 50% 0.34rem;
+}
+
+.cassette-reel-hole-a {
+  transform: rotate(0deg) translateY(-0.65rem);
+}
+
+.cassette-reel-hole-b {
+  transform: rotate(120deg) translateY(-0.65rem);
+}
+
+.cassette-reel-hole-c {
+  transform: rotate(240deg) translateY(-0.65rem);
+}
+
+.cassette-spool-left {
+  box-shadow: inset 0 0 0 0.28rem var(--color-ink);
+}
+
+.cassette-spool-right {
+  box-shadow: inset 0 0 0 0.14rem var(--color-ink);
+}
+
+.cassette-shell {
+  background-image: linear-gradient(
+    180deg,
+    oklch(0.26 0.02 60) 0%,
+    oklch(0.2 0.02 55) 55%,
+    oklch(0.17 0.02 55) 100%
+  );
+}
+
+.cassette-screw {
+  position: absolute;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: var(--color-cinema-gold);
+  box-shadow: inset 0 0 0 1px oklch(0 0 0 / 0.55);
+  opacity: 0.75;
+}
+
+.cassette-tape {
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--color-cinema-clay) 0,
+    var(--color-cinema-clay) 5px,
+    var(--color-cinema-gold) 5px,
+    var(--color-cinema-gold) 7px
+  );
+  background-size: 10px 100%;
+  opacity: 0.75;
+}
+
+.cassette-running .cassette-tape {
+  animation: cassette-tape-travel 0.45s linear infinite;
+}
+
+@utility animate-drift-up {
+  animation: drift-up 2.6s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ---- IST time-of-day lighting grades ---------------------------------- */
+.scene-media {
+  transition: filter 2400ms ease;
+}
+.grade-morning .scene-media {
+  filter: brightness(1.06) saturate(1.02) contrast(0.98) hue-rotate(-4deg);
+}
+.grade-day .scene-media {
+  filter: brightness(1.16) saturate(1.06) contrast(1.02);
+}
+.grade-evening .scene-media {
+  filter: brightness(0.92) saturate(1.12) sepia(0.12);
+}
+.grade-night .scene-media {
+  filter: brightness(0.62) saturate(0.82) contrast(1.06) hue-rotate(6deg);
+}
+
+.scene-light {
+  transition:
+    opacity 2400ms ease,
+    background 2400ms ease;
+  mix-blend-mode: soft-light;
+}
+.grade-morning .scene-light {
+  background: linear-gradient(180deg, oklch(0.92 0.09 82 / 0.5), transparent 62%);
+}
+.grade-day .scene-light {
+  background: radial-gradient(90% 70% at 50% 0%, oklch(0.97 0.05 95 / 0.42), transparent 70%);
+}
+.grade-evening .scene-light {
+  background: linear-gradient(180deg, oklch(0.72 0.16 55 / 0.45), transparent 70%);
+}
+.grade-night .scene-light {
+  background: linear-gradient(180deg, oklch(0.32 0.07 265 / 0.6), oklch(0.22 0.05 265 / 0.35));
+  mix-blend-mode: multiply;
+}
+
+@keyframes meta-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@utility animate-fade-in {
+  animation: meta-fade-in 320ms ease-out both;
+}

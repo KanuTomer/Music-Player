@@ -1,0 +1,3 @@
+-- History marker: Milestone 0 applied the committed additional one-liners migration
+-- under this remote timestamp before the repository filenames were finalized.
+-- The data change itself remains in 20260823145015_52a0d1b0-01b8-47ae-88b1-98ca428d37bd.sql.
