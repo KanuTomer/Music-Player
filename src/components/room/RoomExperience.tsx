@@ -11,6 +11,7 @@ import { useRoomSocial } from "@/hooks/useRoomSocial";
 import { ControlCluster } from "@/components/room/ControlCluster";
 import { OneLinerCaption } from "@/components/room/OneLinerCaption";
 import { JagahExplorer } from "@/components/JagahExplorer";
+import { InfoPlaceholderDialog } from "@/components/InfoPlaceholderDialog";
 import { ISTClock } from "@/components/ISTClock";
 import { useJagahNavigation } from "@/hooks/useJagahNavigation";
 
@@ -21,6 +22,7 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
   const sceneVideo = videoForScene(scene.slug);
   const sceneVideoRef = useRef<HTMLVideoElement | null>(null);
   const [explorerOpen, setExplorerOpen] = useState(false);
+  const [dialog, setDialog] = useState<"suggest" | "support" | null>(null);
   const { selectScene, switchingSlug } = useJagahNavigation({
     activeSlug: scene.slug,
     closeExplorer: () => setExplorerOpen(false),
@@ -236,7 +238,18 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
         open={explorerOpen}
         onOpenChange={setExplorerOpen}
         onSelect={selectScene}
+        onPlaceholder={setDialog}
         switchingSlug={switchingSlug}
+      />
+      <InfoPlaceholderDialog
+        kind="suggest"
+        open={dialog === "suggest"}
+        onOpenChange={(open) => setDialog(open ? "suggest" : null)}
+      />
+      <InfoPlaceholderDialog
+        kind="support"
+        open={dialog === "support"}
+        onOpenChange={(open) => setDialog(open ? "support" : null)}
       />
     </div>
   );

@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
-import { Check, Compass, Loader2, MapPin, Search } from "lucide-react";
+import { Check, Compass, Heart, Lightbulb, Loader2, MapPin, Search } from "lucide-react";
 import type { Scene } from "@/lib/rooms.functions";
 import { artFor } from "@/lib/scene-art";
 import { explorerFilters, filterScenes, type ExplorerFilter } from "@/lib/scene-search";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 
 const filterLabels: Record<ExplorerFilter, string> = {
   all: "All",
@@ -19,6 +19,7 @@ type JagahExplorerProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSelect: (scene: Scene) => void | Promise<void>;
+  onPlaceholder: (kind: "suggest" | "support") => void;
   switchingSlug?: string | null;
 };
 
@@ -28,6 +29,7 @@ export function JagahExplorer({
   open,
   onOpenChange,
   onSelect,
+  onPlaceholder,
   switchingSlug = null,
 }: JagahExplorerProps) {
   const [query, setQuery] = useState("");
@@ -35,16 +37,19 @@ export function JagahExplorer({
   const results = useMemo(() => filterScenes(scenes, query, filter), [filter, query, scenes]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!top-auto !bottom-0 !left-0 !max-h-[92dvh] !w-full !max-w-none !translate-x-0 !translate-y-0 grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden rounded-t-3xl border-cream/15 bg-charcoal p-0 text-cream shadow-2xl sm:!top-[4.5rem] sm:!bottom-auto sm:!left-1/2 sm:!max-h-[calc(100dvh-5.5rem)] sm:!w-[min(1180px,calc(100%-2rem))] sm:!translate-x-[-50%] sm:rounded-2xl">
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="bottom"
+        className="grid h-[92dvh] w-full max-w-none grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden rounded-t-3xl border-cream/15 bg-charcoal p-0 text-cream shadow-2xl motion-reduce:transition-none motion-reduce:data-[state=closed]:animate-none motion-reduce:data-[state=open]:animate-none sm:mx-auto sm:h-[min(78dvh,46rem)] sm:w-[min(1180px,calc(100%-2rem))] sm:rounded-t-2xl"
+      >
         <div className="border-b border-cream/10 px-4 pt-5 pb-4 sm:px-7 sm:pt-6">
           <div className="pr-10">
-            <DialogTitle className="font-signage text-2xl text-cream sm:text-3xl">
+            <SheetTitle className="font-signage text-2xl text-cream sm:text-3xl">
               Jagah Explorer
-            </DialogTitle>
-            <DialogDescription className="mt-1 text-sm text-cream/60">
+            </SheetTitle>
+            <SheetDescription className="mt-1 text-sm text-cream/60">
               Pick a familiar corner. Your music keeps playing while you look around.
-            </DialogDescription>
+            </SheetDescription>
           </div>
 
           <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -164,7 +169,39 @@ export function JagahExplorer({
             </div>
           )}
         </div>
-      </DialogContent>
-    </Dialog>
+
+        <div className="flex flex-col gap-3 border-t border-cream/10 bg-night/45 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-7">
+          <p className="text-xs leading-relaxed text-cream/50">
+            Missing a familiar corner, or want to help keep the radio running?
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                onOpenChange(false);
+                onPlaceholder("suggest");
+              }}
+              className="flex min-h-11 items-center gap-2 rounded-full border border-cream/15 px-4 text-xs font-semibold text-cream/75 transition-colors hover:bg-cream/10 hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember"
+            >
+              <Lightbulb className="size-4 text-ember" aria-hidden />
+              Suggest a Jagah
+              <span className="text-[9px] tracking-wide text-cream/40 uppercase">Soon</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                onOpenChange(false);
+                onPlaceholder("support");
+              }}
+              className="flex min-h-11 items-center gap-2 rounded-full border border-cream/15 px-4 text-xs font-semibold text-cream/75 transition-colors hover:bg-cream/10 hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember"
+            >
+              <Heart className="size-4 text-ember" aria-hidden />
+              Support Us
+              <span className="text-[9px] tracking-wide text-cream/40 uppercase">Soon</span>
+            </button>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
