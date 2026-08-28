@@ -4,6 +4,7 @@ import type { Scene } from "@/lib/rooms.functions";
 import { artFor } from "@/lib/scene-art";
 import { explorerFilters, filterScenes, type ExplorerFilter } from "@/lib/scene-search";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
+import { CompactCassettePlayer } from "@/components/player/CassettePlayers";
 
 const filterLabels: Record<ExplorerFilter, string> = {
   all: "All",
@@ -170,35 +171,38 @@ export function JagahExplorer({
           )}
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-cream/10 bg-night/45 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-7">
-          <p className="text-xs leading-relaxed text-cream/50">
-            Missing a familiar corner, or want to help keep the radio running?
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                onOpenChange(false);
-                onPlaceholder("suggest");
-              }}
-              className="flex min-h-11 items-center gap-2 rounded-full border border-cream/15 px-4 text-xs font-semibold text-cream/75 transition-colors hover:bg-cream/10 hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember"
-            >
-              <Lightbulb className="size-4 text-ember" aria-hidden />
-              Suggest a Jagah
-              <span className="text-[9px] tracking-wide text-cream/40 uppercase">Soon</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                onOpenChange(false);
-                onPlaceholder("support");
-              }}
-              className="flex min-h-11 items-center gap-2 rounded-full border border-cream/15 px-4 text-xs font-semibold text-cream/75 transition-colors hover:bg-cream/10 hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember"
-            >
-              <Heart className="size-4 text-ember" aria-hidden />
-              Support Us
-              <span className="text-[9px] tracking-wide text-cream/40 uppercase">Soon</span>
-            </button>
+        <div className="border-t border-cream/10 bg-night/45">
+          <CompactCassettePlayer className="rounded-none border-x-0 border-t-0 border-b border-cream/10" />
+          <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-7">
+            <p className="text-xs leading-relaxed text-cream/50">
+              Missing a familiar corner, or want to help keep the radio running?
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  onOpenChange(false);
+                  onPlaceholder("suggest");
+                }}
+                className="flex min-h-11 items-center gap-2 rounded-full border border-cream/15 px-4 text-xs font-semibold text-cream/75 transition-colors hover:bg-cream/10 hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember"
+              >
+                <Lightbulb className="size-4 text-ember" aria-hidden />
+                Suggest a Jagah
+                <span className="text-[9px] tracking-wide text-cream/40 uppercase">Soon</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onOpenChange(false);
+                  onPlaceholder("support");
+                }}
+                className="flex min-h-11 items-center gap-2 rounded-full border border-cream/15 px-4 text-xs font-semibold text-cream/75 transition-colors hover:bg-cream/10 hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember"
+              >
+                <Heart className="size-4 text-ember" aria-hidden />
+                Support Us
+                <span className="text-[9px] tracking-wide text-cream/40 uppercase">Soon</span>
+              </button>
+            </div>
           </div>
         </div>
       </SheetContent>

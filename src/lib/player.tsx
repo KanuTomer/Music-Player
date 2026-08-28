@@ -10,7 +10,8 @@ import {
 } from "react";
 import { resolveTrackVideo, type RoomPayload, type Track } from "./rooms.functions";
 import { currentDaypart, forDaypart, type Daypart } from "./dayparts";
-import { playlistLifecycleAction } from "./player-lifecycle";
+import { normalizeAmbienceLevel } from "./player-display";
+import { playerErrorAction, playlistLifecycleAction } from "./player-lifecycle";
 
 type YTPlayer = {
   loadPlaylist: (o: { list: string; listType: "playlist"; index?: number }) => void;
@@ -24,7 +25,7 @@ type YTPlayer = {
   seekTo: (s: number, allowSeekAhead?: boolean) => void;
   getCurrentTime: () => number;
   getDuration: () => number;
-  getVideoData: () => { video_id?: string; title?: string; author?: string };
+  getVideoData: () => { video_id?: string; title?: string; author?: string } | undefined;
   getPlaylistIndex: () => number;
   getPlaylist: () => string[] | null;
   getPlayerState: () => number;
@@ -79,12 +80,14 @@ type PlayerState = {
   isCuratedPlaylist: boolean;
   nowPlaying: NowPlaying;
   musicVolume: number;
+  ambienceLevel: number;
   openRoom: (room: RoomPayload) => void;
   toggle: () => void;
   next: () => void;
   previous: () => void;
   seek: (seconds: number) => void;
   setMusicVolume: (v: number) => void;
+  setAmbienceLevel: (level: number) => void;
   start: () => void;
   fadeForThemeChange: () => Promise<void>;
   leave: () => void;
@@ -138,6 +141,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const resolvedRef = useRef<Map<string, string>>(new Map());
   const loadedPlaylistRef = useRef<string | null>(null);
   const playlistStartRef = useRef<Map<string, number>>(new Map());
+  const handledErrorKeysRef = useRef<Set<string>>(new Set());
   // True whenever the app wants sound; a watchdog keeps the embed honest.
   const intendPlayRef = useRef(false);
   const [room, setRoom] = useState<RoomPayload | null>(null);
@@ -149,6 +153,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [apiReady, setApiReady] = useState(false);
   const [musicBlocked, setMusicBlocked] = useState(false);
   const [musicVolume, setMusicVol] = useState(0.7);
+  const [ambienceLevel, setAmbienceLevelState] = useState(50);
   const musicVolumeRef = useRef(0.7);
   const [nowPlaying, setNowPlaying] = useState<NowPlaying>(emptyNowPlaying);
 
@@ -239,6 +244,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const setAmbienceLevel = useCallback((level: number) => {
+    setAmbienceLevelState(normalizeAmbienceLevel(level));
+  }, []);
+
   const previous = useCallback(() => {
     const p = playerRef.current;
     if (!p || !playerReadyRef.current) return;
@@ -276,6 +285,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const outgoing = playerRef.current;
     playerRef.current = null;
     loadedPlaylistRef.current = null;
+    handledErrorKeysRef.current.clear();
     try {
       outgoing?.setVolume(0);
     } catch {
@@ -349,7 +359,23 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           },
           onError: (event: YTPlayerEvent) => {
             const p = event.target;
-            if (!isCurrent(p)) return;
+            let failedIndex = -1;
+            let failedVideoId = "unknown";
+            try {
+              failedIndex = p.getPlaylistIndex?.() ?? -1;
+              failedVideoId = p.getVideoData?.()?.video_id ?? "unknown";
+            } catch {
+              /* YouTube may report an error before metadata methods are readable. */
+            }
+            const errorKey = `${generation}:${failedIndex}:${failedVideoId}`;
+            const action = playerErrorAction({
+              eventGeneration: generation,
+              currentGeneration: playerGenerationRef.current,
+              isCurrentTarget: isCurrent(p),
+              alreadyHandled: handledErrorKeysRef.current.has(errorKey),
+            });
+            if (action === "ignore") return;
+            handledErrorKeysRef.current.add(errorKey);
             setMusicBlocked(true);
             try {
               p.nextVideo();
@@ -360,6 +386,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           onStateChange: (event: YTPlayerStateEvent) => {
             if (!isCurrent(event.target)) return;
             if (event.data === 1) {
+              handledErrorKeysRef.current.clear();
               setIsPlaying(true);
               setMusicBlocked(false);
             }
@@ -573,12 +600,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     isCuratedPlaylist,
     nowPlaying,
     musicVolume,
+    ambienceLevel,
     openRoom,
     toggle,
     next,
     previous,
     seek,
     setMusicVolume,
+    setAmbienceLevel,
     start,
     fadeForThemeChange,
     leave,

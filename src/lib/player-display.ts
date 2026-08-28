@@ -1,0 +1,71 @@
+import type { NowPlaying } from "./player";
+import type { Track } from "./rooms.functions";
+
+const NOISE =
+  /\b(official\s*(music\s*)?(video|audio|lyrical|lyric)?|full\s*(video\s*)?song|lyrical(\s*video)?|hd|4k|remastered|audio|video song|with lyrics)\b/gi;
+
+function titleParts(raw: string | null) {
+  if (!raw) return [];
+  return raw
+    .split(/[|｜–—]/)
+    .map((part) =>
+      part
+        .replace(NOISE, "")
+        .replace(/[[\]()]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim(),
+    )
+    .filter(Boolean);
+}
+
+export function readableTitle(raw: string | null) {
+  const parts = titleParts(raw);
+  return parts[0] ?? raw?.trim() ?? null;
+}
+
+export function readableSubtitle(raw: string | null, channel: string | null) {
+  const rest = titleParts(raw)
+    .slice(1)
+    .filter((part) => part.length > 1)
+    .slice(0, 2);
+  return rest.length ? rest.join(" · ") : channel;
+}
+
+export function clock(seconds: number) {
+  if (!Number.isFinite(seconds) || seconds <= 0) return "0:00";
+  const minutes = Math.floor(seconds / 60);
+  const remainder = Math.floor(seconds % 60);
+  return `${minutes}:${String(remainder).padStart(2, "0")}`;
+}
+
+export function normalizeAmbienceLevel(level: number) {
+  if (!Number.isFinite(level)) return 50;
+  return Math.min(100, Math.max(0, Math.round(level)));
+}
+
+export type PlayerDisplay = {
+  title: string;
+  subtitle: string;
+  coverId: string | null;
+  status: "loading" | "unavailable" | "ready";
+};
+
+export function getPlayerDisplay({
+  nowPlaying,
+  track,
+  musicBlocked,
+}: {
+  nowPlaying: NowPlaying;
+  track: Track | null;
+  musicBlocked: boolean;
+}): PlayerDisplay {
+  const liveTitle = readableTitle(nowPlaying.title);
+  const title = liveTitle ?? track?.title ?? "Tuning in…";
+  const subtitle =
+    readableSubtitle(nowPlaying.title, nowPlaying.channel) ??
+    ([track?.artist, track?.year].filter(Boolean).join(" · ") || "गीत की जानकारी आ रही है…");
+  const coverId = nowPlaying.videoId ?? track?.youtube_id ?? null;
+  const status = musicBlocked ? "unavailable" : nowPlaying.title ? "ready" : "loading";
+
+  return { title, subtitle, coverId, status };
+}
