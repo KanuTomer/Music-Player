@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { fetchRoom, fetchScenes, resolveRoomTrack } from "./rooms.server";
+import { fetchRoom, fetchScenes, recordSourceFailure } from "./rooms.server";
 
 export type Scene = {
   id: string;
@@ -19,15 +19,33 @@ export type Scene = {
   tags: string[];
 };
 
-export type Track = {
+export type PlaybackSource = {
+  id: string;
+  provider: "youtube";
+  provider_item_id: string;
+  source_url: string;
+  provider_title: string | null;
+  provider_channel: string | null;
+  priority: number;
+};
+
+export type QueueItem = {
+  id: string;
+  position: number;
+  daypart_tag: string;
+  track: {
+    id: string;
+    title: string;
+    artist: string | null;
+    year: number | null;
+  };
+  sources: PlaybackSource[];
+};
+
+export type CuratedSet = {
   id: string;
   title: string;
-  artist: string | null;
-  year: number | null;
-  youtube_id: string | null;
-  search_query: string | null;
-  daypart_tag: string;
-  sort_order: number;
+  shuffle_start: boolean;
 };
 
 export type OneLiner = {
@@ -39,7 +57,8 @@ export type OneLiner = {
 
 export type RoomPayload = {
   scene: Scene;
-  tracks: Track[];
+  curatedSet: CuratedSet;
+  queue: QueueItem[];
   oneliners: OneLiner[];
 };
 
@@ -47,14 +66,22 @@ export const listScenes = createServerFn({ method: "GET" }).handler(async () => 
   return fetchScenes();
 });
 
-export const resolveTrackVideo = createServerFn({ method: "GET" })
-  .inputValidator((data: { query: string }) => ({ query: String(data.query) }))
-  .handler(async ({ data }): Promise<{ videoId: string | null }> => {
-    return { videoId: await resolveRoomTrack(data.query) };
-  });
+export const reportPlaybackSourceFailure = createServerFn({ method: "POST" })
+  .validator((data: { sourceId: string; errorCode: number }) => {
+    const sourceId = String(data.sourceId);
+    const errorCode = Number(data.errorCode);
+    if (
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(sourceId)
+    ) {
+      throw new Error("Invalid source identifier");
+    }
+    if (![2, 5, 100, 101, 150, 153].includes(errorCode)) throw new Error("Invalid player error");
+    return { sourceId, errorCode };
+  })
+  .handler(async ({ data }) => recordSourceFailure(data.sourceId, data.errorCode));
 
 export const getRoom = createServerFn({ method: "GET" })
-  .inputValidator((data: { slug: string }) => ({ slug: String(data.slug) }))
+  .validator((data: { slug: string }) => ({ slug: String(data.slug) }))
   .handler(async ({ data }): Promise<RoomPayload | null> => {
     return fetchRoom(data.slug);
   });
