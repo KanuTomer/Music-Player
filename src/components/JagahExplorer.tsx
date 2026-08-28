@@ -41,7 +41,7 @@ export function JagahExplorer({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="grid h-[92dvh] w-full max-w-none grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden rounded-t-3xl border-cream/15 bg-charcoal p-0 text-cream shadow-2xl motion-reduce:transition-none motion-reduce:data-[state=closed]:animate-none motion-reduce:data-[state=open]:animate-none sm:mx-auto sm:h-[min(78dvh,46rem)] sm:w-[min(1180px,calc(100%-2rem))] sm:rounded-t-2xl"
+        className="grid h-[92dvh] w-full max-w-none grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden rounded-t-3xl border-cream/15 bg-charcoal p-0 text-cream shadow-2xl motion-reduce:transition-none motion-reduce:data-[state=closed]:animate-none motion-reduce:data-[state=open]:animate-none sm:mx-auto sm:h-[calc(100dvh-2rem)] sm:w-[min(1180px,calc(100%-2rem))] sm:rounded-t-2xl"
       >
         <div className="border-b border-cream/10 px-4 pt-5 pb-4 sm:px-7 sm:pt-6">
           <div className="pr-10">
