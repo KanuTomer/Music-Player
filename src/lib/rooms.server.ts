@@ -1,6 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
-import { resolveYouTubeId } from "./yt-resolve.server";
 import type { RoomPayload, Scene } from "./rooms.functions";
 
 function publicClient() {
@@ -46,22 +45,67 @@ export async function fetchRoom(slug: string): Promise<RoomPayload | null> {
   if (error) throw new Error(error.message);
   if (!scene) return null;
 
-  const [tracks, oneliners] = await Promise.all([
+  const [curatedSet, oneliners] = await Promise.all([
     client
-      .from("tracks")
-      .select("id, title, artist, year, youtube_id, search_query, daypart_tag, sort_order")
+      .from("curated_sets")
+      .select("id, title, shuffle_start")
       .eq("scene_id", scene.id)
-      .order("sort_order", { ascending: true }),
+      .eq("is_active", true)
+      .single(),
     client.from("oneliners").select("id, text_en, text_hi, daypart_tag").eq("scene_id", scene.id),
   ]);
+  if (curatedSet.error) throw new Error(curatedSet.error.message);
+
+  const memberships = await client
+    .from("curated_set_tracks")
+    .select(
+      "id, position, daypart_tag, tracks!inner(id, title, artist, year, playback_sources!inner(id, provider, provider_item_id, source_url, provider_title, provider_channel, priority, is_active))",
+    )
+    .eq("curated_set_id", curatedSet.data.id)
+    .eq("tracks.playback_sources.is_active", true)
+    .order("position", { ascending: true });
+  if (memberships.error) throw new Error(memberships.error.message);
 
   return {
     scene: scene as unknown as Scene,
-    tracks: (tracks.data ?? []) as RoomPayload["tracks"],
+    curatedSet: curatedSet.data,
+    queue: (memberships.data ?? []).map((membership) => {
+      const track = membership.tracks;
+      return {
+        id: membership.id,
+        position: membership.position,
+        daypart_tag: membership.daypart_tag,
+        track: { id: track.id, title: track.title, artist: track.artist, year: track.year },
+        sources: track.playback_sources
+          .map(({ is_active: _active, ...source }) => source)
+          .sort((a, b) => a.priority - b.priority),
+      };
+    }) as RoomPayload["queue"],
     oneliners: (oneliners.data ?? []) as RoomPayload["oneliners"],
   };
 }
 
-export async function resolveRoomTrack(query: string) {
-  return resolveYouTubeId(query);
+export async function recordSourceFailure(sourceId: string, errorCode: number) {
+  const url = process.env["SUPABASE_URL"];
+  const secret = process.env["SUPABASE_SECRET_KEY"];
+  if (!url || !secret) throw new Error("Failure reporting is unavailable");
+  const client = createClient<Database>(url, secret, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: {
+      fetch: (input, init) => {
+        const headers = new Headers(init?.headers);
+        if (secret.startsWith("sb_") && headers.get("Authorization") === `Bearer ${secret}`) {
+          headers.delete("Authorization");
+        }
+        headers.set("apikey", secret);
+        return fetch(input, { ...init, headers });
+      },
+    },
+  });
+  const { error } = await client.rpc("record_playback_source_failure", {
+    p_source_id: sourceId,
+    p_error_code: errorCode,
+  });
+  if (error) throw new Error(error.message);
+  return { recorded: true };
 }
