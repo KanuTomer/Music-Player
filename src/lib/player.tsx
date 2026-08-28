@@ -3,35 +3,28 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useMemo,
   useRef,
   useState,
   type ReactNode,
 } from "react";
-import { resolveTrackVideo, type RoomPayload, type Track } from "./rooms.functions";
-import { currentDaypart, forDaypart, type Daypart } from "./dayparts";
+import { currentDaypart, type Daypart } from "./dayparts";
 import { normalizeAmbienceLevel } from "./player-display";
-import { playerErrorAction, playlistLifecycleAction } from "./player-lifecycle";
+import { chooseStart, circularIndex, snapshotQueue, sourceFailureAction } from "./queue";
+import { reportPlaybackSourceFailure, type QueueItem, type RoomPayload } from "./rooms.functions";
 
 type YTPlayer = {
-  loadPlaylist: (o: { list: string; listType: "playlist"; index?: number }) => void;
   loadVideoById: (id: string) => void;
   playVideo: () => void;
   pauseVideo: () => void;
   stopVideo: () => void;
-  nextVideo: () => void;
-  previousVideo: () => void;
   setVolume: (v: number) => void;
   seekTo: (s: number, allowSeekAhead?: boolean) => void;
   getCurrentTime: () => number;
   getDuration: () => number;
   getVideoData: () => { video_id?: string; title?: string; author?: string } | undefined;
-  getPlaylistIndex: () => number;
-  getPlaylist: () => string[] | null;
   getPlayerState: () => number;
   destroy: () => void;
 };
-
 type YTPlayerEvent = { target: YTPlayer };
 type YTPlayerStateEvent = YTPlayerEvent & { data: number };
 
@@ -44,35 +37,21 @@ export type NowPlaying = {
   index: number;
   total: number;
 };
-
-const emptyNowPlaying = (): NowPlaying => ({
+const emptyNowPlaying = (index = 0, total = 0): NowPlaying => ({
   videoId: null,
   title: null,
   channel: null,
   position: 0,
   duration: 0,
-  index: 0,
-  total: 0,
+  index,
+  total,
 });
-
-const scenePlaylists: Record<string, string> = {
-  "sainik-dhaba": "PLO1WqL1Pm6ic",
-  "nai-ki-dukaan": "PLRrYJLVviXe3yGN2NIrw0Qj_jEmjQpOKi",
-  "chai-ki-tapri": "PLUByR8i-v0KY",
-  "raj-mistri": "PLd--yIT4E7VcYzwx3iawJLQFdAk9HyAZa",
-  "rail-yatra": "PLQdfb6nEJz_X-0Tkwec2N2Sj83d_DM36d",
-  "raat-ki-bus": "PL8xy2vgHsFJjhGJJnwp8mspv27hN4K_Bg",
-  "sarkari-daftar": "PLJABXrnHALkJHG7vK7QMhJ6_Wxl6OPriF",
-  "doordarshan-shaam": "PLiIasA9CetIoIgLf6e_EXMVbAPr-04g6z",
-  "bhojpuriya-devara": "PLJ3M6AoVR-gZtOkB4v-_XgzYQz_6UQssJ",
-  "corporate-majdoor": "PLLounUW9rgqHr6YYR7r4oQOIeqdCZ7gO8",
-};
 
 type PlayerState = {
   room: RoomPayload | null;
   daypart: Daypart;
-  playlist: Track[];
-  track: Track | null;
+  playlist: QueueItem[];
+  track: QueueItem["track"] | null;
   isPlaying: boolean;
   needsGate: boolean;
   musicReady: boolean;
@@ -92,9 +71,7 @@ type PlayerState = {
   fadeForThemeChange: () => Promise<void>;
   leave: () => void;
 };
-
 const PlayerContext = createContext<PlayerState | null>(null);
-
 declare global {
   interface Window {
     YT?: { Player: new (el: HTMLElement, opts: unknown) => YTPlayer };
@@ -102,20 +79,18 @@ declare global {
   }
 }
 
-function loadYouTubeApi(): Promise<void> {
-  if (typeof window === "undefined") return Promise.resolve();
-  if (window.YT?.Player) return Promise.resolve();
-  return new Promise((resolve) => {
-    const existing = document.getElementById("yt-iframe-api");
-    if (!existing) {
-      const s = document.createElement("script");
-      s.id = "yt-iframe-api";
-      s.src = "https://www.youtube.com/iframe_api";
-      document.head.appendChild(s);
+function loadYouTubeApi() {
+  if (typeof window === "undefined" || window.YT?.Player) return Promise.resolve();
+  return new Promise<void>((resolve) => {
+    if (!document.getElementById("yt-iframe-api")) {
+      const script = document.createElement("script");
+      script.id = "yt-iframe-api";
+      script.src = "https://www.youtube.com/iframe_api";
+      document.head.appendChild(script);
     }
-    const prev = window.onYouTubeIframeAPIReady;
+    const previous = window.onYouTubeIframeAPIReady;
     window.onYouTubeIframeAPIReady = () => {
-      prev?.();
+      previous?.();
       resolve();
     };
     const poll = window.setInterval(() => {
@@ -124,269 +99,170 @@ function loadYouTubeApi(): Promise<void> {
         resolve();
       }
     }, 250);
-    window.setTimeout(() => {
-      window.clearInterval(poll);
-      resolve();
-    }, 8000);
   });
 }
 
 export function PlayerProvider({ children }: { children: ReactNode }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<YTPlayer | null>(null);
-  const playerReadyRef = useRef(false);
-  const playerGenerationRef = useRef(0);
-  const themeTransitionRef = useRef(false);
-  const volumeTimerRef = useRef<number | null>(null);
-  const resolvedRef = useRef<Map<string, string>>(new Map());
-  const loadedPlaylistRef = useRef<string | null>(null);
-  const playlistStartRef = useRef<Map<string, number>>(new Map());
-  const handledErrorKeysRef = useRef<Set<string>>(new Set());
-  // True whenever the app wants sound; a watchdog keeps the embed honest.
+  const readyRef = useRef(false);
+  const generationRef = useRef(0);
   const intendPlayRef = useRef(false);
+  const volumeRef = useRef(0.7);
+  const fadeTimerRef = useRef<number | null>(null);
+  const themeTransitionRef = useRef(false);
+  const queueRef = useRef<QueueItem[]>([]);
+  const indexRef = useRef(0);
+  const sourceIndexRef = useRef(0);
+  const failedSourcesRef = useRef<Set<string>>(new Set());
+  const failedItemsRef = useRef<Set<string>>(new Set());
+  const previousStartsRef = useRef<Map<string, number>>(new Map());
   const [room, setRoom] = useState<RoomPayload | null>(null);
   const [daypart, setDaypart] = useState<Daypart>(() => currentDaypart());
-  const [index, setIndex] = useState(0);
+  const [playlist, setPlaylist] = useState<QueueItem[]>([]);
+  const [index, setIndexState] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [needsGate, setNeedsGate] = useState(true);
   const [musicReady, setMusicReady] = useState(false);
-  const [apiReady, setApiReady] = useState(false);
   const [musicBlocked, setMusicBlocked] = useState(false);
+  const [apiReady, setApiReady] = useState(false);
   const [musicVolume, setMusicVol] = useState(0.7);
   const [ambienceLevel, setAmbienceLevelState] = useState(50);
-  const musicVolumeRef = useRef(0.7);
   const [nowPlaying, setNowPlaying] = useState<NowPlaying>(emptyNowPlaying);
+  const track = playlist[index]?.track ?? null;
 
-  const playlist = useMemo(() => (room ? forDaypart(room.tracks, daypart) : []), [room, daypart]);
-  const track = playlist[index % Math.max(playlist.length, 1)] ?? null;
-  const isCuratedPlaylist = Boolean(room && scenePlaylists[room.scene.slug]);
-
-  // Poll the hidden YouTube player for real track metadata + progress.
-  // Metadata (id/title/channel) is only committed once YouTube reports a title
-  // for the new video, so cover art, title and artist swap in one atomic step.
-  useEffect(() => {
-    const t = window.setInterval(() => {
-      const p = playerRef.current;
-      if (!p || !playerReadyRef.current || typeof p.getVideoData !== "function") return;
-      try {
-        const d = p.getVideoData();
-        const list = typeof p.getPlaylist === "function" ? p.getPlaylist() : null;
-        const position = p.getCurrentTime() || 0;
-        const duration = p.getDuration() || 0;
-        const idx = typeof p.getPlaylistIndex === "function" ? p.getPlaylistIndex() : 0;
-        const total = list?.length ?? 0;
-        const metaReady = Boolean(d?.video_id && d?.title);
-
-        setNowPlaying((prev) => {
-          const nextState: NowPlaying = metaReady
-            ? {
-                videoId: d.video_id ?? null,
-                title: d.title ?? null,
-                channel: d?.author ?? null,
-                position,
-                duration,
-                index: idx,
-                total,
-              }
-            : {
-                ...prev,
-                position,
-                duration: duration > 0 ? duration : prev.duration,
-                index: idx,
-                total,
-              };
-          if (
-            prev.videoId === nextState.videoId &&
-            prev.title === nextState.title &&
-            prev.channel === nextState.channel &&
-            Math.abs(prev.position - nextState.position) < 0.25 &&
-            prev.duration === nextState.duration &&
-            prev.index === nextState.index &&
-            prev.total === nextState.total
-          ) {
-            return prev;
-          }
-          return nextState;
-        });
-      } catch {
-        /* player not ready yet */
-      }
-    }, 250);
-    return () => window.clearInterval(t);
+  const setIndex = useCallback((next: number) => {
+    indexRef.current = next;
+    sourceIndexRef.current = 0;
+    setIndexState(next);
+    setNowPlaying(emptyNowPlaying(next, queueRef.current.length));
   }, []);
-
-  // Playback watchdog: while the app intends to play, an embed that sits in
-  // UNSTARTED (-1), PAUSED (2) or CUED (5) is nudged until it really plays.
-  useEffect(() => {
-    const t = window.setInterval(() => {
-      const p = playerRef.current;
-      if (!p || !playerReadyRef.current || !intendPlayRef.current) return;
-      try {
-        if (typeof p.getPlayerState !== "function") return;
-        const state = p.getPlayerState();
-        if (state === 1 || state === 3) return; // playing / buffering
-        p.playVideo();
-      } catch {
-        /* embed not ready yet */
-      }
-    }, 700);
-    return () => window.clearInterval(t);
-  }, []);
-
-  const setMusicVolume = useCallback((v: number) => {
-    const clamped = Math.min(1, Math.max(0, v));
-    musicVolumeRef.current = clamped;
-    setMusicVol(clamped);
-    try {
-      playerRef.current?.setVolume(Math.round(clamped * 100));
-    } catch {
-      /* noop */
+  const cueCurrent = useCallback((player: YTPlayer, autoplay: boolean) => {
+    const source = queueRef.current[indexRef.current]?.sources[sourceIndexRef.current];
+    if (!source) {
+      setMusicBlocked(true);
+      return false;
     }
-  }, []);
-
-  const setAmbienceLevel = useCallback((level: number) => {
-    setAmbienceLevelState(normalizeAmbienceLevel(level));
-  }, []);
-
-  const previous = useCallback(() => {
-    const p = playerRef.current;
-    if (!p || !playerReadyRef.current) return;
-    if (room && scenePlaylists[room.scene.slug]) {
-      p.previousVideo();
-      return;
-    }
-    setIndex((i) => (playlist.length ? (i - 1 + playlist.length) % playlist.length : 0));
-  }, [playlist.length, room]);
-
-  const seek = useCallback((seconds: number) => {
-    if (!playerReadyRef.current) return;
-    try {
-      playerRef.current?.seekTo(Math.max(0, seconds), true);
-    } catch {
-      /* noop */
-    }
-  }, []);
-
-  // IST daypart ticks over while a room is left running for hours
-  useEffect(() => {
-    const t = window.setInterval(() => setDaypart(currentDaypart()), 60000);
-    return () => window.clearInterval(t);
-  }, []);
-
-  const buildPlayer = useCallback((playlistId: string | null, autoplay: boolean) => {
-    const host = hostRef.current;
-    if (!host || !window.YT?.Player) return null;
-
-    const generation = playerGenerationRef.current + 1;
-    playerGenerationRef.current = generation;
-    playerReadyRef.current = false;
+    player.loadVideoById(source.provider_item_id);
+    player.setVolume(themeTransitionRef.current ? 0 : Math.round(volumeRef.current * 100));
     intendPlayRef.current = autoplay;
-
-    const outgoing = playerRef.current;
-    playerRef.current = null;
-    loadedPlaylistRef.current = null;
-    handledErrorKeysRef.current.clear();
-    try {
-      outgoing?.setVolume(0);
-    } catch {
-      /* outgoing embed may already be detached */
+    if (autoplay) player.playVideo();
+    else player.pauseVideo();
+    if (autoplay && themeTransitionRef.current) {
+      let step = 0;
+      if (fadeTimerRef.current != null) window.clearInterval(fadeTimerRef.current);
+      fadeTimerRef.current = window.setInterval(() => {
+        step += 1;
+        player.setVolume(Math.round((volumeRef.current * 100 * step) / 8));
+        if (step >= 8) {
+          if (fadeTimerRef.current != null) window.clearInterval(fadeTimerRef.current);
+          fadeTimerRef.current = null;
+          themeTransitionRef.current = false;
+        }
+      }, 100);
     }
-    try {
-      outgoing?.stopVideo();
-    } catch {
-      /* outgoing embed may already be detached */
-    }
-    try {
-      outgoing?.destroy();
-    } catch {
-      /* outgoing embed may already be detached */
-    }
+    return true;
+  }, []);
+  const advance = useCallback(
+    (delta: number) => {
+      const next = circularIndex(indexRef.current, delta, queueRef.current.length);
+      setIndex(next);
+      const player = playerRef.current;
+      if (player && readyRef.current) cueCurrent(player, intendPlayRef.current);
+    },
+    [cueCurrent, setIndex],
+  );
+  const reportFailure = useCallback((sourceId: string, errorCode: number) => {
+    void reportPlaybackSourceFailure({ data: { sourceId, errorCode } }).catch(() => {
+      /* playback continues */
+    });
+  }, []);
+  const handleSourceError = useCallback(
+    (generation: number, player: YTPlayer, errorCode: number) => {
+      const item = queueRef.current[indexRef.current];
+      const source = item?.sources[sourceIndexRef.current];
+      if (!item || !source) return;
+      const fallback = item.sources.findIndex(
+        (candidate, candidateIndex) =>
+          candidateIndex > sourceIndexRef.current && !failedSourcesRef.current.has(candidate.id),
+      );
+      const action = sourceFailureAction({
+        eventGeneration: generation,
+        currentGeneration: generationRef.current,
+        isCurrentTarget: playerRef.current === player,
+        alreadyFailed: failedSourcesRef.current.has(source.id),
+        hasFallback: fallback >= 0,
+        failedItemCount: failedItemsRef.current.size,
+        queueLength: queueRef.current.length,
+      });
+      if (action === "ignore") return;
+      failedSourcesRef.current.add(source.id);
+      reportFailure(source.id, errorCode);
+      if (action === "fallback") {
+        sourceIndexRef.current = fallback;
+        cueCurrent(player, intendPlayRef.current);
+        return;
+      }
+      failedItemsRef.current.add(item.id);
+      if (action === "stop") {
+        intendPlayRef.current = false;
+        setIsPlaying(false);
+        setMusicBlocked(true);
+        return;
+      }
+      setMusicBlocked(true);
+      advance(1);
+    },
+    [advance, cueCurrent, reportFailure],
+  );
 
-    host.replaceChildren();
-    const el = document.createElement("div");
-    host.appendChild(el);
-    setMusicReady(false);
-    setMusicBlocked(false);
-    setNowPlaying(emptyNowPlaying());
-
-    const isCurrent = (candidate: YTPlayer) =>
-      playerGenerationRef.current === generation && playerRef.current === candidate;
-
-    try {
-      const created = new window.YT.Player(el, {
+  const buildPlayer = useCallback(
+    (autoplay: boolean) => {
+      const host = hostRef.current;
+      if (!host || !window.YT?.Player || !queueRef.current.length) return;
+      const generation = generationRef.current + 1;
+      generationRef.current = generation;
+      readyRef.current = false;
+      intendPlayRef.current = autoplay;
+      const outgoing = playerRef.current;
+      playerRef.current = null;
+      try {
+        outgoing?.setVolume(0);
+        outgoing?.stopVideo();
+        outgoing?.destroy();
+      } catch {
+        /* detached */
+      }
+      host.replaceChildren();
+      const element = document.createElement("div");
+      host.appendChild(element);
+      setMusicReady(false);
+      setMusicBlocked(false);
+      setNowPlaying(emptyNowPlaying(indexRef.current, queueRef.current.length));
+      const current = (candidate: YTPlayer) =>
+        generationRef.current === generation && playerRef.current === candidate;
+      const created = new window.YT.Player(element, {
         height: "1",
         width: "1",
-        playerVars: {
-          autoplay: autoplay ? 1 : 0,
-          controls: 0,
-          playsinline: 1,
-          ...(playlistId ? { list: playlistId, listType: "playlist" } : {}),
-        },
+        playerVars: { autoplay: autoplay ? 1 : 0, controls: 0, playsinline: 1 },
         events: {
           onReady: (event: YTPlayerEvent) => {
-            const p = event.target;
-            if (!isCurrent(p)) return;
-            playerReadyRef.current = true;
+            if (!current(event.target)) return;
+            readyRef.current = true;
             setMusicReady(true);
             try {
-              p.setVolume(Math.round(musicVolumeRef.current * 100));
-              if (playlistId) {
-                const availableTracks = p.getPlaylist() ?? [];
-                const total = availableTracks.length;
-                const previousStart = playlistStartRef.current.get(playlistId) ?? -1;
-                let nextStart = 0;
-
-                if (total > 1) {
-                  do {
-                    nextStart = Math.floor(Math.random() * total);
-                  } while (nextStart === previousStart);
-                }
-
-                playlistStartRef.current.set(playlistId, nextStart);
-                p.loadPlaylist({ list: playlistId, listType: "playlist", index: nextStart });
-              }
-
-              if (intendPlayRef.current) {
-                setIsPlaying(true);
-                p.playVideo();
-              } else {
-                setIsPlaying(false);
-                p.pauseVideo();
-              }
+              cueCurrent(event.target, intendPlayRef.current);
             } catch {
-              if (isCurrent(p)) setMusicBlocked(true);
+              setMusicBlocked(true);
             }
           },
-          onError: (event: YTPlayerEvent) => {
-            const p = event.target;
-            let failedIndex = -1;
-            let failedVideoId = "unknown";
-            try {
-              failedIndex = p.getPlaylistIndex?.() ?? -1;
-              failedVideoId = p.getVideoData?.()?.video_id ?? "unknown";
-            } catch {
-              /* YouTube may report an error before metadata methods are readable. */
-            }
-            const errorKey = `${generation}:${failedIndex}:${failedVideoId}`;
-            const action = playerErrorAction({
-              eventGeneration: generation,
-              currentGeneration: playerGenerationRef.current,
-              isCurrentTarget: isCurrent(p),
-              alreadyHandled: handledErrorKeysRef.current.has(errorKey),
-            });
-            if (action === "ignore") return;
-            handledErrorKeysRef.current.add(errorKey);
-            setMusicBlocked(true);
-            try {
-              p.nextVideo();
-            } catch {
-              /* noop */
-            }
+          onError: (event: YTPlayerStateEvent) => {
+            if (current(event.target)) handleSourceError(generation, event.target, event.data);
           },
           onStateChange: (event: YTPlayerStateEvent) => {
-            if (!isCurrent(event.target)) return;
+            if (!current(event.target)) return;
+            if (event.data === 0) advance(1);
             if (event.data === 1) {
-              handledErrorKeysRef.current.clear();
               setIsPlaying(true);
               setMusicBlocked(false);
             }
@@ -395,16 +271,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         },
       });
       playerRef.current = created;
-      loadedPlaylistRef.current = playlistId;
-      return created;
-    } catch {
-      playerRef.current = null;
-      loadedPlaylistRef.current = null;
-      playerReadyRef.current = false;
-      setMusicBlocked(true);
-      return null;
-    }
-  }, []);
+    },
+    [advance, cueCurrent, handleSourceError],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -415,177 +284,112 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       cancelled = true;
     };
   }, []);
-
-  const cueTrack = useCallback(async (t: Track | null, autoplay: boolean) => {
-    const p = playerRef.current;
-    if (!p || !t) return;
-    let videoId = t.youtube_id ?? resolvedRef.current.get(t.id) ?? null;
-    if (!videoId && t.search_query) {
-      try {
-        const res = await resolveTrackVideo({ data: { query: t.search_query } });
-        if (res.videoId) {
-          resolvedRef.current.set(t.id, res.videoId);
-          videoId = res.videoId;
-        }
-      } catch {
-        /* no playable video id */
-      }
-    }
-    if (!videoId) {
-      setMusicBlocked(true);
-      return;
-    }
-    try {
-      p.loadVideoById(videoId);
-      p.setVolume(themeTransitionRef.current ? 0 : Math.round(musicVolumeRef.current * 100));
-      intendPlayRef.current = autoplay;
-      if (autoplay) p.playVideo();
-      else p.pauseVideo();
-      if (autoplay && themeTransitionRef.current) {
-        let step = 0;
-        if (volumeTimerRef.current !== null) window.clearInterval(volumeTimerRef.current);
-        volumeTimerRef.current = window.setInterval(() => {
-          step += 1;
-          p.setVolume(Math.round((musicVolumeRef.current * 100 * step) / 8));
-          if (step >= 8) {
-            if (volumeTimerRef.current !== null) window.clearInterval(volumeTimerRef.current);
-            volumeTimerRef.current = null;
-            themeTransitionRef.current = false;
-          }
-        }, 100);
-      }
-    } catch {
-      setMusicBlocked(true);
-    }
-  }, []);
-
-  const cueRoomPlaylist = useCallback(
-    (slug: string, autoplay: boolean) => {
-      const playlistId = scenePlaylists[slug];
-      if (!playlistId) return false;
-
-      intendPlayRef.current = autoplay;
-      const existing = playerRef.current;
-      const action = playlistLifecycleAction({
-        requestedPlaylistId: playlistId,
-        loadedPlaylistId: loadedPlaylistRef.current,
-        hasPlayer: Boolean(existing),
-        isReady: playerReadyRef.current,
-      });
-
-      try {
-        if (action === "build") {
-          themeTransitionRef.current = false;
-          if (volumeTimerRef.current !== null) {
-            window.clearInterval(volumeTimerRef.current);
-            volumeTimerRef.current = null;
-          }
-          return Boolean(buildPlayer(playlistId, autoplay));
-        }
-
-        if (action === "wait" || !existing) return true;
-
-        const p = existing;
-        if (autoplay) p.playVideo();
-        else p.pauseVideo();
-        p.setVolume(Math.round(musicVolumeRef.current * 100));
-        return true;
-      } catch {
-        setMusicBlocked(true);
-        return true;
-      }
-    },
-    [buildPlayer],
-  );
-
-  const openRoom = useCallback((next: RoomPayload) => {
-    setRoom((prev) => {
-      if (prev?.scene.slug === next.scene.slug) return prev;
-      setIndex(0);
-      return next;
-    });
-  }, []);
-
   useEffect(() => {
-    if (needsGate || !apiReady) return;
-    // Curated playlists rebuild the embed themselves, so they must not wait on
-    // a previous embed becoming ready — otherwise a room can stay silent.
-    if (room && cueRoomPlaylist(room.scene.slug, true)) return;
-    if (!playerRef.current) {
-      buildPlayer(null, false);
-      return;
-    }
-    if (!musicReady) return;
-    void cueTrack(track, true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [room?.scene.slug, apiReady, musicReady, needsGate]);
+    const timer = window.setInterval(() => setDaypart(currentDaypart()), 60000);
+    return () => window.clearInterval(timer);
+  }, []);
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      const player = playerRef.current;
+      if (!player || !readyRef.current) return;
+      try {
+        const data = player.getVideoData();
+        setNowPlaying({
+          videoId: data?.video_id ?? null,
+          title: data?.title ?? null,
+          channel: data?.author ?? null,
+          position: player.getCurrentTime() || 0,
+          duration: player.getDuration() || 0,
+          index: indexRef.current,
+          total: queueRef.current.length,
+        });
+        if (intendPlayRef.current && ![1, 3].includes(player.getPlayerState())) player.playVideo();
+      } catch {
+        /* not ready */
+      }
+    }, 500);
+    return () => window.clearInterval(timer);
+  }, []);
+  useEffect(() => {
+    if (room && !needsGate && apiReady) buildPlayer(true);
+  }, [apiReady, buildPlayer, needsGate, room]);
 
+  const openRoom = useCallback(
+    (nextRoom: RoomPayload) => {
+      if (room?.scene.slug === nextRoom.scene.slug) return;
+      const snapshot = snapshotQueue(nextRoom.queue, currentDaypart());
+      const previous = previousStartsRef.current.get(nextRoom.scene.slug) ?? -1;
+      const startIndex = nextRoom.curatedSet.shuffle_start
+        ? chooseStart(snapshot.length, previous)
+        : 0;
+      previousStartsRef.current.set(nextRoom.scene.slug, startIndex);
+      queueRef.current = snapshot;
+      failedSourcesRef.current.clear();
+      failedItemsRef.current.clear();
+      setPlaylist(snapshot);
+      setIndex(startIndex);
+      setRoom(nextRoom);
+    },
+    [room?.scene.slug, setIndex],
+  );
   const start = useCallback(() => {
     intendPlayRef.current = true;
     setNeedsGate(false);
     setIsPlaying(true);
-    if (playerReadyRef.current) playerRef.current?.playVideo();
+    if (readyRef.current) playerRef.current?.playVideo();
   }, []);
-
   const toggle = useCallback(() => {
-    if (needsGate) {
-      start();
-      return;
+    if (needsGate) return start();
+    intendPlayRef.current = !isPlaying;
+    if (readyRef.current) {
+      if (isPlaying) playerRef.current?.pauseVideo();
+      else playerRef.current?.playVideo();
     }
-    if (isPlaying) {
-      intendPlayRef.current = false;
-      if (playerReadyRef.current) playerRef.current?.pauseVideo();
-      setIsPlaying(false);
-    } else {
-      intendPlayRef.current = true;
-      if (playerReadyRef.current) playerRef.current?.playVideo();
-      setIsPlaying(true);
-    }
+    setIsPlaying(!isPlaying);
   }, [isPlaying, needsGate, start]);
-
-  const next = useCallback(() => {
-    if (room && scenePlaylists[room.scene.slug] && playerRef.current && playerReadyRef.current) {
-      playerRef.current.nextVideo();
-      return;
-    }
-    setIndex((i) => (playlist.length ? (i + 1) % playlist.length : 0));
-  }, [playlist.length, room]);
-
+  const next = useCallback(() => advance(1), [advance]);
+  const previous = useCallback(() => advance(-1), [advance]);
+  const seek = useCallback((seconds: number) => {
+    if (readyRef.current) playerRef.current?.seekTo(Math.max(0, seconds), true);
+  }, []);
+  const setMusicVolume = useCallback((value: number) => {
+    const clamped = Math.min(1, Math.max(0, value));
+    volumeRef.current = clamped;
+    setMusicVol(clamped);
+    if (readyRef.current) playerRef.current?.setVolume(Math.round(clamped * 100));
+  }, []);
+  const setAmbienceLevel = useCallback(
+    (value: number) => setAmbienceLevelState(normalizeAmbienceLevel(value)),
+    [],
+  );
   const fadeForThemeChange = useCallback(() => {
     themeTransitionRef.current = true;
-    const p = playerRef.current;
-    if (!p || !isPlaying) return Promise.resolve();
-
-    if (volumeTimerRef.current !== null) window.clearInterval(volumeTimerRef.current);
+    const player = playerRef.current;
+    if (!player || !isPlaying) return Promise.resolve();
+    if (fadeTimerRef.current != null) window.clearInterval(fadeTimerRef.current);
     return new Promise<void>((resolve) => {
       let step = 7;
-      volumeTimerRef.current = window.setInterval(() => {
-        if (typeof p.setVolume !== "function") {
-          if (volumeTimerRef.current !== null) window.clearInterval(volumeTimerRef.current);
-          volumeTimerRef.current = null;
-          resolve();
-          return;
-        }
+      fadeTimerRef.current = window.setInterval(() => {
         step -= 1;
-        p.setVolume(Math.max(0, Math.round((musicVolumeRef.current * 100 * step) / 7)));
+        player.setVolume(Math.max(0, Math.round((volumeRef.current * 100 * step) / 7)));
         if (step <= 0) {
-          if (volumeTimerRef.current !== null) window.clearInterval(volumeTimerRef.current);
-          volumeTimerRef.current = null;
+          if (fadeTimerRef.current != null) window.clearInterval(fadeTimerRef.current);
+          fadeTimerRef.current = null;
           resolve();
         }
       }, 45);
     });
   }, [isPlaying]);
-
   const leave = useCallback(() => {
-    setRoom(null);
-    loadedPlaylistRef.current = null;
-    playerReadyRef.current = false;
-    playerGenerationRef.current += 1;
-    setNeedsGate(true);
-    setIsPlaying(false);
+    generationRef.current += 1;
+    readyRef.current = false;
     intendPlayRef.current = false;
     playerRef.current?.pauseVideo();
+    setRoom(null);
+    setPlaylist([]);
+    queueRef.current = [];
+    setNeedsGate(true);
+    setIsPlaying(false);
   }, []);
 
   const value: PlayerState = {
@@ -597,7 +401,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     needsGate,
     musicReady,
     musicBlocked,
-    isCuratedPlaylist,
+    isCuratedPlaylist: Boolean(room),
     nowPlaying,
     musicVolume,
     ambienceLevel,
@@ -612,7 +416,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     fadeForThemeChange,
     leave,
   };
-
   return (
     <PlayerContext.Provider value={value}>
       {children}
@@ -626,8 +429,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function usePlayer(): PlayerState {
-  const ctx = useContext(PlayerContext);
-  if (!ctx) throw new Error("usePlayer must be used inside PlayerProvider");
-  return ctx;
+export function usePlayer() {
+  const value = useContext(PlayerContext);
+  if (!value) throw new Error("usePlayer must be used inside PlayerProvider");
+  return value;
 }

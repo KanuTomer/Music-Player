@@ -6,6 +6,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.17";
   };
+  graphql_public: {
+    Tables: {
+      [_ in never]: never;
+    };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json;
+          operationName?: string;
+          query?: string;
+          variables?: Json;
+        };
+        Returns: Json;
+      };
+    };
+    Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
+    };
+  };
   public: {
     Tables: {
       chat_messages: {
@@ -37,6 +62,95 @@ export type Database = {
           text?: string;
         };
         Relationships: [];
+      };
+      curated_set_tracks: {
+        Row: {
+          created_at: string;
+          curated_set_id: string;
+          daypart_tag: string;
+          id: string;
+          position: number;
+          track_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          curated_set_id: string;
+          daypart_tag?: string;
+          id?: string;
+          position: number;
+          track_id: string;
+        };
+        Update: {
+          created_at?: string;
+          curated_set_id?: string;
+          daypart_tag?: string;
+          id?: string;
+          position?: number;
+          track_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "curated_set_tracks_curated_set_id_fkey";
+            columns: ["curated_set_id"];
+            isOneToOne: false;
+            referencedRelation: "curated_sets";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "curated_set_tracks_track_id_fkey";
+            columns: ["track_id"];
+            isOneToOne: false;
+            referencedRelation: "tracks";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      curated_sets: {
+        Row: {
+          created_at: string;
+          id: string;
+          imported_at: string;
+          is_active: boolean;
+          origin_external_id: string | null;
+          origin_provider: string | null;
+          scene_id: string;
+          shuffle_start: boolean;
+          sort_order: number;
+          title: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          imported_at?: string;
+          is_active?: boolean;
+          origin_external_id?: string | null;
+          origin_provider?: string | null;
+          scene_id: string;
+          shuffle_start?: boolean;
+          sort_order?: number;
+          title: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          imported_at?: string;
+          is_active?: boolean;
+          origin_external_id?: string | null;
+          origin_provider?: string | null;
+          scene_id?: string;
+          shuffle_start?: boolean;
+          sort_order?: number;
+          title?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "curated_sets_scene_id_fkey";
+            columns: ["scene_id"];
+            isOneToOne: false;
+            referencedRelation: "scenes";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       generated_rooms: {
         Row: {
@@ -125,6 +239,91 @@ export type Database = {
             columns: ["scene_id"];
             isOneToOne: false;
             referencedRelation: "scenes";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      playback_source_failures: {
+        Row: {
+          error_code: number;
+          failed_on: string;
+          first_seen_at: string;
+          last_seen_at: string;
+          occurrence_count: number;
+          source_id: string;
+        };
+        Insert: {
+          error_code: number;
+          failed_on?: string;
+          first_seen_at?: string;
+          last_seen_at?: string;
+          occurrence_count?: number;
+          source_id: string;
+        };
+        Update: {
+          error_code?: number;
+          failed_on?: string;
+          first_seen_at?: string;
+          last_seen_at?: string;
+          occurrence_count?: number;
+          source_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "playback_source_failures_source_id_fkey";
+            columns: ["source_id"];
+            isOneToOne: false;
+            referencedRelation: "playback_sources";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      playback_sources: {
+        Row: {
+          created_at: string;
+          id: string;
+          is_active: boolean;
+          priority: number;
+          provider: string;
+          provider_channel: string | null;
+          provider_item_id: string;
+          provider_title: string | null;
+          source_url: string;
+          track_id: string;
+          validated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          is_active?: boolean;
+          priority?: number;
+          provider: string;
+          provider_channel?: string | null;
+          provider_item_id: string;
+          provider_title?: string | null;
+          source_url: string;
+          track_id: string;
+          validated_at: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          is_active?: boolean;
+          priority?: number;
+          provider?: string;
+          provider_channel?: string | null;
+          provider_item_id?: string;
+          provider_title?: string | null;
+          source_url?: string;
+          track_id?: string;
+          validated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "playback_sources_track_id_fkey";
+            columns: ["track_id"];
+            isOneToOne: false;
+            referencedRelation: "tracks";
             referencedColumns: ["id"];
           },
         ];
@@ -364,9 +563,10 @@ export type Database = {
       tracks: {
         Row: {
           artist: string | null;
+          catalogue_key: string;
           daypart_tag: string;
           id: string;
-          scene_id: string;
+          scene_id: string | null;
           search_query: string | null;
           sort_order: number;
           spotify_url: string | null;
@@ -377,9 +577,10 @@ export type Database = {
         };
         Insert: {
           artist?: string | null;
+          catalogue_key: string;
           daypart_tag?: string;
           id?: string;
-          scene_id: string;
+          scene_id?: string | null;
           search_query?: string | null;
           sort_order?: number;
           spotify_url?: string | null;
@@ -390,9 +591,10 @@ export type Database = {
         };
         Update: {
           artist?: string | null;
+          catalogue_key?: string;
           daypart_tag?: string;
           id?: string;
-          scene_id?: string;
+          scene_id?: string | null;
           search_query?: string | null;
           sort_order?: number;
           spotify_url?: string | null;
@@ -416,7 +618,10 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      record_playback_source_failure: {
+        Args: { p_error_code: number; p_source_id: string };
+        Returns: undefined;
+      };
     };
     Enums: {
       [_ in never]: never;
@@ -539,6 +744,9 @@ export type CompositeTypes<
     : never;
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },

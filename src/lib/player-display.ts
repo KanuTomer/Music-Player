@@ -1,5 +1,5 @@
 import type { NowPlaying } from "./player";
-import type { Track } from "./rooms.functions";
+import type { QueueItem } from "./rooms.functions";
 
 const NOISE =
   /\b(official\s*(music\s*)?(video|audio|lyrical|lyric)?|full\s*(video\s*)?song|lyrical(\s*video)?|hd|4k|remastered|audio|video song|with lyrics)\b/gi;
@@ -56,16 +56,16 @@ export function getPlayerDisplay({
   musicBlocked,
 }: {
   nowPlaying: NowPlaying;
-  track: Track | null;
+  track: QueueItem["track"] | null;
   musicBlocked: boolean;
 }): PlayerDisplay {
-  const liveTitle = readableTitle(nowPlaying.title);
-  const title = liveTitle ?? track?.title ?? "Tuning in…";
+  const title = track?.title ?? readableTitle(nowPlaying.title) ?? "Tuning in…";
   const subtitle =
-    readableSubtitle(nowPlaying.title, nowPlaying.channel) ??
-    ([track?.artist, track?.year].filter(Boolean).join(" · ") || "गीत की जानकारी आ रही है…");
-  const coverId = nowPlaying.videoId ?? track?.youtube_id ?? null;
-  const status = musicBlocked ? "unavailable" : nowPlaying.title ? "ready" : "loading";
+    [track?.artist, track?.year].filter(Boolean).join(" · ") ||
+    readableSubtitle(nowPlaying.title, nowPlaying.channel) ||
+    "गीत की जानकारी आ रही है…";
+  const coverId = nowPlaying.videoId;
+  const status = musicBlocked ? "unavailable" : nowPlaying.videoId ? "ready" : "loading";
 
   return { title, subtitle, coverId, status };
 }
