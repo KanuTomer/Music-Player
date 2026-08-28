@@ -8,7 +8,7 @@ import { videoForScene } from "@/lib/scene-media";
 import { usePlayer } from "@/lib/player";
 import { forDaypart } from "@/lib/dayparts";
 import { useRoomSocial } from "@/hooks/useRoomSocial";
-import { ControlCluster } from "@/components/room/ControlCluster";
+import { FullCassettePlayer } from "@/components/player/CassettePlayers";
 import { OneLinerCaption } from "@/components/room/OneLinerCaption";
 import { JagahExplorer } from "@/components/JagahExplorer";
 import { InfoPlaceholderDialog } from "@/components/InfoPlaceholderDialog";
@@ -188,19 +188,7 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
       />
 
       <div className="pointer-events-none absolute inset-x-0 bottom-3 z-30 flex justify-center px-3">
-        <ControlCluster
-          track={player.track}
-          nowPlaying={player.nowPlaying}
-          isCuratedPlaylist={player.isCuratedPlaylist}
-          isPlaying={player.isPlaying}
-          onToggle={player.toggle}
-          onNext={player.next}
-          onPrevious={player.previous}
-          onSeek={player.seek}
-          musicVolume={player.musicVolume}
-          onMusicVolume={player.setMusicVolume}
-          musicBlocked={player.musicBlocked}
-        />
+        <FullCassettePlayer />
       </div>
 
       {player.needsGate && (
