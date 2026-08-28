@@ -7,7 +7,7 @@ import { videoForScene } from "@/lib/scene-media";
 import { usePlayer } from "@/lib/player";
 import { JagahExplorer } from "@/components/JagahExplorer";
 import { InfoPlaceholderDialog } from "@/components/InfoPlaceholderDialog";
-import { MiniPlayer } from "@/components/MiniPlayer";
+import { CompactCassettePlayer } from "@/components/player/CassettePlayers";
 import { ISTClock } from "@/components/ISTClock";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useJagahNavigation } from "@/hooks/useJagahNavigation";
@@ -178,7 +178,9 @@ function Home() {
         </section>
       </main>
 
-      {player.room && <MiniPlayer />}
+      {player.room && !explorerOpen ? (
+        <CompactCassettePlayer className="shrink-0 rounded-none border-x-0 border-b-0" />
+      ) : null}
 
       <JagahExplorer
         scenes={scenes}
