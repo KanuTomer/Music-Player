@@ -80,6 +80,7 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
 
   return (
     <div
+      id="room-experience-top"
       className={`room-scene-enter relative h-dvh w-full overflow-y-auto no-scrollbar scroll-smooth ${gradeClass} ${scene.is_dark ? "room-dark" : ""}`}
     >
       {/* Immersive View Area (100dvh height) */}
@@ -208,6 +209,23 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
         active={active}
         trackKey={player.nowPlaying?.title ?? player.track?.title ?? null}
       />
+
+      {/* Floating Scroll Down Indicator (bottom-right) */}
+      <div className="pointer-events-auto absolute right-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-30 flex items-center sm:right-6 sm:bottom-5">
+        <button
+          type="button"
+          onClick={() => {
+            document.getElementById(`about-${scene.slug}`)?.scrollIntoView({ behavior: "smooth" });
+          }}
+          className="group flex items-center gap-2 text-cream/55 hover:text-ember transition-colors cursor-pointer"
+          aria-label="Scroll down for details"
+        >
+          <span className="font-vintage-deva text-[9px] sm:text-[10px] tracking-wider uppercase">Neeche chalo · Details</span>
+          <span className="flex size-9 items-center justify-center rounded-full border border-cream/20 bg-charcoal/60 backdrop-blur-sm group-hover:border-ember group-hover:bg-charcoal/80 transition-colors animate-bounce sm:size-10">
+            <span className="text-sm font-bold sm:text-base">↓</span>
+          </span>
+        </button>
+      </div>
 
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-center px-3 pb-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:pb-4">
         <FullCassettePlayer />
