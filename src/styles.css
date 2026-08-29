@@ -482,3 +482,29 @@
 @utility animate-fade-in {
   animation: meta-fade-in 320ms ease-out both;
 }
+
+/* Premium scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(26, 26, 26, 0.4);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(220, 199, 170, 0.18);
+  border-radius: 9999px;
+  border: 1px solid rgba(26, 26, 26, 0.15);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(167, 45, 13, 0.7); /* ember hover color */
+}
+
+/* Firefox scrollbar styling */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(220, 199, 170, 0.18) rgba(26, 26, 26, 0.4);
+}

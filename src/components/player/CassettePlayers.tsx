@@ -29,9 +29,8 @@ function Cover({
 }) {
   return (
     <span
-      className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-lg border border-cream/15 bg-charcoal-soft ${
-        compact ? "size-11" : "size-16 sm:size-[4.5rem]"
-      }`}
+      className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-lg border border-cream/15 bg-charcoal-soft ${compact ? "size-11" : "size-14 sm:size-16"
+        }`}
     >
       {coverId ? (
         <img
@@ -145,65 +144,58 @@ export function FullCassettePlayer() {
     track: player.track,
     musicBlocked: player.musicBlocked,
   });
-  const progressLabel =
-    player.isCuratedPlaylist && player.nowPlaying.total > 0
-      ? `${player.nowPlaying.index + 1}/${player.nowPlaying.total}`
-      : null;
+  const progressLabel = null;
 
   if (!player.room) return null;
 
   return (
     <>
-      <div className="pointer-events-auto w-[min(96vw,44rem)] rounded-xl border border-charcoal-line/60 bg-charcoal/92 p-3 text-cream shadow-lift ring-1 ring-cream/5 backdrop-blur-md sm:p-4">
-        <div className="flex items-center gap-3 border-b border-cream/10 pb-3">
-          <Cover coverId={display.coverId} title={display.title} />
+      {/* Responsive player card: full width on mobile, capped on larger screens */}
+      <div className="pointer-events-auto w-full max-w-[min(96vw,36rem)] rounded-xl border border-charcoal-line/60 bg-charcoal/92 p-2.5 text-cream shadow-lift ring-1 ring-cream/5 backdrop-blur-md sm:p-3">
+        {/* Track info row */}
+        <div className="flex items-center gap-2.5 border-b border-cream/10 pb-2 sm:gap-3">
+          <Cover coverId={display.coverId} title={display.title} compact />
           <div key={display.coverId ?? "idle"} className="min-w-0 flex-1 animate-fade-in">
-            <p className="truncate font-cinema-display text-lg leading-tight text-cream sm:text-xl">
+            <p className="truncate font-cinema-display text-sm leading-tight text-cream sm:text-base">
               {display.title}
             </p>
-            <p className="mt-1 truncate text-[11px] font-medium text-cream/60 sm:text-xs">
+            <p className="mt-0.5 truncate text-[10px] font-medium text-cream/60 sm:text-[11px]">
               {display.status === "unavailable" ? (
-                "Track unavailable — advancing automatically"
+                "Track unavailable"
               ) : (
                 <>
                   <span className="text-ember">कलाकार</span> · {display.subtitle}
                 </>
               )}
             </p>
-            <p
-              className="mt-1 flex items-center gap-1.5 font-vintage-deva text-[11px] text-ember"
-              aria-live="polite"
-            >
-              <span
-                className="animate-bulb inline-block size-1.5 rounded-full bg-ember"
-                aria-hidden
-              />
-              {display.status === "loading" ? "ट्यून हो रहा है" : "अभी बज रहा है"}
-            </p>
           </div>
-          {progressLabel ? (
-            <span className="shrink-0 rounded-full border border-cream/15 px-2 py-0.5 text-[10px] font-semibold tabular-nums text-cream/50">
-              {progressLabel}
-            </span>
-          ) : null}
+          {/* Live pulse */}
+          <span className="flex shrink-0 items-center gap-1.5 font-vintage-deva text-[10px] text-ember/80">
+            <span className={`inline-block size-1.5 rounded-full bg-ember ${player.isPlaying ? "animate-bulb" : "opacity-50"}`} aria-hidden />
+            <span className="hidden sm:inline">{display.status === "loading" ? "ट्यून हो रहा" : "बज रहा है"}</span>
+          </span>
         </div>
 
-        <div className="mt-3 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 sm:gap-4">
+        {/* Cassette + transport */}
+        <div className="mt-2 grid grid-cols-[2rem_minmax(0,1fr)_2rem] items-center gap-1.5 sm:grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] sm:gap-3">
           <TransportButton action={player.previous} label="Previous track">
-            <SkipBack className="size-4" aria-hidden />
+            <SkipBack className="size-3.5 sm:size-4" aria-hidden />
           </TransportButton>
-          <CassetteBody variant="full" isPlaying={player.isPlaying} label="Sainik Dhaba" />
+          <CassetteBody variant="full" isPlaying={player.isPlaying} label={player.room.scene.title_en} />
           <TransportButton action={player.next} label="Next track">
-            <SkipForward className="size-4" aria-hidden />
+            <SkipForward className="size-3.5 sm:size-4" aria-hidden />
           </TransportButton>
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <div className="order-1 min-w-[10rem] flex-1">
-            <SeekBar />
-          </div>
-          <div className="order-2 flex items-center gap-2">
-            <PlayButton />
+        {/* Seekbar */}
+        <div className="mt-2">
+          <SeekBar />
+        </div>
+
+        {/* Controls row */}
+        <div className="mt-2 flex items-center justify-between gap-1.5 border-t border-cream/10 pt-2">
+          <PlayButton />
+          <div className="flex items-center gap-1.5">
             <Button
               type="button"
               variant="ghost"
@@ -211,30 +203,21 @@ export function FullCassettePlayer() {
               onClick={() => setShowVolume((current) => !current)}
               aria-expanded={showVolume}
               aria-label="Music volume"
-              className={`size-11 rounded-full border border-cream/20 ${
-                showVolume
+              className={`size-9 rounded-full border border-cream/20 sm:size-10 ${showVolume
                   ? "bg-ember text-charcoal"
                   : "text-cream/70 hover:bg-cream/10 hover:text-cream"
-              }`}
+                }`}
             >
-              <Volume2 className="size-4" aria-hidden />
+              <Volume2 className="size-3.5 sm:size-4" aria-hidden />
             </Button>
             <AmbienceControl level={player.ambienceLevel} onLevelChange={player.setAmbienceLevel} />
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setMoreOpen(true)}
-              className="min-h-11 rounded-full border border-cream/20 px-3 text-xs text-cream/70 hover:bg-cream/10 hover:text-cream"
-            >
-              <MoreHorizontal className="mr-1.5 size-4" aria-hidden /> More
-            </Button>
           </div>
         </div>
 
         {showVolume ? (
-          <div className="mt-3 flex items-center gap-2 border-t border-cream/10 pt-3">
+          <div className="mt-2 flex items-center gap-2 border-t border-cream/10 pt-2">
             <Volume1 className="size-3.5 shrink-0 text-cream/60" aria-hidden />
-            <span className="w-14 shrink-0 text-[10.5px] text-cream/60">Music</span>
+            <span className="hidden w-14 shrink-0 text-[10px] text-cream/60 sm:inline">Music</span>
             <Slider
               value={[Math.round(player.musicVolume * 100)]}
               max={100}
@@ -308,7 +291,7 @@ export function CompactCassettePlayer({ className = "" }: { className?: string }
                 onLevelChange={player.setAmbienceLevel}
               />
             </div>
-            <Button
+            {/* <Button
               type="button"
               variant="ghost"
               size="icon"
@@ -317,7 +300,7 @@ export function CompactCassettePlayer({ className = "" }: { className?: string }
               className="size-11 shrink-0 rounded-full border border-cream/20 text-cream/70 hover:bg-cream/10 hover:text-cream"
             >
               <MoreHorizontal className="size-4" aria-hidden />
-            </Button>
+            </Button> */}
           </div>
 
           <div className="col-span-3 flex items-center justify-between gap-2 border-t border-cream/10 pt-2 sm:hidden">

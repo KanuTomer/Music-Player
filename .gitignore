@@ -42,3 +42,7 @@ supabase/.temp/
 .vercel
 .env*
 !.env.example
+
+# Local editor/telemetry directories
+.lovable/
+scratch/

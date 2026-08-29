@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Compass, Home, Share2, Sparkles } from "lucide-react";
+import { Compass, Share2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import type { RoomPayload, Scene } from "@/lib/rooms.functions";
 import { artFor } from "@/lib/scene-art";
@@ -14,6 +14,9 @@ import { JagahExplorer } from "@/components/JagahExplorer";
 import { InfoPlaceholderDialog } from "@/components/InfoPlaceholderDialog";
 import { ISTClock } from "@/components/ISTClock";
 import { useJagahNavigation } from "@/hooks/useJagahNavigation";
+import { ThemeAbout } from "@/components/ThemeAbout";
+import { ThemeFAQ } from "@/components/ThemeFAQ";
+import { Footer } from "@/components/Footer";
 
 export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Scene[] }) {
   const { scene, oneliners } = room;
@@ -77,8 +80,10 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
 
   return (
     <div
-      className={`room-scene-enter relative h-dvh w-full overflow-hidden ${gradeClass} ${scene.is_dark ? "room-dark" : ""}`}
+      className={`room-scene-enter relative h-dvh w-full overflow-y-auto no-scrollbar scroll-smooth ${gradeClass} ${scene.is_dark ? "room-dark" : ""}`}
     >
+      {/* Immersive View Area (100dvh height) */}
+      <div className="relative h-dvh w-full shrink-0 overflow-hidden">
       {sceneVideo ? (
         <video
           ref={sceneVideoRef}
@@ -103,8 +108,8 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
           width={1536}
           height={1024}
           fetchPriority="high"
-          className={`scene-media absolute inset-0 size-full object-cover transition-[transform,opacity] duration-[12s] ${
-            active ? "scale-105" : "scale-100"
+          className={`scene-media absolute inset-0 size-full object-cover scale-100 ${
+            scene.slug === "sainik-dhaba" ? "object-top" : "object-center"
           }`}
         />
       )}
@@ -123,6 +128,8 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
         className="pointer-events-none absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-night/80 to-transparent"
         aria-hidden
       />
+
+
 
       {/* top row: live pill · Explorer · Home and share */}
       <div className="absolute inset-x-0 top-0 z-50 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 p-2 sm:gap-3 sm:p-3">
@@ -151,19 +158,34 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
         </div>
 
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-          <Link
-            to="/"
-            aria-label="Home"
-            className="flex h-10 items-center justify-center gap-2 rounded-full border border-cream/12 bg-charcoal/60 px-3 text-cream/80 backdrop-blur-md transition-colors hover:bg-charcoal/85 hover:text-cream"
+          {/* About Pill Button */}
+          <button
+            type="button"
+            onClick={() => {
+              const el = document.getElementById(`about-${scene.slug}`);
+              if (el) el.scrollIntoView({ behavior: "smooth" });
+            }}
+            className="flex h-9 items-center justify-center rounded-full bg-charcoal/80 border border-cream/15 px-3.5 text-xs font-bold text-cream transition-colors hover:bg-charcoal/95 hover:text-amber active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember cursor-pointer"
           >
-            <Home className="size-4" aria-hidden />
-            <span className="hidden text-xs font-semibold lg:inline">Home</span>
-          </Link>
+            About
+          </button>
+
+          {/* FAQ Pill Button */}
+          <button
+            type="button"
+            onClick={() => {
+              const el = document.getElementById(`faq-${scene.slug}`);
+              if (el) el.scrollIntoView({ behavior: "smooth" });
+            }}
+            className="flex h-9 items-center justify-center rounded-full bg-charcoal/80 border border-cream/15 px-3.5 text-xs font-bold text-cream transition-colors hover:bg-charcoal/95 hover:text-amber active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember cursor-pointer"
+          >
+            FAQ
+          </button>
           <button
             type="button"
             onClick={share}
             aria-label="Share this room"
-            className="flex size-10 items-center justify-center rounded-full border border-cream/12 bg-charcoal/60 text-cream/80 backdrop-blur-md transition-colors hover:bg-charcoal/85 hover:text-cream"
+            className="flex size-9 items-center justify-center rounded-full border border-cream/12 bg-charcoal/60 text-cream/80 backdrop-blur-md transition-colors hover:bg-charcoal/85 hover:text-cream"
           >
             <Share2 className="size-4" aria-hidden />
           </button>
@@ -187,7 +209,7 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
         trackKey={player.nowPlaying?.title ?? player.track?.title ?? null}
       />
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-3 z-30 flex justify-center px-3">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-center px-3 pb-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:pb-4">
         <FullCassettePlayer />
       </div>
 
@@ -196,29 +218,41 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
           <div className="absolute inset-0 bg-charcoal/78 backdrop-blur-[4px]" aria-hidden />
           <div className="vignette absolute inset-0" aria-hidden />
 
-          <div className="relative flex w-full max-w-sm flex-col items-center gap-3 rounded-2xl border border-cream/10 bg-charcoal/45 px-6 py-8 shadow-lift">
-            <span className="rounded-full border border-ember/50 px-3 py-[3px] text-[9.5px] font-bold tracking-[0.22em] text-ember uppercase">
+          <div className="relative flex w-full max-w-sm flex-col items-center gap-3 rounded-2xl border border-cream/10 bg-charcoal/45 px-6 py-8 shadow-lift overflow-hidden">
+
+
+            <span className="rounded-full border border-ember/50 px-3 py-[3px] text-[9.5px] font-bold tracking-[0.22em] text-ember uppercase relative z-10">
               {scene.region ?? scene.category} · live
             </span>
-            <h2 className="signage-text font-deva text-3xl leading-tight text-cream">
+            <h2 className="signage-text font-deva text-3xl leading-tight text-cream relative z-10">
               {scene.title_hi}
             </h2>
-            <p className="text-[12.5px] font-medium tracking-[0.22em] text-cream/55 uppercase">
+            <p className="text-[12.5px] font-medium tracking-[0.22em] text-cream/55 uppercase relative z-10">
               {scene.title_en}
             </p>
-            <p className="max-w-xs text-sm leading-relaxed text-cream/70">{scene.hook}</p>
+            <p className="max-w-xs text-sm leading-relaxed text-cream/70 relative z-10">{scene.hook}</p>
             <button
               type="button"
               onClick={player.start}
-              className="mt-2 flex items-center gap-2 rounded-full bg-ember px-7 py-3.5 text-sm font-bold text-charcoal shadow-lift transition-transform hover:scale-[1.03] active:scale-95"
+              className="mt-2 flex items-center gap-2 rounded-full bg-ember px-7 py-3.5 text-sm font-bold text-charcoal shadow-lift transition-transform hover:scale-[1.03] active:scale-95 relative z-10"
             >
               <Sparkles className="size-4" aria-hidden />
               Andar aa jao — press play
             </button>
-            <p className="text-[11px] text-cream/45">Headphones lagao. Ye kamra chalta rahega.</p>
+            <p className="text-[11px] text-cream/45 relative z-10">Headphones lagao. Ye kamra chalta rahega.</p>
           </div>
         </div>
       )}
+      </div>
+
+      {/* Unique About section */}
+      <ThemeAbout slug={scene.slug} />
+
+      {/* Unique FAQ section */}
+      <ThemeFAQ slug={scene.slug} />
+
+      {/* Common Footer */}
+      <Footer />
 
       <JagahExplorer
         scenes={scenes}
