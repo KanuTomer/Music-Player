@@ -79,6 +79,22 @@ export function Footer() {
             © {year} Sainik Dhaba. Made with{" "}
             <Heart className="inline size-3 text-ember" aria-label="love" /> in India.
           </p>
+
+          <button
+            type="button"
+            onClick={() => {
+              const container = document.getElementById("room-experience-top");
+              if (container) {
+                container.scrollTo({ top: 0, behavior: "smooth" });
+              } else {
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }
+            }}
+            className="flex items-center gap-1.5 text-[10px] font-bold tracking-wider text-cream/45 hover:text-ember transition-colors cursor-pointer uppercase"
+          >
+            Upar chalo · Back to Top ↑
+          </button>
+
           <p className="text-[11px] text-cream/30">
             An always-on ambient listening experience.
           </p>
