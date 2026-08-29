@@ -1,0 +1,204 @@
+import { writeFileSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+const [, , migrationArgument, docsArgument] = process.argv;
+if (!migrationArgument || !docsArgument) {
+  throw new Error("Usage: node scripts/generate-forwarded-track-update.mjs <migration.sql> <song-list.md>");
+}
+
+const t = (id, title, artist, providerTitle = null, providerChannel = null, year = null) => ({
+  id, title, artist, providerTitle, providerChannel, year,
+});
+
+const groups = [
+  {
+    heading: "Papa Ke Gaane",
+    sceneSlug: "papa-ke-gaane",
+    originId: "PL3rJgr5HfVCrov_nZV_2ltKKFGWbbjATx",
+    tracks: [
+      t("SEO4Afg7lKY", "Pardesi Pardesi", "Udit Narayan, Alka Yagnik, Sapna Awasthi", "Pardesi Pardesi Full Video - Raja Hindustani | Aamir Khan,Karisma Kapoor | Udit Narayan, Alka Yagnik", "FAMOUS MUSIC'S"),
+      t("T7IZuj5fvYM", "Is Tarah Aashiqui Ka", "Kumar Sanu", "Is Tarah Aashiqui Ka Full Song | Imtihan | Saif Ali Khan, Raveena | Kumar Sanu | 90's Hindi Songs", "Tips Official"),
+      t("DLYp9GWowYQ", "Is Pyar Se Meri Taraf Na Dekho", "Kumar Sanu, Alka Yagnik", "Is Pyar Se Meri Taraf Na Dekho | Kumar Sanu, Alka Yagnik | Chamatkar | Shah Rukh Khan", "Red Chillies Entertainment"),
+      t("AQ2r7XOTnyI", "Chand Se Parda Kijiye", "Kumar Sanu", "Chand Se Parda Kijiye (4K) Video Song | Aao Pyaar Karen | Kumar Sanu | Saif Ali Khan & Shilpa Shetty", "Hindi Filmi Songs"),
+      t("jO7KrjYBHiY", "Tu Pyar Hai Kisi Aur Ka", "Kumar Sanu, Anuradha Paudwal", "Tu Pyar Hai Kisi Aur Ka | Full video in 1080P FULL HD- (Dil Hai Ke Manta Nahin) | Aamir, Pooja", "HD MUSIC VIDEOS"),
+      t("BMXRic0byxE", "Hamen Tumse Pyar Kitna", "Kishore Kumar", "Hamen Tumse Pyar Kitna | Kudrat | Rajesh Khanna,Hema Malini | Kishore Kumar", "Shemaroo Filmi Gaane"),
+      t("GGn2N0KZGsI", "Dilbar Dilbar", "Alka Yagnik", "Dilbar Dilbar - Sirf Tum (1999) HD Music Video", "Backer .K"),
+      t("q_MxDz18l4I", "Janu Meri Jaan", "Mohammed Rafi, Kishore Kumar, Asha Bhosle, Usha Mangeshkar", "Janu Meri Jaan | Shaan | Amitabh Bachchan | Parveen Babi | Kishore Kumar | Mohd Rafi | HD", "NH Hindi Songs"),
+      t("hD0vuSJxzmc", "Inteha Ho Gai", "Kishore Kumar, Asha Bhosle", "Intaha Ho Gai Intezar Ki - Audio | Sharaabi | Amitabh Bachchan, Jaya P, Asha Bhosle, Kishore Kumar", "Old Hindi Songs"),
+      t("hh7Ps61ws5Q", "Wada Karo", "Kishore Kumar, Lata Mangeshkar", "Wada Karo Nahin Chodoge Full Song With Lyrics| Kishore Kumar, Lata Mangeshkar| Aa Gale Lag Jaa Songs", "Goldmines Gaane Sune Ansune"),
+      t("S9SjRIkexoM", "Main Tere Pyar Mein Pagal", "Lata Mangeshkar, Kishore Kumar", "Main Tere Pyar Mein Pagal | Lata Mangeshkar, Kishore Kumar | Prem Bandhan 1979 Songs | Rajesh Khanna", "Goldmines Gaane Sune Ansune"),
+      t("E2WqfG8OBds", "Thodi Si Beqarari", "Alka Yagnik, Kumar Sanu", "Thodi Si Bekarari 4K Video Song | Chal Mere Bhai | Salman Khan, Karishma Kapoor | Alka Yagnik, Kumar", "BollyHD 1080p Music"),
+      t("zWPsjhBaRb0", "Humko Humise Chura Lo", "Lata Mangeshkar, Udit Narayan", "Humko Humise Chura Lo Song | Mohabbatein | Shah Rukh Khan, Aishwarya Rai | Lata Mangeshkar, Udit N", "YRF"),
+      t("1cWR8QVhJLE", "Zinda Rehti Hain Mohabbatein", "Lata Mangeshkar, Udit Narayan", "Zinda Rehti Hain Mohabbatein Song | Mohabbatein | Shah Rukh Khan, Aishwarya Rai | Lata Mangeshkar", "YRF"),
+      t("8cwuAsz5qo4", "Hadh Kar Di Aapne", "Udit Narayan, Kavita Krishnamurthy", "Hadh Kardi Aapne - Title Track | Udit Narayan | Kavita Krishnamurthy | Govinda | Rani Mukherjee", "T-Series Bollywood Classics"),
+      t("6_p1jrZU10k", "O Phirkiwali", "Mohammed Rafi", "O Phirkiwali 4K Raja Aur Runk (1968) | Mohammed Rafi | Sanjeev Kumar, KumKum", "SuperHit Gaane"),
+      t("DvU57seTCZI", "Teri Galiyon Mein", "Mohammed Rafi", "Full Video: Teri Galiyon Mein Na Rakhenge Kadam | Hawas (1974) | Neetu Singh,Anil Dhawan | Mohd Rafi", "Dard Bhare Gaane"),
+      t("e9_Jf2BfrsY", "Akele Hain Chale Aao", "Mohammed Rafi", "Akele Hain Chale Aao (HD) | Raaz (1967) | Rajesh Khanna, Babita | Mohammed Rafi | Old Romantic Songs", "Shemaroo Filmi Gaane"),
+      t("odrhc32fiLo", "Mere Mehboob Qayamat Hogi", "Kishore Kumar"),
+      t("V0TejHIZLV8", "Pal Pal Dil Ke Paas", "Kishore Kumar"),
+      t("eAXSrnHDlfQ", "Likhe Jo Khat Tujhe", "Mohammed Rafi"),
+      t("qq-_7Q6zq80", "Ankhiyon Ke Jharokhon Se", "Hemlata"),
+      t("oPlHNekNTtI", "Dekha Ek Khwab", "Lata Mangeshkar, Kishore Kumar"),
+      t("p0FY8rRrZ6Y", "Meri Bheegi Bheegi Si", "Kishore Kumar"),
+      t("GMLFuNHHB6s", "Main Pal Do Pal Ka Shair Hoon", "Mukesh"),
+    ],
+  },
+  {
+    heading: "Raju Mistri",
+    sceneSlug: "raj-mistri",
+    originId: "PLTcrZKUys_a5zSgv_3ZHsRnTVJ05GbDvY",
+    tracks: [
+      t("AQSRq6eGWp0", "Raah Mein Unse Mulaqat", "Kumar Sanu, Alka Yagnik", "Raah Mein Unse Mulaqat Ho Gayi | Ajay Devgn, Tabu | Kumar Sanu, Alka Yagnik | Vijaypath (1994)", "Hot Hits Hindi"),
+      t("tIALY5lEzfA", "Na Kajre Ki Dhar", "Pankaj Udhas, Sadhana Sargam", "Na Kajre Ki Dhar - Video Song | Mohra | Sunil Shetty | Sadhana Sargam | Pankaj Udhas | 90's Songs", "90s Hindi Songs"),
+      t("3Z_x7vBqr6E", "Tum Dil Ki Dhadkan Mein", "Abhijeet Bhattacharya, Alka Yagnik", "Tum Dil Ki Dhadkan Mein - 4K Romantic Video | Dhadkan | Suniel Shetty & Shilpa Shetty", "Ishtar Music"),
+      t("Xuq6a29AVxM", "Baazigar O Baazigar", "Kumar Sanu, Alka Yagnik", "Baazigar O Baazigar HD Video | Shahrukh Khan , Kajol | Kumar Sanu , Alka Yagnik | 90s Songs", "Abhijeet Bharti"),
+      t("UxLj89bUflc", "Waada Raha Sanam", "Abhijeet Bhattacharya, Alka Yagnik", "Waada Raha Sanam Lyrical Video Song | Khiladi | Akshay Kumar & Ayesha Jhulka", "Ishtar Music"),
+      t("sWqjZpBtcxc", "Aye Mere Humsafar", "Udit Narayan, Alka Yagnik"),
+      t("ioWh9vMixyw", "Tu Shayar Hai Main Teri Shayari", "Alka Yagnik", "Tu Shayar Hai Main Teri Shayari | Saajan | Lyrical Video | Alka Yagnik | Sanjay | Madhuri | Salman", "Ishtar Music"),
+      t("pn8L64hTXB4", "Jo Bhi Kasmein", "Udit Narayan, Alka Yagnik", "Jo Bhi Kasmein Full Video - Raaz | Bipasha Basu & Dino Morea | Udit Narayan & Alka Yagnik", "Best Of Alka Yagnik"),
+      t("LvqEcIAsh5k", "Mujhe Neend Na Aaye", "Udit Narayan, Anuradha Paudwal", "Mujhe Neend Na Aaye - Video Song | Udit Narayan, Anuradha Paudwal | Dil | Amir Khan, Madhuri Dixit", "T-Series Bollywood Classics"),
+      t("IhKXq5dhTag", "Yeh Kaali Kaali Aankhen", "Kumar Sanu, Anu Malik", "Yeh Kaali Kaali Aankhen | Baazigar | Shahrukh Khan & Kajol | HD VIDEO | 90's Song", "Ishtar Music"),
+      t("rG_ky9Mc_4Q", "Mohabbat Ki Nahi Jati", "Udit Narayan, Sadhana Sargam", "Mohabbat Ki Nahi Jati | Udit Narayan | Sadhana Sargam | Hero No.1 | 1997", "Gaane Filmi"),
+      t("doeVBPCylmg", "Kitna Haseen Chehra", "Kumar Sanu", "Kitna Haseen Chehra [Full Video Song] (HQ) With Lyrics - Dilwale", "bollysongs4video"),
+      t("00V7IokvbTA", "Chaaha Toh Bahut", "Kumar Sanu, Bela Sulakhe"),
+      t("FPjmi3Q6aho", "Teri Umeed Tera Intezaar", "Kumar Sanu, Sadhana Sargam", "Teri Umeed Tera Intezaar - Deewana - Rishi Kapoor - Divya Bharti superhit", "Gaana Khazana"),
+      t("jO7KrjYBHiY", "Tu Pyar Hai Kisi Aur Ka", "Kumar Sanu, Anuradha Paudwal"),
+      t("YjJAJEw_duM", "Tumhein Apna Banane Ki Kasam", "Kumar Sanu, Anuradha Paudwal", "Tumhein Apna Banane Ki Kasam Khai Hai - Sadak [FHD]", "BondTune Hindi"),
+      t("9f6GhUb-WdM", "Dil Cheer Ke Dekh", "Kumar Sanu", "Dil Cheer Ke Dekh | Divya Bharti | Kamal Sadanah | Kumar Sanu | Rang Movie | 90's Romantic Song", "Tips Official"),
+      t("DH_XHR09jxY", "Hum Yaar Hain Tumhare", "Alka Yagnik, Udit Narayan", "Full Video: Hum Yaar Hain Tumhare | Haan Maine Bhi Pyar Kiya | Karisma Kapoor, Abhishek Bachchan", "90s Hindi Songs"),
+      t("6x_aBA3trGQ", "Mubarak Ho Tumko Yeh Shaadi Tumhari", "Udit Narayan", "Mubarak Ho Tumko Ye Shadi Tumhari | Udit Narayan | Haan Maine Bhi Pyaar Kiya(2002) | Karisma, Akshay", "Shemaroo Filmi Gaane"),
+      t("sBFKHnNp-8c", "Abhi To Mohabbat Ka", "Udit Narayan, Alka Yagnik"),
+      t("maqLiqpClqU", "Woh Ladki Bohot Yaad Aati Hai", "Kumar Sanu, Alka Yagnik"),
+      t("c_K2sf6QWFY", "Mujhse Mohabbat Ka Izhar", "Alka Yagnik, Kumar Sanu"),
+      t("HubRXgH0Erc", "Tumsa Koi Pyaara", "Kumar Sanu, Alka Yagnik"),
+      t("qSAVrkUsI6o", "Lagi Aaj Sawan Ki", "Anupama Deshpande, Suresh Wadkar"),
+      t("OsBqRHx2JAA", "Chhupana Bhi Nahi Aata", "Vinod Rathod"),
+    ],
+  },
+  {
+    heading: "Bartan Time",
+    sceneSlug: "bartan-time",
+    originId: "PLc1Byv6ESHSaag4naocpjBLSjO58i9MV5",
+    tracks: [
+      t("gE3XkDXpB74", "Udi Udi Jaye", "Sukhwinder Singh, Bhoomi Trivedi, Karsan Sagathia", "Udi Udi Jaye - Full Video | Raees | Shah Rukh Khan | Ram Sampath", "Zee Music Company"),
+      t("fqP5pTPvqZ8", "Rangtaari", "Dev Negi, Yo Yo Honey Singh", "Rangtaari Full Video | Loveyatri | Aayush Sharma | Warina Hussain |Yo Yo Honey Singh |Tanishk Bagchi", "T-Series"),
+      t("UaHLcQFlhrc", "Dandiya Mashup (Param Sundari x Nadiyon Paar)", "DJ Lijo", "Dandiya Mashup - Param Sundari x Nadiyon Paar | DJ Lijo | Janhvi Kapoor | Kriti Sanon | Roohi | Mimi", "Sony Music India"),
+      t("ey0ktniv8bs", "Bhammariyo", "Shruti Pathak, Divya Kumar", "Bhammariyo | Shruti Pathak | Divya Kumar | Priya Saraiya | Artiste First", "Artiste First", 2021),
+      t("dh1_OPW9xl8", "Jhume Re Gori", "Archana Gore, Tarannum Malik Jain, Dipti Rege, Aditi Prabhudesai", "Jhume Re Gori | Full Music Video | Gangubai Kathiawadi | Alia Bhatt | Sanjay Leela Bhansali", "Saregama Music"),
+      t("Z6Fr5hMvjtA", "Ghoonghat Mein Chand Hoga", "Kumar Sanu, Kavita Krishnamurthy", "Ghoonghat Mein Chand Hoga-Khoobsurat 1999 HD Video Song, Sanjay Dutt, Urmila Matondkar", "Indian Music HD"),
+      t("FyOwgSvKnKU", "Bani Bani", "K. S. Chithra", "Bani Bani - Main Prem Ki Diwani Hoon - Kareena Kapoor, Hrithik Roshan & Abhishek Bachchan", "Rajshri"),
+      t("_4fdo3Y5_6g", "Chunari Chunari", "Abhijeet Bhattacharya, Anuradha Sriram", "Aaja Na Chhu Le Meri Chunari Sanam (Chunnari Chunnari) | Biwi No.1 | Abhijeet B | Anuradha", "90's Dard - Bollywood Songs"),
+      t("h6mK-OJ5YRo", "Khallas", "Asha Bhosle, Sapna Awasthi, Sudesh Bhosle", "Khallas Song Lyrical Video | Company | Ajay Devgan, Ishsha Koppikar, Vivek Oberoi", "T-Series Bollywood Classics"),
+      t("IJNR_UVLDhs", "Main Nikla Gaddi Leke", "Udit Narayan"),
+      t("I0VB0c90NFc", "Nakhrewali", "Prashant Nakti, Sonali Sonawane, Rohit Raut", "Nakhrewali", "Prashant Nakti Official", 2024),
+      t("SE7mK-52KC0", "Dekhha Tenu", "Mohammad Faiz", "Dekhha Tenu (From \"Mr. And Mrs. Mahi\")", "Mohammad Faiz", 2024),
+      t("uKHlnmepnNA", "Nayan", "Dhvani Bhanushali, Jubin Nautiyal", "Nayan Video Song | Dhvani B Jubin N | Lijo G Dj Chetas Manoj M Manhar U | Radhika Vinay | Bhushan K", "T-Series"),
+      t("8zkUFoXku0Y", "Tainu Khabar Nahi", "Arijit Singh", "Tainu Khabar Nahi (From \"Munjya\")", "Sachin Jigar", 2024),
+      t("YqaJrE7Di_s", "Teri Aankhon Mein", "Darshan Raval, Neha Kakkar", "Teri Aankhon Mein Dikhta Jo Pyaar Mujhe - Full Video Song | Neha Kakkar & Darshan Raval | Divya K", "Indian Vibe", 2020),
+      t("BddP6PYo2gs", "Kesariya", "Arijit Singh", "Kesariya - Brahmastra | Ranbir Kapoor, Alia Bhatt | Pritam | Arijit Singh | Amitabh Bhattacharya | 4K", "Sony Music India", 2022),
+      t("uucoiREuIy4", "Saawariya", "Kumar Sanu, Aastha Gill", "Kumar Sanu & Aastha Gill: Saawariya | Arjun Bijlani | Official Video | Latest Dance Song 2021", "Sony Music India", 2021),
+      t("niy16TKkMTA", "Sukh Kalale", "Shreya Ghoshal", "Sukh Kalale", "Ajay Gogavale - Topic", 2022),
+      t("KUpwupYj_tY", "Tere Hawaale", "Arijit Singh, Shilpa Rao", "Tere Hawaale (Full Video) Laal Singh Chaddha | Aamir,Kareena | Arijit,Shilpa | Pritam,Amitabh,Advait", "T-Series"),
+      t("4dvPgVeKgbc", "Show Me the Thumka", "Sunidhi Chauhan, Shashwat Singh"),
+      t("YEp76bA-6rA", "Teri Baaton Mein Aisa Uljha Jiya", "Raghav, Tanishk Bagchi, Asees Kaur"),
+      t("4z-oDk1utVo", "Lut Gaye", "Jubin Nautiyal"),
+      t("YALvuUpY_b0", "Apna Bana Le", "Arijit Singh"),
+      t("qnQCd_nZn_g", "O Maahi", "Arijit Singh"),
+      t("_9FyH8PmRSU", "Maan Meri Jaan", "King"),
+    ],
+  },
+];
+
+for (const group of groups) {
+  if (group.tracks.length !== 25) throw new Error(`${group.heading} does not contain 25 tracks`);
+  if (new Set(group.tracks.map((track) => track.id)).size !== 25) throw new Error(`${group.heading} contains duplicate sources`);
+}
+
+const uniqueTracks = new Map();
+for (const group of groups) for (const track of group.tracks) {
+  const previous = uniqueTracks.get(track.id);
+  if (previous && (previous.title !== track.title || previous.artist !== track.artist)) throw new Error(`Conflicting metadata for ${track.id}`);
+  uniqueTracks.set(track.id, previous?.providerTitle && !track.providerTitle ? previous : track);
+}
+const suppliedTracks = [...uniqueTracks.values()].filter((track) => track.providerTitle);
+const invalidIds = ["fOGFyvb0RX4", "7WaUdMhy118", "-b2dfPU_tCY", "ztLjAiErnFc", "ZsvT3oEb9zM", "QR90tJy7tsc", "FSehF4cLPpU", "ijBMsA7mq4w", "2Y8NtyTpaHk"];
+const quote = (value) => value == null ? "NULL" : `'${String(value).replaceAll("'", "''")}'`;
+
+const sql = [
+  "-- Replace Papa Ke Gaane, Raju Mistri, and Bartan Time staged queues with team-forwarded sources.",
+  "BEGIN;",
+  "SET LOCAL lock_timeout = '10s';",
+  "",
+  "DO $$ BEGIN",
+  "  IF (SELECT count(*) FROM public.scenes WHERE is_live) <> 10 OR (SELECT count(*) FROM public.curated_sets WHERE is_active) <> 10 THEN RAISE EXCEPTION 'production catalogue baseline changed'; END IF;",
+  "  IF (SELECT count(*) FROM public.curated_sets WHERE NOT is_active) <> 7 THEN RAISE EXCEPTION 'expected seven inactive target sets'; END IF;",
+  "  IF EXISTS (SELECT 1 FROM public.curated_sets cs LEFT JOIN public.curated_set_tracks cst ON cst.curated_set_id=cs.id WHERE NOT cs.is_active GROUP BY cs.id HAVING count(cst.id)<>25) THEN RAISE EXCEPTION 'expected 25 tracks in every staged set'; END IF;",
+  "END $$;",
+  "",
+  "CREATE TEMP TABLE stale_forwarded_track_candidates(id uuid PRIMARY KEY) ON COMMIT DROP;",
+  "INSERT INTO stale_forwarded_track_candidates(id)",
+  "SELECT DISTINCT cst.track_id FROM public.curated_set_tracks cst JOIN public.curated_sets cs ON cs.id=cst.curated_set_id JOIN public.scenes s ON s.id=cs.scene_id",
+  `WHERE NOT cs.is_active AND s.slug IN (${groups.map((group) => quote(group.sceneSlug)).join(", ")});`,
+  "",
+  "INSERT INTO public.tracks(catalogue_key, scene_id, title, artist, year, daypart_tag, sort_order) VALUES",
+  suppliedTracks.map((track) => `  (${quote(`youtube:${track.id}`)}, NULL, ${quote(track.title)}, ${quote(track.artist)}, ${track.year ?? "NULL"}, 'all', 0)`).join(",\n"),
+  "ON CONFLICT (catalogue_key) DO UPDATE SET title=EXCLUDED.title, artist=EXCLUDED.artist, year=COALESCE(EXCLUDED.year, public.tracks.year);",
+  "",
+  "INSERT INTO public.playback_sources(track_id, provider, provider_item_id, source_url, provider_title, provider_channel, priority, validated_at, is_active)",
+  "SELECT t.id, 'youtube', v.video_id, 'https://www.youtube.com/watch?v=' || v.video_id, v.provider_title, v.provider_channel, 0, '2026-08-29T12:40:00Z'::timestamptz, true FROM (VALUES",
+  suppliedTracks.map((track) => `  (${quote(track.id)}, ${quote(track.providerTitle)}, ${quote(track.providerChannel)})`).join(",\n"),
+  ") AS v(video_id, provider_title, provider_channel) JOIN public.tracks t ON t.catalogue_key='youtube:' || v.video_id",
+  "ON CONFLICT (provider, provider_item_id) DO UPDATE SET provider_title=EXCLUDED.provider_title, provider_channel=EXCLUDED.provider_channel, validated_at=EXCLUDED.validated_at, is_active=true;",
+  "",
+  "UPDATE public.tracks t SET title=v.title, artist=v.artist, year=COALESCE(v.year, t.year) FROM public.playback_sources ps JOIN (VALUES",
+  [...uniqueTracks.values()].map((track) => `  (${quote(track.id)}, ${quote(track.title)}, ${quote(track.artist)}, ${track.year ?? "NULL"})`).join(",\n"),
+  ") AS v(video_id, title, artist, year) ON v.video_id=ps.provider_item_id WHERE ps.track_id=t.id AND ps.provider='youtube';",
+  "",
+  "DELETE FROM public.curated_set_tracks cst USING public.curated_sets cs, public.scenes s WHERE cst.curated_set_id=cs.id AND cs.scene_id=s.id AND NOT cs.is_active",
+  `  AND (s.slug, cs.origin_external_id) IN (${groups.map((group) => `(${quote(group.sceneSlug)}, ${quote(group.originId)})`).join(", ")});`,
+  "",
+];
+
+for (const group of groups) {
+  sql.push(
+    "INSERT INTO public.curated_set_tracks(curated_set_id, track_id, position, daypart_tag)",
+    "SELECT cs.id, ps.track_id, v.position, 'all' FROM public.curated_sets cs JOIN public.scenes s ON s.id=cs.scene_id JOIN (VALUES",
+    group.tracks.map((track, index) => `  (${quote(track.id)}, ${index + 1})`).join(",\n"),
+    ") AS v(video_id, position) ON true JOIN public.playback_sources ps ON ps.provider='youtube' AND ps.provider_item_id=v.video_id AND ps.is_active",
+    `WHERE NOT cs.is_active AND s.slug=${quote(group.sceneSlug)} AND cs.origin_external_id=${quote(group.originId)};`,
+    "",
+  );
+}
+
+sql.push(
+  "DELETE FROM public.tracks t USING stale_forwarded_track_candidates stale WHERE t.id=stale.id AND NOT EXISTS (SELECT 1 FROM public.curated_set_tracks cst WHERE cst.track_id=t.id);",
+  "",
+  "DO $$ DECLARE staged_count bigint; staged_video_count bigint; replacement_counts text; BEGIN",
+  "  IF (SELECT count(*) FROM public.scenes WHERE is_live) <> 10 OR (SELECT count(*) FROM public.curated_sets WHERE is_active) <> 10 THEN RAISE EXCEPTION 'production catalogue changed'; END IF;",
+  "  SELECT string_agg(slug || ':' || memberships, ', ' ORDER BY slug) INTO replacement_counts FROM (SELECT s.slug, count(cst.id) AS memberships FROM public.curated_sets cs JOIN public.scenes s ON s.id=cs.scene_id LEFT JOIN public.curated_set_tracks cst ON cst.curated_set_id=cs.id WHERE NOT cs.is_active AND s.slug IN ('papa-ke-gaane','raj-mistri','bartan-time') GROUP BY s.slug) counts;",
+  "  IF replacement_counts <> 'bartan-time:25, papa-ke-gaane:25, raj-mistri:25' THEN RAISE EXCEPTION 'replacement queue counts: %', replacement_counts; END IF;",
+  "  SELECT count(*) INTO staged_count FROM public.curated_set_tracks cst JOIN public.curated_sets cs ON cs.id=cst.curated_set_id WHERE NOT cs.is_active;",
+  "  IF staged_count <> 175 THEN RAISE EXCEPTION 'expected 175 staged memberships, got %', staged_count; END IF;",
+  "  SELECT count(DISTINCT ps.provider_item_id) INTO staged_video_count FROM public.curated_set_tracks cst JOIN public.curated_sets cs ON cs.id=cst.curated_set_id JOIN public.playback_sources ps ON ps.track_id=cst.track_id AND ps.provider='youtube' AND ps.is_active WHERE NOT cs.is_active;",
+  "  IF staged_video_count <> 171 THEN RAISE EXCEPTION 'expected 171 staged videos, got %', staged_video_count; END IF;",
+  `  IF EXISTS (SELECT 1 FROM public.playback_sources ps JOIN public.curated_set_tracks cst ON cst.track_id=ps.track_id JOIN public.curated_sets cs ON cs.id=cst.curated_set_id WHERE NOT cs.is_active AND ps.provider_item_id IN (${invalidIds.map(quote).join(", ")})) THEN RAISE EXCEPTION 'invalid forwarded source entered a staged queue'; END IF;`,
+  "  IF EXISTS (SELECT 1 FROM public.curated_sets cs JOIN public.scenes s ON s.id=cs.scene_id LEFT JOIN public.curated_set_tracks cst ON cst.curated_set_id=cs.id WHERE NOT cs.is_active AND s.slug IN ('papa-ke-gaane','raj-mistri','bartan-time') GROUP BY cs.id HAVING count(cst.id)<>25 OR count(DISTINCT cst.track_id)<>25) THEN RAISE EXCEPTION 'replacement queue count or uniqueness failed'; END IF;",
+  "  IF EXISTS (SELECT 1 FROM public.curated_set_tracks cst JOIN public.curated_sets cs ON cs.id=cst.curated_set_id LEFT JOIN public.playback_sources ps ON ps.track_id=cst.track_id AND ps.is_active WHERE NOT cs.is_active AND ps.id IS NULL) THEN RAISE EXCEPTION 'staged membership lacks an active source'; END IF;",
+  "  IF EXISTS (SELECT 1 FROM public.tracks t JOIN public.curated_set_tracks cst ON cst.track_id=t.id JOIN public.curated_sets cs ON cs.id=cst.curated_set_id WHERE NOT cs.is_active AND t.title ~* '(official|full[ -]?(video|song)|lyrical|#[[:alnum:]])') THEN RAISE EXCEPTION 'unclean staged title remains'; END IF;",
+  "END $$;",
+  "",
+  "COMMIT;",
+  "",
+);
+
+writeFileSync(resolve(migrationArgument), sql.join("\n"));
+
+let docs = readFileSync(resolve(docsArgument), "utf8");
+for (const group of groups) {
+  const section = [`## ${group.heading}`, "", ...group.tracks.map((track, index) => `${index + 1}. [${track.title} — ${track.artist}](https://www.youtube.com/watch?v=${track.id})`), "", ""].join("\n");
+  const expression = new RegExp(`## ${group.heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\n[\\s\\S]*?(?=## |$)`);
+  if (!expression.test(docs)) throw new Error(`Could not find ${group.heading} documentation section`);
+  docs = docs.replace(expression, section);
+}
+writeFileSync(resolve(docsArgument), docs.trimEnd() + "\n");
+console.log(JSON.stringify({ queues: groups.map((group) => [group.heading, group.tracks.length]), suppliedValidSources: suppliedTracks.length, rejectedSources: invalidIds.length }, null, 2));
