@@ -46,3 +46,6 @@ supabase/.temp/
 # Local editor/telemetry directories
 .lovable/
 scratch/
+
+# Raw PNG assets (use WebP versions for production builds)
+src/assets/*.png
