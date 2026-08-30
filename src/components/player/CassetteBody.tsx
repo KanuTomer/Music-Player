@@ -41,9 +41,7 @@ export function CassetteBody({ variant, isPlaying, label }: CassetteBodyProps) {
         {/* Window — spools pushed to edges with justify-between */}
         <div
           className={`cassette-window relative mx-auto flex items-center justify-between rounded-[3px] border border-ink/50 bg-night/95 ${
-            compact
-              ? "mt-1 h-[1.9rem] px-3"
-              : "mt-1 h-[2.3rem] px-4 sm:h-[2.6rem] sm:px-8"
+            compact ? "mt-1 h-[1.9rem] px-3" : "mt-1 h-[2.3rem] px-4 sm:h-[2.6rem] sm:px-8"
           }`}
         >
           {(["left", "right"] as const).map((side) => (

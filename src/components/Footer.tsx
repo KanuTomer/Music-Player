@@ -17,23 +17,21 @@ export function Footer() {
               Sainik Dhaba
             </span>
             <p className="mt-3 text-xs leading-relaxed text-cream/50">
-              An always-on radio for the places India grew up in — barbershops, night buses,
-              highway dhabas. Press play and sit there a while.
+              An always-on radio for the places India grew up in — salons, kitchens, buses, family
+              rooms and highway dhabas. Press play and sit there a while.
             </p>
           </div>
 
           {/* Navigation columns */}
           <div className="flex flex-wrap gap-x-12 gap-y-6">
             <div>
-              <p className="text-[10px] font-bold tracking-[0.22em] text-ember uppercase">
-                Jagahs
-              </p>
+              <p className="text-[10px] font-bold tracking-[0.22em] text-ember uppercase">Jagahs</p>
               <ul className="mt-3 space-y-2">
                 {[
+                  { label: "Sainik Dhaba", slug: "sainik-dhaba" },
                   { label: "Deluxe Salon", slug: "nai-ki-dukaan" },
-                  { label: "Corporate Majdoor", slug: "corporate-majdoor" },
-                  { label: "Raat Ki Bus", slug: "raat-ki-bus" },
-                  { label: "Chai Ki Tapri", slug: "chai-ki-tapri" },
+                  { label: "Bus Driver", slug: "bus-driver" },
+                  { label: "Bartan Time", slug: "bartan-time" },
                 ].map((item) => (
                   <li key={item.slug}>
                     <a
@@ -47,14 +45,12 @@ export function Footer() {
               </ul>
             </div>
             <div>
-              <p className="text-[10px] font-bold tracking-[0.22em] text-ember uppercase">
-                &nbsp;
-              </p>
+              <p className="text-[10px] font-bold tracking-[0.22em] text-ember uppercase">&nbsp;</p>
               <ul className="mt-3 space-y-2">
                 {[
-                  { label: "Raj Mistri", slug: "raj-mistri" },
-                  { label: "Sainik Dhaba", slug: "sainik-dhaba" },
-                  { label: "Door Darshan", slug: "doordarshan-shaam" },
+                  { label: "Raju Mistri", slug: "raj-mistri" },
+                  { label: "Papa Ke Gaane", slug: "papa-ke-gaane" },
+                  { label: "Corporate Majdoor", slug: "corporate-majdoor" },
                 ].map((item) => (
                   <li key={item.slug}>
                     <a
@@ -95,9 +91,7 @@ export function Footer() {
             Upar chalo · Back to Top ↑
           </button>
 
-          <p className="text-[11px] text-cream/30">
-            An always-on ambient listening experience.
-          </p>
+          <p className="text-[11px] text-cream/30">An always-on ambient listening experience.</p>
         </div>
       </div>
     </footer>

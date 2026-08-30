@@ -16,7 +16,10 @@ export function ThemeAbout({ slug }: ThemeAboutProps) {
       className="relative overflow-hidden bg-night px-5 py-16 sm:px-10 sm:py-24 lg:px-16"
     >
       {/* Background logo watermark */}
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center" aria-hidden>
+      <div
+        className="pointer-events-none absolute inset-0 flex items-center justify-center"
+        aria-hidden
+      >
         <img
           src={logoSrc}
           alt=""
@@ -38,10 +41,7 @@ export function ThemeAbout({ slug }: ThemeAboutProps) {
         <span className="mt-5 block h-[2px] w-16 rounded-full bg-ember/60" aria-hidden />
         <div className="mt-6 space-y-4">
           {about.paragraphs.map((p, i) => (
-            <p
-              key={i}
-              className="text-sm leading-relaxed text-cream/70 sm:text-base"
-            >
+            <p key={i} className="text-sm leading-relaxed text-cream/70 sm:text-base">
               {p}
             </p>
           ))}

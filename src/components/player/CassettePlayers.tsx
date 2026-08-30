@@ -29,8 +29,9 @@ function Cover({
 }) {
   return (
     <span
-      className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-lg border border-cream/15 bg-charcoal-soft ${compact ? "size-11" : "size-14 sm:size-16"
-        }`}
+      className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-lg border border-cream/15 bg-charcoal-soft ${
+        compact ? "size-11" : "size-14 sm:size-16"
+      }`}
     >
       {coverId ? (
         <img
@@ -171,8 +172,13 @@ export function FullCassettePlayer() {
           </div>
           {/* Live pulse */}
           <span className="flex shrink-0 items-center gap-1.5 font-vintage-deva text-[10px] text-ember/80">
-            <span className={`inline-block size-1.5 rounded-full bg-ember ${player.isPlaying ? "animate-bulb" : "opacity-50"}`} aria-hidden />
-            <span className="hidden sm:inline">{display.status === "loading" ? "ट्यून हो रहा" : "बज रहा है"}</span>
+            <span
+              className={`inline-block size-1.5 rounded-full bg-ember ${player.isPlaying ? "animate-bulb" : "opacity-50"}`}
+              aria-hidden
+            />
+            <span className="hidden sm:inline">
+              {display.status === "loading" ? "ट्यून हो रहा" : "बज रहा है"}
+            </span>
           </span>
         </div>
 
@@ -181,7 +187,11 @@ export function FullCassettePlayer() {
           <TransportButton action={player.previous} label="Previous track">
             <SkipBack className="size-3.5 sm:size-4" aria-hidden />
           </TransportButton>
-          <CassetteBody variant="full" isPlaying={player.isPlaying} label={player.room.scene.title_en} />
+          <CassetteBody
+            variant="full"
+            isPlaying={player.isPlaying}
+            label={player.room.scene.title_en}
+          />
           <TransportButton action={player.next} label="Next track">
             <SkipForward className="size-3.5 sm:size-4" aria-hidden />
           </TransportButton>
@@ -203,10 +213,11 @@ export function FullCassettePlayer() {
               onClick={() => setShowVolume((current) => !current)}
               aria-expanded={showVolume}
               aria-label="Music volume"
-              className={`size-9 rounded-full border border-cream/20 sm:size-10 ${showVolume
+              className={`size-9 rounded-full border border-cream/20 sm:size-10 ${
+                showVolume
                   ? "bg-ember text-charcoal"
                   : "text-cream/70 hover:bg-cream/10 hover:text-cream"
-                }`}
+              }`}
             >
               <Volume2 className="size-3.5 sm:size-4" aria-hidden />
             </Button>
