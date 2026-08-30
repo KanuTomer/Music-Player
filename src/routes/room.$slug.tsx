@@ -2,12 +2,12 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { DoorClosed } from "lucide-react";
 import { getRoom, listScenes } from "@/lib/rooms.functions";
 import { RoomExperience } from "@/components/room/RoomExperience";
-import { ALLOWED_SLUGS } from "@/lib/theme-data";
+import { isAllowedSlug } from "@/lib/theme-data";
 
 export const Route = createFileRoute("/room/$slug")({
   loader: async ({ params }) => {
     // Check if the requested slug is one of the 7 allowed themes
-    if (!ALLOWED_SLUGS.includes(params.slug as any)) {
+    if (!isAllowedSlug(params.slug)) {
       throw notFound();
     }
 
@@ -18,9 +18,7 @@ export const Route = createFileRoute("/room/$slug")({
     if (!room) throw notFound();
 
     // Filter scenes list to only include allowed ones
-    const scenes = allScenes.filter((scene) =>
-      ALLOWED_SLUGS.includes(scene.slug as any)
-    );
+    const scenes = allScenes.filter((scene) => isAllowedSlug(scene.slug));
 
     return { room, scenes };
   },

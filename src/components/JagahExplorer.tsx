@@ -77,10 +77,11 @@ export function JagahExplorer({
                     type="button"
                     aria-pressed={selected}
                     onClick={() => setFilter(item)}
-                    className={`min-h-11 shrink-0 rounded-full border px-4 text-xs font-semibold tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember ${selected
+                    className={`min-h-11 shrink-0 rounded-full border px-4 text-xs font-semibold tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember ${
+                      selected
                         ? "border-ember bg-ember text-charcoal"
                         : "border-cream/15 bg-cream/5 text-cream/70 hover:bg-cream/10 hover:text-cream"
-                      }`}
+                    }`}
                   >
                     {filterLabels[item]}
                   </button>
@@ -103,10 +104,11 @@ export function JagahExplorer({
                     disabled={Boolean(switchingSlug)}
                     onClick={() => void onSelect(scene)}
                     aria-current={active ? "location" : undefined}
-                    className={`group relative min-h-44 overflow-hidden rounded-2xl border text-left shadow-lg transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember disabled:cursor-progress ${active
+                    className={`group relative min-h-44 overflow-hidden rounded-2xl border text-left shadow-lg transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember disabled:cursor-progress ${
+                      active
                         ? "border-ember"
                         : "border-cream/10 hover:-translate-y-0.5 hover:border-cream/30"
-                      }`}
+                    }`}
                   >
                     <img
                       src={artFor(scene.art_key)}

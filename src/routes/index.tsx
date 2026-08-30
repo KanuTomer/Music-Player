@@ -11,7 +11,7 @@ import { CompactCassettePlayer } from "@/components/player/CassettePlayers";
 import { ISTClock } from "@/components/ISTClock";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useJagahNavigation } from "@/hooks/useJagahNavigation";
-import { ALLOWED_SLUGS } from "@/lib/theme-data";
+import { isAllowedSlug } from "@/lib/theme-data";
 import { ThemeAbout } from "@/components/ThemeAbout";
 import { ThemeFAQ } from "@/components/ThemeFAQ";
 import { Footer } from "@/components/Footer";
@@ -30,9 +30,7 @@ export const Route = createFileRoute("/")({
   loader: async () => {
     const allScenes = await listScenes();
     // Keep only the 7 allowed themes
-    const scenes = allScenes.filter((scene) =>
-      ALLOWED_SLUGS.includes(scene.slug as any)
-    );
+    const scenes = allScenes.filter((scene) => isAllowedSlug(scene.slug));
     const featured = scenes[0] ?? null;
     const room = featured ? await getRoom({ data: { slug: featured.slug } }) : null;
     return { room, scenes };
@@ -110,8 +108,6 @@ function Home() {
             aria-hidden
           />
           <div className="vignette pointer-events-none absolute inset-0" aria-hidden />
-
-
 
           <header className="relative z-20 mx-auto flex w-full max-w-[1440px] items-center justify-between gap-3 px-4 py-4 sm:px-8 sm:py-5">
             <a href="#featured" className="min-w-0">

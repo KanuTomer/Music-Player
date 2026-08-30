@@ -29,11 +29,11 @@ export type ThemeInfo = {
 export const ALLOWED_SLUGS = [
   "nai-ki-dukaan",
   "corporate-majdoor",
-  "raat-ki-bus",
-  "chai-ki-tapri",
+  "bus-driver",
+  "bartan-time",
   "raj-mistri",
   "sainik-dhaba",
-  "doordarshan-shaam",
+  "papa-ke-gaane",
 ] as const;
 
 export type AllowedSlug = (typeof ALLOWED_SLUGS)[number];
@@ -113,86 +113,85 @@ export const themeMap: Record<AllowedSlug, ThemeInfo> = {
     ],
   },
 
-  "raat-ki-bus": {
-    slug: "raat-ki-bus",
-    displayName: "Raat Ki Bus",
+  "bus-driver": {
+    slug: "bus-driver",
+    displayName: "Bus Driver",
     logoSrc: newBus,
     about: {
-      title: "Raat Ki Bus",
-      subtitle: "The night bus that goes nowhere and everywhere",
+      title: "Bus Driver",
+      subtitle: "Long routes, open roads, and the dashboard radio",
       paragraphs: [
-        "Board the overnight bus from one small town to another — the one with the curtained windows, the reclining seats that don't fully recline, and the driver who thinks he's in a Fast & Furious movie. This is Raat Ki Bus.",
-        "The engine rumbles beneath you, the highway stretches endlessly ahead, and the small TV at the front plays old Hindi songs through crackling speakers. Fellow passengers drift in and out of sleep while you stare out at the passing darkness.",
-        "There's something deeply peaceful about being in motion at night — the world outside is a blur of headlights and highway dhabas. Press play, put on your headphones, and let this bus take you somewhere familiar yet far away.",
+        "Take the driver's seat on a long intercity route, with the engine humming below and highway signs glowing beyond the windscreen.",
+        "The dashboard radio keeps the cabin company through late-night tea stops, open roads, and the steady rhythm of another kilometre passing.",
+        "This preview uses the existing bus footage while the final Bus Driver visual package is being prepared.",
       ],
     },
     faq: [
       {
-        question: "What sounds will I hear?",
+        question: "What is the Bus Driver Jagah?",
         answer:
-          "The deep rumble of a bus engine, occasional horn blares, the whoosh of passing vehicles, and the gentle rattle of windows. It's a full night-bus soundscape layered under retro Hindi music.",
+          "It is a music-first room inspired by long Indian bus routes, dashboard radios, and the quiet focus of driving through the night.",
       },
       {
-        question: "Is this good for sleeping?",
+        question: "Is this the final room artwork?",
         answer:
-          "Many listeners use Raat Ki Bus as a sleep aid. The steady engine drone and gentle motion sounds are deeply soothing. The music fades into the background, creating a lullaby-like experience.",
+          "Not yet. The current bus imagery is a temporary preview and will be replaced when the final team assets arrive.",
       },
       {
-        question: "Does the lighting change?",
+        question: "How many songs are in the queue?",
         answer:
-          "Raat Ki Bus keeps its dark, nighttime atmosphere regardless of real-world time. It's always night on this bus — that's the whole point.",
+          "The launch queue contains 25 curated YouTube tracks in a fixed database-backed order with a random starting point.",
       },
       {
-        question: "Which route is this bus on?",
+        question: "Can I switch Jagahs without stopping playback?",
         answer:
-          "It's every route and no route — the eternal highway between Patna and Ranchi, between Ahmedabad and Udaipur, between any two small towns connected by a rumbling Volvo. The destination is the journey itself.",
+          "Yes. Open Jagah Explorer and choose another room; the player keeps the transition within the same listening session.",
       },
     ],
   },
 
-  "chai-ki-tapri": {
-    slug: "chai-ki-tapri",
-    displayName: "Chai Ki Tapri",
+  "bartan-time": {
+    slug: "bartan-time",
+    displayName: "Bartan Time",
     logoSrc: newChaiKiTapri,
     about: {
-      title: "Chai Ki Tapri",
-      subtitle: "Where cutting chai cuts through everything",
+      title: "Bartan Time",
+      subtitle: "Steel ki khanak, running water, and the kitchen radio",
       paragraphs: [
-        "Pull up a plastic stool at the corner tapri — the one wedged between the paan shop and the photocopy centre. The chaiwala knows your order by heart: cutting chai, thoda zyada cheeni. This is Chai Ki Tapri.",
-        "The clinking of glass cups, the hiss of milk hitting the pan, the loud conversations about politics, films, and neighbourhood gossip — it's the most democratic space in India. Billionaires and auto-wallahs share the same bench here.",
-        "We've recreated that tapri magic — the ambient sounds, the soundtrack of the streets, and the Hindi songs that every tapri radio has been playing since forever. Grab your virtual cup and take a break.",
+        "Dinner is over, the sink is full, and the kitchen radio is still playing. Bartan Time turns the familiar rhythm of washing up into a listening room.",
+        "Steel plates, running water, and songs between every scrub give this Jagah its everyday character.",
+        "This preview uses the existing chai-room imagery until the final Bartan Time asset package is delivered.",
       ],
     },
     faq: [
       {
-        question: "What makes this different from a café ambience?",
+        question: "What is the Bartan Time Jagah?",
         answer:
-          "A tapri is NOT a café. There's no latte art here, no jazz playlist. This is street-side chai with maximum flavour — both in the cup and in the soundscape. Think rattling cups, auto-rickshaw horns, and neighbourhood banter.",
+          "It is a music-first room inspired by the late-night kitchen routine of washing steel plates while the radio keeps playing.",
       },
       {
-        question: "Is the music street-friendly?",
+        question: "Is this the final room artwork?",
         answer:
-          "The playlist mirrors what you'd actually hear at a tapri — popular Hindi film songs, old and new, played at a volume that's perfect background for conversation. Nothing pretentious, everything catchy.",
+          "Not yet. The current image and footage are temporary placeholders that can be replaced without changing this route or its queue.",
       },
       {
-        question: "Can I use this for studying?",
-        answer:
-          "Many students swear by tapri ambience for studying — the white noise of the street helps with concentration. It's like sitting at a chai stall near your college campus during exam season.",
+        question: "How many songs are in the queue?",
+        answer: "The launch queue contains 25 curated YouTube tracks stored in Supabase.",
       },
       {
-        question: "How much is the chai?",
+        question: "Does Ambience change the sound?",
         answer:
-          "₹10 for a cutting, ₹15 for a full. We accept UPI, cash, and the promise of paying tomorrow. But since this is virtual, it's on the house. Infinite refills.",
+          "Ambience is still a preview control. Its level is remembered during the session but does not mix additional audio yet.",
       },
     ],
   },
 
   "raj-mistri": {
     slug: "raj-mistri",
-    displayName: "Raj Mistri",
+    displayName: "Raju Mistri",
     logoSrc: newRajMistri,
     about: {
-      title: "Raj Mistri",
+      title: "Raju Mistri",
       subtitle: "Building dreams, one brick at a time",
       paragraphs: [
         "Welcome to the construction site — where cement dust dances in the sunlight and the radio competes with the clang of hammers. Raj Mistri is the room dedicated to India's builders, the men who construct our cities while singing along to the radio.",
@@ -261,39 +260,39 @@ export const themeMap: Record<AllowedSlug, ThemeInfo> = {
     ],
   },
 
-  "doordarshan-shaam": {
-    slug: "doordarshan-shaam",
-    displayName: "Door Darshan",
+  "papa-ke-gaane": {
+    slug: "papa-ke-gaane",
+    displayName: "Papa Ke Gaane",
     logoSrc: newDoordarshan,
     about: {
-      title: "Door Darshan",
-      subtitle: "When TV was one channel and life was simple",
+      title: "Papa Ke Gaane",
+      subtitle: "Sunday cleaning, an old cassette, and Papa's fixed playlist",
       paragraphs: [
-        "Tune in to Doordarshan — India's original and only TV channel for decades. The one with the test card that haunted your mornings, the news reader who was more trusted than your family, and the ad breaks that were more entertaining than the shows.",
-        "The gentle static hum of a CRT television, the familiar tune of the national anthem at sign-off, the crackling audio of a Chitrahaar episode — Door Darshan is a time machine to an India where the whole family gathered around one television set.",
-        "This room recreates the warm, nostalgic glow of a Doordarshan evening — complete with the music that defined an entire generation's taste. No remote control fights here — just press play and let the broadcast begin.",
+        "A slow Sunday, folded newspapers, old speakers, and the songs Papa never skips. This Jagah is built around the family playlist that somehow became everyone's memory.",
+        "The launch queue brings together familiar classics and 90s favourites in a single 25-song set.",
+        "This preview borrows the current Doordarshan room imagery while the final Papa Ke Gaane visual package is being prepared.",
       ],
     },
     faq: [
       {
-        question: "What's with the scanlines effect?",
+        question: "What is Papa Ke Gaane?",
         answer:
-          "We've added CRT television scanlines to the visual experience — those horizontal lines you'd see on old TVs. It's a deliberate visual choice to make you feel like you're watching through a 1990s BPL television set.",
+          "It is a nostalgia-led room for familiar family favourites, old cassettes, Sunday routines, and songs passed from one generation to another.",
       },
       {
-        question: "Is this actually Doordarshan content?",
+        question: "Is this the final room artwork?",
         answer:
-          "No — we're not affiliated with Doordarshan. This is an ambient room inspired by the experience of watching DD in the 80s and 90s. The music is curated to match that era's vibe — Chitrahaar, Rangoli, and film songs of the golden age.",
+          "Not yet. The current television-room visual is a temporary preview and will be replaced by the final team assets.",
       },
       {
-        question: "What time period does the music cover?",
+        question: "How many songs are in the queue?",
         answer:
-          "Primarily the 70s through the 90s — the golden era of Doordarshan. You'll hear the songs that played during Chitrahaar, the tunes from sponsored programs, and the classics that every Indian family hummed together.",
+          "The launch queue contains exactly 25 curated songs backed by canonical database metadata and verified YouTube sources.",
       },
       {
-        question: "Why does this make me emotional?",
+        question: "Will the queue survive a Jagah switch?",
         answer:
-          "Because Doordarshan wasn't just television — it was a shared national experience. Every Indian above a certain age has the same memories: watching the same shows, hearing the same songs, at the same time. This room taps into that collective nostalgia.",
+          "Each Jagah keeps a stable queue for its current browser session, and playback continues through the normal room-switch transition.",
       },
     ],
   },

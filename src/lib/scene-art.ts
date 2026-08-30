@@ -8,10 +8,10 @@ import corporateMajdoor from "@/assets/new_corporatemajdoor.webp";
 
 export const sceneArt: Record<string, string> = {
   barbershop,
-  "night-bus": nightBus,
-  doordarshan,
+  "bus-driver": nightBus,
+  "bartan-time": chaiKiTapri,
+  "papa-ke-gaane": doordarshan,
   "punjabi-dhaba": punjabiDhaba,
-  "chai-ki-tapri": chaiKiTapri,
   "raj-mistri": rajMistri,
   "corporate-majdoor": corporateMajdoor,
 };

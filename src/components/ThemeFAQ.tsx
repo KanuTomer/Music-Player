@@ -45,9 +45,7 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
   return (
     <div
       className={`rounded-xl border transition-colors duration-200 ${
-        open
-          ? "border-ember/30 bg-night/60"
-          : "border-cream/10 bg-night/30 hover:border-cream/20"
+        open ? "border-ember/30 bg-night/60" : "border-cream/10 bg-night/30 hover:border-cream/20"
       }`}
     >
       <button
@@ -70,9 +68,7 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
         }`}
       >
         <div className="overflow-hidden">
-          <p className="px-5 pb-4 text-sm leading-relaxed text-cream/65">
-            {answer}
-          </p>
+          <p className="px-5 pb-4 text-sm leading-relaxed text-cream/65">{answer}</p>
         </div>
       </div>
     </div>
