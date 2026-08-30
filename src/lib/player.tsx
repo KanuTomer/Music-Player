@@ -122,7 +122,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [playlist, setPlaylist] = useState<QueueItem[]>([]);
   const [index, setIndexState] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [needsGate, setNeedsGate] = useState(true);
+  const [needsGate, setNeedsGate] = useState(false);
   const [musicReady, setMusicReady] = useState(false);
   const [musicBlocked, setMusicBlocked] = useState(false);
   const [apiReady, setApiReady] = useState(false);
@@ -388,7 +388,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setRoom(null);
     setPlaylist([]);
     queueRef.current = [];
-    setNeedsGate(true);
+    setNeedsGate(false);
     setIsPlaying(false);
   }, []);
 

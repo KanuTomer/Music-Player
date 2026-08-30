@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Compass, Home, Share2, Sparkles } from "lucide-react";
+import { Compass, Share2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import type { RoomPayload, Scene } from "@/lib/rooms.functions";
 import { artFor } from "@/lib/scene-art";
@@ -14,6 +14,9 @@ import { JagahExplorer } from "@/components/JagahExplorer";
 import { InfoPlaceholderDialog } from "@/components/InfoPlaceholderDialog";
 import { ISTClock } from "@/components/ISTClock";
 import { useJagahNavigation } from "@/hooks/useJagahNavigation";
+import { ThemeAbout } from "@/components/ThemeAbout";
+import { ThemeFAQ } from "@/components/ThemeFAQ";
+import { Footer } from "@/components/Footer";
 
 export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Scene[] }) {
   const { scene, oneliners } = room;
@@ -77,148 +80,204 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
 
   return (
     <div
-      className={`room-scene-enter relative h-dvh w-full overflow-hidden ${gradeClass} ${scene.is_dark ? "room-dark" : ""}`}
+      id="room-experience-top"
+      className={`room-scene-enter relative h-dvh w-full overflow-y-auto no-scrollbar scroll-smooth ${gradeClass} ${scene.is_dark ? "room-dark" : ""}`}
     >
-      {sceneVideo ? (
-        <video
-          ref={sceneVideoRef}
-          key={scene.art_key}
-          src={sceneVideo}
-          poster={artFor(scene.art_key)}
-          autoPlay
-          preload="auto"
-          muted
-          loop
-          playsInline
-          disablePictureInPicture
-          onCanPlay={(event) => void event.currentTarget.play().catch(() => undefined)}
-          aria-label={`${scene.title_en} — ambient moving scene`}
-          className="scene-media absolute inset-0 size-full object-cover"
-        />
-      ) : (
-        <img
-          key={scene.art_key}
-          src={artFor(scene.art_key)}
-          alt={`${scene.title_en} — ${scene.hook}`}
-          width={1536}
-          height={1024}
-          fetchPriority="high"
-          className={`scene-media absolute inset-0 size-full object-cover transition-[transform,opacity] duration-[12s] ${
-            active ? "scale-105" : "scale-100"
-          }`}
-        />
-      )}
-      {!gradeless && (
-        <div className="scene-light pointer-events-none absolute inset-0" aria-hidden />
-      )}
-      {scene.slug === "doordarshan-shaam" && (
-        <div className="scanlines pointer-events-none absolute inset-0 opacity-20" aria-hidden />
-      )}
-      <div className="vignette pointer-events-none absolute inset-0" aria-hidden />
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-night/70 to-transparent"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-night/80 to-transparent"
-        aria-hidden
-      />
-
-      {/* top row: live pill · Explorer · Home and share */}
-      <div className="absolute inset-x-0 top-0 z-50 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 p-2 sm:gap-3 sm:p-3">
-        <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-cream/12 bg-charcoal/60 px-2.5 py-1.5 backdrop-blur-md sm:gap-2 sm:px-3">
-          <span className="animate-bulb inline-block size-1.5 rounded-full bg-ember" aria-hidden />
-          <span className="text-[12px] font-semibold text-cream tabular-nums">
-            {social.listeners}
-          </span>
-          <span className="hidden text-[11px] text-cream/55 sm:inline">sun rahe hain</span>
-          <span className="hidden text-cream/25 sm:inline">·</span>
-          <ISTClock
-            inherit
-            className="hidden items-center gap-1.5 text-[11px] text-cream/55 sm:flex"
+      {/* Immersive View Area (100dvh height) */}
+      <div className="relative h-dvh w-full shrink-0 overflow-hidden">
+        {sceneVideo ? (
+          <video
+            ref={sceneVideoRef}
+            key={scene.art_key}
+            src={sceneVideo}
+            poster={artFor(scene.art_key)}
+            autoPlay
+            preload="auto"
+            muted
+            loop
+            playsInline
+            disablePictureInPicture
+            onCanPlay={(event) => void event.currentTarget.play().catch(() => undefined)}
+            aria-label={`${scene.title_en} — ambient moving scene`}
+            className="scene-media absolute inset-0 size-full object-cover"
           />
-        </div>
+        ) : (
+          <img
+            key={scene.art_key}
+            src={artFor(scene.art_key)}
+            alt={`${scene.title_en} — ${scene.hook}`}
+            width={1536}
+            height={1024}
+            fetchPriority="high"
+            className={`scene-media absolute inset-0 size-full object-cover scale-100 ${
+              scene.slug === "sainik-dhaba" ? "object-top" : "object-center"
+            }`}
+          />
+        )}
+        {!gradeless && (
+          <div className="scene-light pointer-events-none absolute inset-0" aria-hidden />
+        )}
+        {scene.slug === "doordarshan-shaam" && (
+          <div className="scanlines pointer-events-none absolute inset-0 opacity-20" aria-hidden />
+        )}
+        <div className="vignette pointer-events-none absolute inset-0" aria-hidden />
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-night/70 to-transparent"
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-night/80 to-transparent"
+          aria-hidden
+        />
 
-        <div className="flex min-w-0 items-center justify-center">
-          <button
-            type="button"
-            onClick={() => setExplorerOpen(true)}
-            className="flex h-11 min-w-0 items-center gap-2 rounded-full border border-cream/25 bg-night/55 px-3.5 text-[13px] font-semibold text-cream outline-none backdrop-blur transition-colors hover:bg-night/70 focus-visible:ring-2 focus-visible:ring-accent/70 sm:h-10 sm:px-4 sm:text-sm"
-          >
-            <Compass className="size-4 shrink-0" aria-hidden />
-            <span className="truncate">Jagah Explorer</span>
-          </button>
-        </div>
-
-        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-          <Link
-            to="/"
-            aria-label="Home"
-            className="flex h-10 items-center justify-center gap-2 rounded-full border border-cream/12 bg-charcoal/60 px-3 text-cream/80 backdrop-blur-md transition-colors hover:bg-charcoal/85 hover:text-cream"
-          >
-            <Home className="size-4" aria-hidden />
-            <span className="hidden text-xs font-semibold lg:inline">Home</span>
-          </Link>
-          <button
-            type="button"
-            onClick={share}
-            aria-label="Share this room"
-            className="flex size-10 items-center justify-center rounded-full border border-cream/12 bg-charcoal/60 text-cream/80 backdrop-blur-md transition-colors hover:bg-charcoal/85 hover:text-cream"
-          >
-            <Share2 className="size-4" aria-hidden />
-          </button>
-        </div>
-      </div>
-
-      {/* room title, signage-style, centred */}
-      <div className="pointer-events-none absolute inset-x-0 top-[15dvh] z-20 flex flex-col items-center px-6 text-center">
-        <h1 className="signage-text font-deva text-4xl leading-[1.05] text-cream sm:text-6xl">
-          {scene.title_hi}
-        </h1>
-        <span className="mt-3 h-[2px] w-16 rounded-full bg-ember/80" aria-hidden />
-        <p className="mt-3 text-[11px] font-semibold tracking-[0.3em] text-cream/55 uppercase sm:text-[13px]">
-          {scene.title_en}
-        </p>
-      </div>
-
-      <OneLinerCaption
-        lines={lines}
-        active={active}
-        trackKey={player.nowPlaying?.title ?? player.track?.title ?? null}
-      />
-
-      <div className="pointer-events-none absolute inset-x-0 bottom-3 z-30 flex justify-center px-3">
-        <FullCassettePlayer />
-      </div>
-
-      {player.needsGate && (
-        <div className="absolute inset-0 z-40 flex flex-col items-center justify-center px-6 text-center">
-          <div className="absolute inset-0 bg-charcoal/78 backdrop-blur-[4px]" aria-hidden />
-          <div className="vignette absolute inset-0" aria-hidden />
-
-          <div className="relative flex w-full max-w-sm flex-col items-center gap-3 rounded-2xl border border-cream/10 bg-charcoal/45 px-6 py-8 shadow-lift">
-            <span className="rounded-full border border-ember/50 px-3 py-[3px] text-[9.5px] font-bold tracking-[0.22em] text-ember uppercase">
-              {scene.region ?? scene.category} · live
+        {/* top row: live pill · Explorer · Home and share */}
+        <div className="absolute inset-x-0 top-0 z-50 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 p-2 sm:gap-3 sm:p-3">
+          <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-cream/12 bg-charcoal/60 px-2.5 py-1.5 backdrop-blur-md sm:gap-2 sm:px-3">
+            <span
+              className="animate-bulb inline-block size-1.5 rounded-full bg-ember"
+              aria-hidden
+            />
+            <span className="text-[12px] font-semibold text-cream tabular-nums">
+              {social.listeners}
             </span>
-            <h2 className="signage-text font-deva text-3xl leading-tight text-cream">
-              {scene.title_hi}
-            </h2>
-            <p className="text-[12.5px] font-medium tracking-[0.22em] text-cream/55 uppercase">
-              {scene.title_en}
-            </p>
-            <p className="max-w-xs text-sm leading-relaxed text-cream/70">{scene.hook}</p>
+            <span className="hidden text-[11px] text-cream/55 sm:inline">sun rahe hain</span>
+            <span className="hidden text-cream/25 sm:inline">·</span>
+            <ISTClock
+              inherit
+              className="hidden items-center gap-1.5 text-[11px] text-cream/55 sm:flex"
+            />
+          </div>
+
+          <div className="flex min-w-0 items-center justify-center">
             <button
               type="button"
-              onClick={player.start}
-              className="mt-2 flex items-center gap-2 rounded-full bg-ember px-7 py-3.5 text-sm font-bold text-charcoal shadow-lift transition-transform hover:scale-[1.03] active:scale-95"
+              onClick={() => setExplorerOpen(true)}
+              className="flex h-11 min-w-0 items-center gap-2 rounded-full border border-cream/25 bg-night/55 px-3.5 text-[13px] font-semibold text-cream outline-none backdrop-blur transition-colors hover:bg-night/70 focus-visible:ring-2 focus-visible:ring-accent/70 sm:h-10 sm:px-4 sm:text-sm"
             >
-              <Sparkles className="size-4" aria-hidden />
-              Andar aa jao — press play
+              <Compass className="size-4 shrink-0" aria-hidden />
+              <span className="truncate">Jagah Explorer</span>
             </button>
-            <p className="text-[11px] text-cream/45">Headphones lagao. Ye kamra chalta rahega.</p>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            {/* About Pill Button */}
+            <button
+              type="button"
+              onClick={() => {
+                const el = document.getElementById(`about-${scene.slug}`);
+                if (el) el.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="flex h-9 items-center justify-center rounded-full bg-charcoal/80 border border-cream/15 px-3.5 text-xs font-bold text-cream transition-colors hover:bg-charcoal/95 hover:text-amber active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember cursor-pointer"
+            >
+              About
+            </button>
+
+            {/* FAQ Pill Button */}
+            <button
+              type="button"
+              onClick={() => {
+                const el = document.getElementById(`faq-${scene.slug}`);
+                if (el) el.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="flex h-9 items-center justify-center rounded-full bg-charcoal/80 border border-cream/15 px-3.5 text-xs font-bold text-cream transition-colors hover:bg-charcoal/95 hover:text-amber active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember cursor-pointer"
+            >
+              FAQ
+            </button>
+            <button
+              type="button"
+              onClick={share}
+              aria-label="Share this room"
+              className="flex size-9 items-center justify-center rounded-full border border-cream/12 bg-charcoal/60 text-cream/80 backdrop-blur-md transition-colors hover:bg-charcoal/85 hover:text-cream"
+            >
+              <Share2 className="size-4" aria-hidden />
+            </button>
           </div>
         </div>
-      )}
+
+        {/* room title, signage-style, centred */}
+        <div className="pointer-events-none absolute inset-x-0 top-[15dvh] z-20 flex flex-col items-center px-6 text-center">
+          <h1 className="signage-text font-deva text-4xl leading-[1.05] text-cream sm:text-6xl">
+            {scene.title_hi}
+          </h1>
+          <span className="mt-3 h-[2px] w-16 rounded-full bg-ember/80" aria-hidden />
+          <p className="mt-3 text-[11px] font-semibold tracking-[0.3em] text-cream/55 uppercase sm:text-[13px]">
+            {scene.title_en}
+          </p>
+        </div>
+
+        <OneLinerCaption
+          lines={lines}
+          active={active}
+          trackKey={player.nowPlaying?.title ?? player.track?.title ?? null}
+        />
+
+        {/* Floating Scroll Down Indicator (bottom-right) */}
+        <div className="pointer-events-auto absolute right-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-30 flex items-center sm:right-6 sm:bottom-5">
+          <button
+            type="button"
+            onClick={() => {
+              document
+                .getElementById(`about-${scene.slug}`)
+                ?.scrollIntoView({ behavior: "smooth" });
+            }}
+            className="group flex items-center gap-2 text-cream/55 hover:text-ember transition-colors cursor-pointer"
+            aria-label="Scroll down for details"
+          >
+            <span className="font-vintage-deva text-[9px] sm:text-[10px] tracking-wider uppercase">
+              Neeche chalo · Details
+            </span>
+            <span className="flex size-9 items-center justify-center rounded-full border border-cream/20 bg-charcoal/60 backdrop-blur-sm group-hover:border-ember group-hover:bg-charcoal/80 transition-colors animate-bounce sm:size-10">
+              <span className="text-sm font-bold sm:text-base">↓</span>
+            </span>
+          </button>
+        </div>
+
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-center px-3 pb-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:pb-4">
+          <FullCassettePlayer />
+        </div>
+
+        {player.needsGate && (
+          <div className="absolute inset-0 z-40 flex flex-col items-center justify-center px-6 text-center">
+            <div className="absolute inset-0 bg-charcoal/78 backdrop-blur-[4px]" aria-hidden />
+            <div className="vignette absolute inset-0" aria-hidden />
+
+            <div className="relative flex w-full max-w-sm flex-col items-center gap-3 rounded-2xl border border-cream/10 bg-charcoal/45 px-6 py-8 shadow-lift overflow-hidden">
+              <span className="rounded-full border border-ember/50 px-3 py-[3px] text-[9.5px] font-bold tracking-[0.22em] text-ember uppercase relative z-10">
+                {scene.region ?? scene.category} · live
+              </span>
+              <h2 className="signage-text font-deva text-3xl leading-tight text-cream relative z-10">
+                {scene.title_hi}
+              </h2>
+              <p className="text-[12.5px] font-medium tracking-[0.22em] text-cream/55 uppercase relative z-10">
+                {scene.title_en}
+              </p>
+              <p className="max-w-xs text-sm leading-relaxed text-cream/70 relative z-10">
+                {scene.hook}
+              </p>
+              <button
+                type="button"
+                onClick={player.start}
+                className="mt-2 flex items-center gap-2 rounded-full bg-ember px-7 py-3.5 text-sm font-bold text-charcoal shadow-lift transition-transform hover:scale-[1.03] active:scale-95 relative z-10"
+              >
+                <Sparkles className="size-4" aria-hidden />
+                Andar aa jao — press play
+              </button>
+              <p className="text-[11px] text-cream/45 relative z-10">
+                Headphones lagao. Ye kamra chalta rahega.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Unique About section */}
+      <ThemeAbout slug={scene.slug} />
+
+      {/* Unique FAQ section */}
+      <ThemeFAQ slug={scene.slug} />
+
+      {/* Common Footer */}
+      <Footer />
 
       <JagahExplorer
         scenes={scenes}

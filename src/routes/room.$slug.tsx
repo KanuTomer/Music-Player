@@ -2,14 +2,24 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { DoorClosed } from "lucide-react";
 import { getRoom, listScenes } from "@/lib/rooms.functions";
 import { RoomExperience } from "@/components/room/RoomExperience";
+import { isAllowedSlug } from "@/lib/theme-data";
 
 export const Route = createFileRoute("/room/$slug")({
   loader: async ({ params }) => {
-    const [room, scenes] = await Promise.all([
+    // Check if the requested slug is one of the 7 allowed themes
+    if (!isAllowedSlug(params.slug)) {
+      throw notFound();
+    }
+
+    const [room, allScenes] = await Promise.all([
       getRoom({ data: { slug: params.slug } }),
       listScenes(),
     ]);
     if (!room) throw notFound();
+
+    // Filter scenes list to only include allowed ones
+    const scenes = allScenes.filter((scene) => isAllowedSlug(scene.slug));
+
     return { room, scenes };
   },
   head: ({ loaderData }) => {
@@ -22,7 +32,7 @@ export const Route = createFileRoute("/room/$slug")({
       };
     }
     const { scene } = loaderData.room;
-    const title = `${scene.title_hi} / ${scene.title_en} — Sainik Dhaba`;
+    const title = `Sainik Dhaba · ${scene.title_en} 📻`;
     return {
       meta: [
         { title },
