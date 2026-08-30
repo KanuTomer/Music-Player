@@ -1,8 +1,10 @@
-# Seven-Jagah Song List
+# Seven-Jagah Song Review — 175 Songs
 
-Each future Jagah has exactly 25 ordered songs. The seven queues total 175 memberships and 171 unique YouTube videos because four selections intentionally overlap.
+This is the current seven-Jagah launch catalogue for team review. Each Jagah has exactly 25 songs in playback order: 175 queue positions and 171 unique YouTube videos, with four intentional selections appearing in more than one Jagah.
 
-> Status: approved and staged in Supabase, but inactive until the asset and catalogue cutover. Production playback remains unchanged.
+Please review the song choice, version, title, and artist credit. Share feedback in this format: `Jagah — track number — keep/replace — note or replacement link`.
+
+Verified against the active Supabase queues on 30 August 2026.
 
 ## Sainik Dhaba
 
