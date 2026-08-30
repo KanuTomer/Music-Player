@@ -4,7 +4,9 @@ import { resolve } from "node:path";
 
 const [, , manifestArgument, migrationArgument] = process.argv;
 if (!manifestArgument || !migrationArgument) {
-  throw new Error("Usage: node scripts/generate-seven-jagah-staged-catalogue.mjs <approved-manifest.json> <migration.sql>");
+  throw new Error(
+    "Usage: node scripts/generate-seven-jagah-staged-catalogue.mjs <approved-manifest.json> <migration.sql>",
+  );
 }
 const manifestPath = resolve(manifestArgument);
 const migrationPath = resolve(migrationArgument);
@@ -14,14 +16,18 @@ const checksum = createHash("sha256").update(JSON.stringify(manifest.selections)
 if (manifest.status !== "approved" || checksum !== manifest.sha256) {
   throw new Error("The catalogue manifest is not approved or its checksum is invalid");
 }
-if (manifest.selections?.length !== 7 || manifest.selections.some((item) => item.tracks?.length !== 25)) {
+if (
+  manifest.selections?.length !== 7 ||
+  manifest.selections.some((item) => item.tracks?.length !== 25)
+) {
   throw new Error("Expected seven approved groups of 25 tracks");
 }
 
 const quote = (value) => (value == null ? "NULL" : `'${String(value).replaceAll("'", "''")}'`);
 const chunks = (items, size = 100) => {
   const result = [];
-  for (let index = 0; index < items.length; index += size) result.push(items.slice(index, index + size));
+  for (let index = 0; index < items.length; index += size)
+    result.push(items.slice(index, index + size));
   return result;
 };
 
@@ -62,13 +68,69 @@ const sceneDefinitions = [
 ];
 
 const setDefinitions = [
-  { id: "8f382722-007c-481f-9b61-82332ee7aae8", slug: "deluxe-salon", sceneSlug: "nai-ki-dukaan", title: "Deluxe Salon — Seven Jagah Staged", order: 1, baseCount: 42, originId: "PLVFLMYM1tErk" },
-  { id: "bb2cbc33-29d6-4945-ac7a-164ed1f49c8f", slug: "bus-driver", sceneSlug: "bus-driver", title: "Bus Driver — Seven Jagah Staged", order: 2, baseCount: 0, originId: "manual:bus-driver:2026-08-29" },
-  { id: "fe42b40e-6b02-4b60-9ccb-06b1a7e1649d", slug: "bhojpuri-bangers", sceneSlug: "bhojpuriya-devara", title: "Bhojpuri Bangers — Seven Jagah Staged", order: 3, baseCount: 3649, originId: "PLwyqDgjhF4Qpq6kslMcQ8NR6RHb-Z4Tu-" },
-  { id: "d425495b-9938-4a13-a9f0-6014cc3a611d", slug: "bartan-time", sceneSlug: "bartan-time", title: "Bartan Time — Seven Jagah Staged", order: 4, baseCount: 0, originId: "PLc1Byv6ESHSaag4naocpjBLSjO58i9MV5" },
-  { id: "c44a6fb0-ae22-43fb-98b9-843472957d60", slug: "raju-mistri", sceneSlug: "raj-mistri", title: "Raju Mistri — Seven Jagah Staged", order: 5, baseCount: 328, originId: "PLTcrZKUys_a5zSgv_3ZHsRnTVJ05GbDvY" },
-  { id: "359d7737-e012-4f5d-aec0-b0c3fc1faafb", slug: "papa-ke-gaane", sceneSlug: "papa-ke-gaane", title: "Papa Ke Gaane — Seven Jagah Staged", order: 6, baseCount: 0, originId: "PL3rJgr5HfVCrov_nZV_2ltKKFGWbbjATx" },
-  { id: "d2d4c91e-5ac6-4bfd-bcba-299e60546b1f", slug: "corporate-majdoor", sceneSlug: "corporate-majdoor", title: "Corporate Majdoor — Seven Jagah Staged", order: 7, baseCount: 218, originId: "PLMqSYqU_UWQk" },
+  {
+    id: "8f382722-007c-481f-9b61-82332ee7aae8",
+    slug: "deluxe-salon",
+    sceneSlug: "nai-ki-dukaan",
+    title: "Deluxe Salon — Seven Jagah Staged",
+    order: 1,
+    baseCount: 42,
+    originId: "PLVFLMYM1tErk",
+  },
+  {
+    id: "bb2cbc33-29d6-4945-ac7a-164ed1f49c8f",
+    slug: "bus-driver",
+    sceneSlug: "bus-driver",
+    title: "Bus Driver — Seven Jagah Staged",
+    order: 2,
+    baseCount: 0,
+    originId: "manual:bus-driver:2026-08-29",
+  },
+  {
+    id: "fe42b40e-6b02-4b60-9ccb-06b1a7e1649d",
+    slug: "bhojpuri-bangers",
+    sceneSlug: "bhojpuriya-devara",
+    title: "Bhojpuri Bangers — Seven Jagah Staged",
+    order: 3,
+    baseCount: 3649,
+    originId: "PLwyqDgjhF4Qpq6kslMcQ8NR6RHb-Z4Tu-",
+  },
+  {
+    id: "d425495b-9938-4a13-a9f0-6014cc3a611d",
+    slug: "bartan-time",
+    sceneSlug: "bartan-time",
+    title: "Bartan Time — Seven Jagah Staged",
+    order: 4,
+    baseCount: 0,
+    originId: "PLc1Byv6ESHSaag4naocpjBLSjO58i9MV5",
+  },
+  {
+    id: "c44a6fb0-ae22-43fb-98b9-843472957d60",
+    slug: "raju-mistri",
+    sceneSlug: "raj-mistri",
+    title: "Raju Mistri — Seven Jagah Staged",
+    order: 5,
+    baseCount: 328,
+    originId: "PLTcrZKUys_a5zSgv_3ZHsRnTVJ05GbDvY",
+  },
+  {
+    id: "359d7737-e012-4f5d-aec0-b0c3fc1faafb",
+    slug: "papa-ke-gaane",
+    sceneSlug: "papa-ke-gaane",
+    title: "Papa Ke Gaane — Seven Jagah Staged",
+    order: 6,
+    baseCount: 0,
+    originId: "PL3rJgr5HfVCrov_nZV_2ltKKFGWbbjATx",
+  },
+  {
+    id: "d2d4c91e-5ac6-4bfd-bcba-299e60546b1f",
+    slug: "corporate-majdoor",
+    sceneSlug: "corporate-majdoor",
+    title: "Corporate Majdoor — Seven Jagah Staged",
+    order: 7,
+    baseCount: 218,
+    originId: "PLMqSYqU_UWQk",
+  },
 ];
 
 const selections = new Map(manifest.selections.map((selection) => [selection.slug, selection]));
@@ -100,9 +162,12 @@ const lines = [
   "    RAISE EXCEPTION 'preflight failed: expected ten active curated sets';",
   "  END IF;",
   "  FOR v_expected IN SELECT * FROM (VALUES",
-  ...setDefinitions.filter((item) => item.baseCount > 0).map((item, index, items) =>
-    `    (${quote(item.sceneSlug)}, ${item.baseCount})${index === items.length - 1 ? "" : ","}`,
-  ),
+  ...setDefinitions
+    .filter((item) => item.baseCount > 0)
+    .map(
+      (item, index, items) =>
+        `    (${quote(item.sceneSlug)}, ${item.baseCount})${index === items.length - 1 ? "" : ","}`,
+    ),
   "  ) AS expected(slug, membership_count) LOOP",
   "    SELECT count(*) INTO v_actual",
   "    FROM public.curated_set_tracks cst",
@@ -117,17 +182,23 @@ const lines = [
   "",
   "INSERT INTO public.scenes(id, slug, title_en, title_hi, hook, description, region, category, palette, art_key, is_dark, is_live, chat_mode, gag_label, sort_order, tags)",
   "VALUES",
-  sceneDefinitions.map((scene) =>
-    `  (${quote(scene.id)}::uuid, ${quote(scene.slug)}, ${quote(scene.titleEn)}, ${quote(scene.titleHi)}, ${quote(scene.hook)}, NULL, ${quote(scene.region)}, 'tier1', '{}'::jsonb, ${quote(scene.artKey)}, true, false, 'closed', NULL, ${scene.sortOrder}, ARRAY[${scene.tags.map(quote).join(", ")}]::text[])`,
-  ).join(",\n"),
+  sceneDefinitions
+    .map(
+      (scene) =>
+        `  (${quote(scene.id)}::uuid, ${quote(scene.slug)}, ${quote(scene.titleEn)}, ${quote(scene.titleHi)}, ${quote(scene.hook)}, NULL, ${quote(scene.region)}, 'tier1', '{}'::jsonb, ${quote(scene.artKey)}, true, false, 'closed', NULL, ${scene.sortOrder}, ARRAY[${scene.tags.map(quote).join(", ")}]::text[])`,
+    )
+    .join(",\n"),
   "ON CONFLICT (slug) DO NOTHING;",
   "",
   "INSERT INTO public.curated_sets(id, scene_id, title, sort_order, is_active, shuffle_start, origin_provider, origin_external_id, imported_at)",
   "SELECT v.id, s.id, v.title, v.sort_order, false, true, 'youtube', v.origin_external_id, '2026-08-29T09:58:08.299Z'::timestamptz",
   "FROM (VALUES",
-  setDefinitions.map((set) =>
-    `  (${quote(set.id)}::uuid, ${quote(set.sceneSlug)}, ${quote(set.title)}, ${set.order}, ${quote(set.originId)})`,
-  ).join(",\n"),
+  setDefinitions
+    .map(
+      (set) =>
+        `  (${quote(set.id)}::uuid, ${quote(set.sceneSlug)}, ${quote(set.title)}, ${set.order}, ${quote(set.originId)})`,
+    )
+    .join(",\n"),
   ") AS v(id, scene_slug, title, sort_order, origin_external_id)",
   "JOIN public.scenes s ON s.slug = v.scene_slug",
   "ON CONFLICT (id) DO UPDATE SET",
@@ -161,9 +232,12 @@ for (const part of chunks([...uniqueTracks.values()])) {
     "INSERT INTO public.tracks(catalogue_key, scene_id, title, artist, year, daypart_tag, sort_order)",
     "SELECT 'youtube:' || v.video_id, NULL, v.title, v.artist, v.year, 'all', 0",
     "FROM (VALUES",
-    part.map((track) =>
-      `  (${quote(track.videoId)}, ${quote(track.canonicalTitle)}, ${quote(track.canonicalArtist)}, ${track.year == null ? "NULL" : Number(track.year)})`,
-    ).join(",\n"),
+    part
+      .map(
+        (track) =>
+          `  (${quote(track.videoId)}, ${quote(track.canonicalTitle)}, ${quote(track.canonicalArtist)}, ${track.year == null ? "NULL" : Number(track.year)})`,
+      )
+      .join(",\n"),
     ") AS v(video_id, title, artist, year)",
     "WHERE NOT EXISTS (",
     "  SELECT 1 FROM public.playback_sources ps",
@@ -174,9 +248,12 @@ for (const part of chunks([...uniqueTracks.values()])) {
     "INSERT INTO public.playback_sources(track_id, provider, provider_item_id, source_url, provider_title, provider_channel, priority, validated_at, is_active)",
     "SELECT t.id, 'youtube', v.video_id, 'https://www.youtube.com/watch?v=' || v.video_id, v.provider_title, v.provider_channel, 0, '2026-08-29T09:58:08.299Z'::timestamptz, true",
     "FROM (VALUES",
-    part.map((track) =>
-      `  (${quote(track.videoId)}, ${quote(track.providerTitle)}, ${quote(track.providerChannel)})`,
-    ).join(",\n"),
+    part
+      .map(
+        (track) =>
+          `  (${quote(track.videoId)}, ${quote(track.providerTitle)}, ${quote(track.providerChannel)})`,
+      )
+      .join(",\n"),
     ") AS v(video_id, provider_title, provider_channel)",
     "JOIN public.tracks t ON t.catalogue_key = 'youtube:' || v.video_id",
     "WHERE NOT EXISTS (",
@@ -193,9 +270,9 @@ for (const set of setDefinitions) {
     "INSERT INTO public.curated_set_tracks(curated_set_id, track_id, position, daypart_tag)",
     `SELECT ${quote(set.id)}::uuid, ps.track_id, v.position, 'all'`,
     "FROM (VALUES",
-    selection.tracks.map((track) =>
-      `  (${quote(track.videoId)}, ${set.baseCount + track.additionPosition})`,
-    ).join(",\n"),
+    selection.tracks
+      .map((track) => `  (${quote(track.videoId)}, ${set.baseCount + track.additionPosition})`)
+      .join(",\n"),
     ") AS v(video_id, position)",
     "JOIN public.playback_sources ps ON ps.provider = 'youtube' AND ps.provider_item_id = v.video_id AND ps.is_active",
     "ON CONFLICT (curated_set_id, position) DO UPDATE SET",
@@ -220,8 +297,9 @@ lines.push(
   "    RAISE EXCEPTION 'expected three hidden staged scenes';",
   "  END IF;",
   "  FOR v_expected IN SELECT * FROM (VALUES",
-  ...setDefinitions.map((item, index, items) =>
-    `    (${quote(item.id)}::uuid, ${quote(item.slug)}, ${item.baseCount + 25})${index === items.length - 1 ? "" : ","}`,
+  ...setDefinitions.map(
+    (item, index, items) =>
+      `    (${quote(item.id)}::uuid, ${quote(item.slug)}, ${item.baseCount + 25})${index === items.length - 1 ? "" : ","}`,
   ),
   "  ) AS expected(set_id, slug, membership_count) LOOP",
   "    SELECT count(*) INTO v_actual FROM public.curated_set_tracks WHERE curated_set_id = v_expected.set_id;",
@@ -245,4 +323,16 @@ lines.push(
 );
 
 writeFileSync(migrationPath, `${lines.join("\n").trimEnd()}\n`);
-console.log(JSON.stringify({ migrationPath, manifestSha256: manifest.sha256, stagedSets: setDefinitions.length, approvedAdditions: 175, uniqueVideos: uniqueTracks.size }, null, 2));
+console.log(
+  JSON.stringify(
+    {
+      migrationPath,
+      manifestSha256: manifest.sha256,
+      stagedSets: setDefinitions.length,
+      approvedAdditions: 175,
+      uniqueVideos: uniqueTracks.size,
+    },
+    null,
+    2,
+  ),
+);

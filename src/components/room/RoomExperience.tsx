@@ -37,6 +37,17 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
   }, [room.scene.slug]);
 
   useEffect(() => {
+    const timer = setInterval(
+      () => {
+        setDialog("support");
+      },
+      20 * 60 * 1000,
+    ); // Trigger every 20 minutes
+
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
     const video = sceneVideoRef.current;
     if (!video || !sceneVideo) return;
 
@@ -99,7 +110,7 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
             disablePictureInPicture
             onCanPlay={(event) => void event.currentTarget.play().catch(() => undefined)}
             aria-label={`${scene.title_en} — ambient moving scene`}
-            className="scene-media absolute inset-0 size-full object-cover"
+            className="scene-media absolute inset-0 size-full object-cover scale-100 transition-transform duration-700"
           />
         ) : (
           <img
@@ -109,26 +120,15 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
             width={1536}
             height={1024}
             fetchPriority="high"
-            className={`scene-media absolute inset-0 size-full object-cover scale-100 ${
-              scene.slug === "sainik-dhaba" ? "object-top" : "object-center"
-            }`}
+            className="scene-media absolute inset-0 size-full object-cover scale-100 transition-transform duration-700"
+            style={{
+              objectPosition: scene.slug === "sainik-dhaba" ? "center 30%" : "center",
+            }}
           />
         )}
-        {!gradeless && (
-          <div className="scene-light pointer-events-none absolute inset-0" aria-hidden />
-        )}
-        {scene.slug === "doordarshan-shaam" && (
+        {(scene.slug === "doordarshan-shaam" || scene.slug === "papa-ke-gaane") && (
           <div className="scanlines pointer-events-none absolute inset-0 opacity-20" aria-hidden />
         )}
-        <div className="vignette pointer-events-none absolute inset-0" aria-hidden />
-        <div
-          className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-night/70 to-transparent"
-          aria-hidden
-        />
-        <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-night/80 to-transparent"
-          aria-hidden
-        />
 
         {/* top row: live pill · Explorer · Home and share */}
         <div className="absolute inset-x-0 top-0 z-50 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 p-2 sm:gap-3 sm:p-3">
@@ -183,6 +183,16 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
             >
               FAQ
             </button>
+
+            {/* Support Us Button */}
+            <button
+              type="button"
+              onClick={() => setDialog("support")}
+              className="flex h-9 items-center justify-center rounded-full bg-ember border border-cream/15 px-3.5 text-xs font-bold text-charcoal transition-colors hover:bg-ember/90 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream cursor-pointer"
+            >
+              Support Us
+            </button>
+
             <button
               type="button"
               onClick={share}
@@ -212,7 +222,7 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
         />
 
         {/* Floating Scroll Down Indicator (bottom-right) */}
-        <div className="pointer-events-auto absolute right-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-30 flex items-center sm:right-6 sm:bottom-5">
+        <div className="pointer-events-auto absolute right-4 bottom-[calc(1.2rem+env(safe-area-inset-bottom))] z-30 flex items-center sm:right-6 sm:bottom-6">
           <button
             type="button"
             onClick={() => {
@@ -220,14 +230,14 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
                 .getElementById(`about-${scene.slug}`)
                 ?.scrollIntoView({ behavior: "smooth" });
             }}
-            className="group flex items-center gap-2 text-cream/55 hover:text-ember transition-colors cursor-pointer"
+            className="group flex h-9 items-center gap-2 rounded-full border border-cream/15 bg-charcoal/65 px-3.5 text-xs font-bold text-cream/90 backdrop-blur-md transition-all hover:bg-charcoal/85 hover:text-ember active:scale-95 cursor-pointer"
             aria-label="Scroll down for details"
           >
-            <span className="font-vintage-deva text-[9px] sm:text-[10px] tracking-wider uppercase">
+            <span className="font-vintage-deva text-[10px] tracking-wider uppercase">
               Neeche chalo · Details
             </span>
-            <span className="flex size-9 items-center justify-center rounded-full border border-cream/20 bg-charcoal/60 backdrop-blur-sm group-hover:border-ember group-hover:bg-charcoal/80 transition-colors animate-bounce sm:size-10">
-              <span className="text-sm font-bold sm:text-base">↓</span>
+            <span className="animate-bounce text-xs font-bold" aria-hidden>
+              ↓
             </span>
           </button>
         </div>

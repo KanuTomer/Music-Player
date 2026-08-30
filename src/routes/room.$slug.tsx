@@ -1,4 +1,4 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, redirect } from "@tanstack/react-router";
 import { DoorClosed } from "lucide-react";
 import { getRoom, listScenes } from "@/lib/rooms.functions";
 import { RoomExperience } from "@/components/room/RoomExperience";
@@ -6,6 +6,19 @@ import { isAllowedSlug } from "@/lib/theme-data";
 
 export const Route = createFileRoute("/room/$slug")({
   loader: async ({ params }) => {
+    const retiredRedirects: Record<string, string> = {
+      "doordarshan-shaam": "papa-ke-gaane",
+      "raat-ki-bus": "bus-driver",
+      "chai-ki-tapri": "bartan-time",
+    };
+
+    if (params.slug in retiredRedirects) {
+      throw redirect({
+        to: "/room/$slug",
+        params: { slug: retiredRedirects[params.slug] },
+      });
+    }
+
     // Check if the requested slug is one of the 7 allowed themes
     if (!isAllowedSlug(params.slug)) {
       throw notFound();

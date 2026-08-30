@@ -436,16 +436,16 @@
   transition: filter 2400ms ease;
 }
 .grade-morning .scene-media {
-  filter: brightness(1.06) saturate(1.02) contrast(0.98) hue-rotate(-4deg);
+  filter: brightness(1.1) saturate(1.05);
 }
 .grade-day .scene-media {
-  filter: brightness(1.16) saturate(1.06) contrast(1.02);
+  filter: brightness(1.15) saturate(1.1);
 }
 .grade-evening .scene-media {
-  filter: brightness(0.92) saturate(1.12) sepia(0.12);
+  filter: brightness(1.1) saturate(1.05);
 }
 .grade-night .scene-media {
-  filter: brightness(0.62) saturate(0.82) contrast(1.06) hue-rotate(6deg);
+  filter: brightness(1) saturate(1);
 }
 
 .scene-light {

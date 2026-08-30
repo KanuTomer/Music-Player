@@ -10,12 +10,11 @@ const sceneVideos: Record<string, string> = {
   "sainik-dhaba": sainikDhabaVideo.url,
   "nai-ki-dukaan": deluxeSalonVideo.url,
   "bus-driver": nightBusVideo.url,
-  "bartan-time": chaiTapriVideo.url,
   "raj-mistri": rajMistriVideo.url,
   "papa-ke-gaane": doordarshanVideo.url,
   "corporate-majdoor": corporateMajdoorVideo.url,
 };
 
 export function videoForScene(slug: string): string | undefined {
-  return sceneVideos[slug];
+  return undefined; // Disable all moving video backgrounds to use high-quality static image backgrounds instead
 }
