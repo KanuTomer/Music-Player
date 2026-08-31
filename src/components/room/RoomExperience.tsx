@@ -18,6 +18,7 @@ import { ThemeAbout } from "@/components/ThemeAbout";
 import { ThemeFAQ } from "@/components/ThemeFAQ";
 import { Footer } from "@/components/Footer";
 import { LiveChat } from "@/components/room/LiveChat";
+import { useSupportAutoPrompt } from "@/hooks/useSupportPrompt";
 
 export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Scene[] }) {
   const { scene, oneliners } = room;
@@ -32,21 +33,12 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
     closeExplorer: () => setExplorerOpen(false),
   });
 
+  useSupportAutoPrompt(() => setDialog("support"));
+
   useEffect(() => {
     player.openRoom(room);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room.scene.slug]);
-
-  useEffect(() => {
-    const timer = setInterval(
-      () => {
-        setDialog("support");
-      },
-      20 * 60 * 1000,
-    ); // Trigger every 20 minutes
-
-    return () => clearInterval(timer);
-  }, []);
 
   useEffect(() => {
     const video = sceneVideoRef.current;
