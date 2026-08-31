@@ -77,12 +77,33 @@ export type AmbienceStem = {
   sources: AmbienceSource[];
 };
 
+export type AmbienceFilter = {
+  highpass_hz?: number;
+  lowpass_hz?: number;
+  peak_hz?: number;
+  peak_gain_db?: number;
+  peak_q?: number;
+};
+
+export type AmbienceVisualTheme = {
+  accent?: string;
+  haze?: string;
+  pattern?: string;
+  overlay_path?: string;
+  overlay_url?: string;
+  blend_mode?: "screen" | "soft-light" | "lighten";
+  playback_rate?: number;
+  opacity_floor?: number;
+  opacity_ceiling?: number;
+};
+
 export type AmbienceProfile = {
   id: string;
   max_master_gain: number;
   fade_out_ms: number;
   fade_in_ms: number;
-  visual_theme: { accent?: string; haze?: string; pattern?: string };
+  audio_theme: Partial<Record<AmbienceStem["role"], AmbienceFilter>>;
+  visual_theme: AmbienceVisualTheme;
   stems: AmbienceStem[];
 };
 

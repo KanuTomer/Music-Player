@@ -55,7 +55,7 @@ export async function fetchRoom(slug: string): Promise<RoomPayload | null> {
     client.from("oneliners").select("id, text_en, text_hi, daypart_tag").eq("scene_id", scene.id),
     client
       .from("ambience_profiles")
-      .select("id, max_master_gain, fade_out_ms, fade_in_ms, visual_theme")
+      .select("id, max_master_gain, fade_out_ms, fade_in_ms, audio_theme, visual_theme")
       .eq("scene_id", scene.id)
       .eq("enabled", true)
       .maybeSingle(),
@@ -102,7 +102,17 @@ export async function fetchRoom(slug: string): Promise<RoomPayload | null> {
       ? {
           ...ambienceProfile.data,
           max_master_gain: Number(ambienceProfile.data.max_master_gain),
-          visual_theme: ambienceProfile.data.visual_theme as AmbienceProfile["visual_theme"],
+          audio_theme: ambienceProfile.data.audio_theme as AmbienceProfile["audio_theme"],
+          visual_theme: (() => {
+            const visual = ambienceProfile.data.visual_theme as AmbienceProfile["visual_theme"];
+            return {
+              ...visual,
+              overlay_url: visual.overlay_path
+                ? client.storage.from("scene-media").getPublicUrl(visual.overlay_path).data
+                    .publicUrl
+                : undefined,
+            };
+          })(),
           stems: (ambienceStems.data ?? []).map((stem) => {
             const asset = stem.ambience_assets;
             return {

@@ -1,4 +1,4 @@
-import type { AmbienceProfile, AmbienceStem } from "./rooms.functions";
+import type { AmbienceFilter, AmbienceProfile, AmbienceStem } from "./rooms.functions";
 
 export type AmbienceStatus = "idle" | "loading" | "playing" | "partial" | "unavailable";
 
@@ -10,6 +10,24 @@ export const ambienceTiming = {
   laterEventSeconds: [35, 110] as const,
   meanderSeconds: [12, 24] as const,
 };
+
+export const musicDuckRatio = 0.8;
+
+export function effectiveMusicVolume(userVolume: number, ambienceActive: boolean) {
+  const clamped = Math.min(1, Math.max(0, userVolume));
+  return clamped * (ambienceActive ? musicDuckRatio : 1);
+}
+
+export function normalizeAmbienceFilter(filter: AmbienceFilter | undefined) {
+  if (!filter) return null;
+  return {
+    highpass_hz: Math.min(2000, Math.max(10, filter.highpass_hz ?? 20)),
+    lowpass_hz: Math.min(20000, Math.max(1000, filter.lowpass_hz ?? 20000)),
+    peak_hz: Math.min(16000, Math.max(40, filter.peak_hz ?? 1000)),
+    peak_gain_db: Math.min(12, Math.max(-12, filter.peak_gain_db ?? 0)),
+    peak_q: Math.min(12, Math.max(0.1, filter.peak_q ?? 1)),
+  };
+}
 
 export function ambienceLoadStatus(loaded: number, expected: number, playing: boolean) {
   if (loaded === 0) return "unavailable" as const;
@@ -67,9 +85,11 @@ export class AmbienceEngine {
     if (this.context) return this.context;
     this.context = new AudioContext();
     this.compressor = this.context.createDynamicsCompressor();
-    this.compressor.threshold.value = -16;
-    this.compressor.knee.value = 12;
-    this.compressor.ratio.value = 4;
+    this.compressor.threshold.value = -10;
+    this.compressor.knee.value = 10;
+    this.compressor.ratio.value = 3;
+    this.compressor.attack.value = 0.01;
+    this.compressor.release.value = 0.25;
     this.master = this.context.createGain();
     this.master.gain.value = 0;
     this.compressor.connect(this.master).connect(this.context.destination);
@@ -177,7 +197,8 @@ export class AmbienceEngine {
     const gain = context.createGain();
     let target = randomBetween(stem.min_gain, stem.max_gain);
     source.buffer = buffer;
-    source.connect(gain).connect(destination);
+    source.connect(gain);
+    this.connectStem(gain, stem.role, destination);
     gain.gain.setValueCurveAtTime(equalPowerFadeCurve(target, true), when, crossfade);
     const fadeOutAt = Math.max(when + crossfade, when + loopDuration - crossfade);
     let meanderAt = when + crossfade + randomBetween(...ambienceTiming.meanderSeconds);
@@ -226,7 +247,8 @@ export class AmbienceEngine {
         );
         const eventDuration = Math.max(0.1, eventEnd - eventStart);
         source.buffer = buffered.buffer;
-        source.connect(gain).connect(this.compressor);
+        source.connect(gain);
+        this.connectStem(gain, buffered.stem.role, this.compressor);
         gain.gain.setValueAtTime(0, now);
         gain.gain.linearRampToValueAtTime(buffered.stem.default_gain, now + 0.3);
         gain.gain.setValueAtTime(
@@ -267,6 +289,29 @@ export class AmbienceEngine {
         this.sources.delete(source);
       }
     }, milliseconds + 40);
+  }
+
+  private connectStem(source: AudioNode, role: AmbienceStem["role"], destination: AudioNode) {
+    const context = this.context;
+    const settings = normalizeAmbienceFilter(this.profile?.audio_theme?.[role]);
+    if (!context || !settings) {
+      source.connect(destination);
+      return;
+    }
+    const highpass = context.createBiquadFilter();
+    highpass.type = "highpass";
+    highpass.frequency.value = settings.highpass_hz;
+    highpass.Q.value = 0.7;
+    const peak = context.createBiquadFilter();
+    peak.type = "peaking";
+    peak.frequency.value = settings.peak_hz;
+    peak.gain.value = settings.peak_gain_db;
+    peak.Q.value = settings.peak_q;
+    const lowpass = context.createBiquadFilter();
+    lowpass.type = "lowpass";
+    lowpass.frequency.value = settings.lowpass_hz;
+    lowpass.Q.value = 0.7;
+    source.connect(highpass).connect(peak).connect(lowpass).connect(destination);
   }
 
   destroy() {

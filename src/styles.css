@@ -62,6 +62,11 @@
 
 :root {
   --radius: 0.9rem;
+  --motion-fast: 160ms;
+  --motion-standard: 280ms;
+  --motion-slow: 520ms;
+  --motion-ambience: 700ms;
+  --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
 
   /* brand rails */
   --bg-cream: oklch(0.938 0.032 84.5);
@@ -480,7 +485,67 @@
 }
 
 @utility animate-fade-in {
-  animation: meta-fade-in 320ms ease-out both;
+  animation: meta-fade-in var(--motion-standard) var(--motion-ease) both;
+}
+
+@keyframes site-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.997);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.room-scene-enter {
+  animation: site-enter var(--motion-slow) var(--motion-ease) both;
+}
+
+.smooth-reveal {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transform: translateY(-5px);
+  transition:
+    grid-template-rows var(--motion-standard) var(--motion-ease),
+    opacity var(--motion-fast) ease,
+    transform var(--motion-standard) var(--motion-ease),
+    margin var(--motion-standard) var(--motion-ease);
+}
+.smooth-reveal[data-open="true"] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transform: none;
+}
+.smooth-reveal-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ambience-control-details {
+  max-width: 0;
+  padding-right: 0;
+  opacity: 0;
+  transform: translateX(-5px);
+  transition:
+    max-width var(--motion-standard) var(--motion-ease),
+    padding var(--motion-standard) var(--motion-ease),
+    opacity var(--motion-fast) ease,
+    transform var(--motion-standard) var(--motion-ease);
+}
+.ambience-control-shell {
+  transition:
+    max-width var(--motion-standard) var(--motion-ease),
+    background-color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease;
+}
+.ambience-control-details[data-open="true"] {
+  max-width: 12.75rem;
+  padding-right: 0.5rem;
+  opacity: 1;
+  transform: none;
 }
 
 /* Premium scrollbar styling */
@@ -512,7 +577,7 @@
 /* Full-room visual response for the functional ambience engine. */
 .ambience-backdrop {
   opacity: 0;
-  transition: opacity 700ms ease;
+  transition: opacity var(--motion-ambience) var(--motion-ease);
 }
 .ambience-backdrop[data-active="true"] {
   opacity: var(--ambience-strength);
@@ -532,6 +597,13 @@
   filter: blur(34px) saturate(1.18);
   mix-blend-mode: screen;
   animation: ambience-haze-drift 18s ease-in-out infinite alternate;
+}
+.ambience-overlay {
+  opacity: var(--ambience-overlay-opacity);
+  mix-blend-mode: var(--ambience-overlay-blend);
+  filter: saturate(0.9) contrast(1.08);
+  transform: scale(1.025);
+  transition: opacity var(--motion-ambience) var(--motion-ease);
 }
 .ambience-pattern {
   opacity: 0.32;
@@ -624,9 +696,21 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 75ms;
+    --motion-standard: 75ms;
+    --motion-slow: 75ms;
+    --motion-ambience: 100ms;
+  }
+  .room-scene-enter,
   .ambience-haze,
   .ambience-pattern,
   .ambience-event {
     animation: none !important;
+  }
+  .smooth-reveal,
+  .ambience-control-shell,
+  .ambience-control-details {
+    transform: none !important;
   }
 }

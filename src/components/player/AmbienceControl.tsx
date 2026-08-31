@@ -52,12 +52,12 @@ export function AmbienceControl({
   return (
     <div
       ref={rootRef}
-      className={`flex min-h-11 shrink-0 items-center rounded-full border transition-[width,background-color] motion-reduce:transition-none ${
+      className={`ambience-control-shell flex min-h-11 shrink-0 items-center overflow-hidden rounded-full border transition-[background-color,border-color] motion-reduce:transition-none ${
         open
           ? compact
-            ? "w-[min(15rem,72vw)] border-teal-deep/80 bg-teal-deep/25 px-2"
-            : "w-60 border-teal-deep/80 bg-teal-deep/25 px-2"
-          : "w-auto border-teal-deep/70 bg-teal-deep/20"
+            ? "max-w-[min(15rem,72vw)] border-teal-deep/80 bg-teal-deep/25"
+            : "max-w-60 border-teal-deep/80 bg-teal-deep/25"
+          : "max-w-28 border-teal-deep/70 bg-teal-deep/20"
       }`}
     >
       <button
@@ -76,49 +76,50 @@ export function AmbienceControl({
           />
         ) : null}
       </button>
-      {open ? (
-        <>
-          <Slider
-            value={[level]}
-            max={100}
-            step={1}
-            aria-label={`Ambience level, ${level} percent`}
-            onValueChange={(value) => onLevelChange(value[0] ?? 0)}
-            className="min-w-16 flex-1"
-          />
-          <span className="w-7 text-right text-[9px] tabular-nums text-cream/55">{level}</span>
-          {onSoloToggle ? (
-            <button
-              type="button"
-              onClick={onSoloToggle}
-              disabled={musicPlaying}
-              aria-pressed={soloPlaying}
-              aria-label={soloPlaying ? "Pause ambience test" : "Play ambience without music"}
-              title={
-                musicPlaying ? "Pause music to use solo ambience testing" : "Test ambience only"
-              }
-              className="flex size-9 shrink-0 items-center justify-center rounded-full border border-cream/15 text-cream/70 outline-none hover:bg-cream/10 hover:text-cream focus-visible:ring-2 focus-visible:ring-ember disabled:cursor-not-allowed disabled:opacity-35"
-            >
-              {soloPlaying ? (
-                <Pause className="size-3.5" aria-hidden />
-              ) : (
-                <Play className="size-3.5" aria-hidden />
-              )}
-            </button>
-          ) : null}
+      <div
+        data-open={open ? "true" : "false"}
+        aria-hidden={!open}
+        inert={!open}
+        className="ambience-control-details flex min-w-0 items-center gap-1.5 overflow-hidden"
+      >
+        <Slider
+          value={[level]}
+          max={100}
+          step={1}
+          aria-label={`Ambience level, ${level} percent`}
+          onValueChange={(value) => onLevelChange(value[0] ?? 0)}
+          className="min-w-16 flex-1"
+        />
+        <span className="w-7 text-right text-[9px] tabular-nums text-cream/55">{level}</span>
+        {onSoloToggle ? (
           <button
             type="button"
-            onClick={() => {
-              setOpen(false);
-              window.requestAnimationFrame(() => triggerRef.current?.focus());
-            }}
-            aria-label="Close Ambience"
-            className="flex size-9 shrink-0 items-center justify-center rounded-full text-cream/55 outline-none hover:text-cream focus-visible:ring-2 focus-visible:ring-ember"
+            onClick={onSoloToggle}
+            disabled={musicPlaying}
+            aria-pressed={soloPlaying}
+            aria-label={soloPlaying ? "Pause ambience test" : "Play ambience without music"}
+            title={musicPlaying ? "Pause music to use solo ambience testing" : "Test ambience only"}
+            className="flex size-9 shrink-0 items-center justify-center rounded-full border border-cream/15 text-cream/70 outline-none hover:bg-cream/10 hover:text-cream focus-visible:ring-2 focus-visible:ring-ember disabled:cursor-not-allowed disabled:opacity-35"
           >
-            <X className="size-3.5" aria-hidden />
+            {soloPlaying ? (
+              <Pause className="size-3.5" aria-hidden />
+            ) : (
+              <Play className="size-3.5" aria-hidden />
+            )}
           </button>
-        </>
-      ) : null}
+        ) : null}
+        <button
+          type="button"
+          onClick={() => {
+            setOpen(false);
+            window.requestAnimationFrame(() => triggerRef.current?.focus());
+          }}
+          aria-label="Close Ambience"
+          className="flex size-9 shrink-0 items-center justify-center rounded-full text-cream/55 outline-none hover:text-cream focus-visible:ring-2 focus-visible:ring-ember"
+        >
+          <X className="size-3.5" aria-hidden />
+        </button>
+      </div>
     </div>
   );
 }

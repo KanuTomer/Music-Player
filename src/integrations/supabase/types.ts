@@ -78,6 +78,7 @@ export type Database = {
       };
       ambience_profiles: {
         Row: {
+          audio_theme: Json;
           created_at: string;
           enabled: boolean;
           fade_in_ms: number;
@@ -88,6 +89,7 @@ export type Database = {
           visual_theme: Json;
         };
         Insert: {
+          audio_theme?: Json;
           created_at?: string;
           enabled?: boolean;
           fade_in_ms?: number;
@@ -98,6 +100,7 @@ export type Database = {
           visual_theme?: Json;
         };
         Update: {
+          audio_theme?: Json;
           created_at?: string;
           enabled?: boolean;
           fade_in_ms?: number;

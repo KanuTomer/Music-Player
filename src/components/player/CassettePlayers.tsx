@@ -17,6 +17,10 @@ import { CassetteBody } from "@/components/player/CassetteBody";
 import { PlayerDetailsSheet } from "@/components/player/PlayerDetailsSheet";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { SmoothReveal } from "@/components/ui/smooth-reveal";
+
+const ambienceSoloPreviewEnabled =
+  import.meta.env.DEV || import.meta.env["VITE_ENABLE_AMBIENCE_SOLO_PREVIEW"] === "true";
 
 function Cover({
   coverId,
@@ -228,7 +232,7 @@ export function FullCassettePlayer() {
               status={player.ambienceStatus}
               soloPlaying={player.ambienceSoloPlaying}
               musicPlaying={player.isPlaying}
-              onSoloToggle={player.toggleAmbienceSolo}
+              onSoloToggle={ambienceSoloPreviewEnabled ? player.toggleAmbienceSolo : undefined}
             />
             <Button
               type="button"
@@ -243,8 +247,8 @@ export function FullCassettePlayer() {
           </div>
         </div>
 
-        {showVolume ? (
-          <div className="mt-2 flex items-center gap-2 border-t border-cream/10 pt-2">
+        <SmoothReveal open={showVolume} className="mt-2">
+          <div className="flex items-center gap-2 border-t border-cream/10 pt-2">
             <Volume1 className="size-3.5 shrink-0 text-cream/60" aria-hidden />
             <span className="hidden w-14 shrink-0 text-[10px] text-cream/60 sm:inline">Music</span>
             <Slider
@@ -255,7 +259,7 @@ export function FullCassettePlayer() {
               onValueChange={(value) => player.setMusicVolume((value[0] ?? 0) / 100)}
             />
           </div>
-        ) : null}
+        </SmoothReveal>
       </div>
       <PlayerDetailsSheet open={moreOpen} onOpenChange={setMoreOpen} />
     </>
@@ -322,7 +326,7 @@ export function CompactCassettePlayer({ className = "" }: { className?: string }
                 status={player.ambienceStatus}
                 soloPlaying={player.ambienceSoloPlaying}
                 musicPlaying={player.isPlaying}
-                onSoloToggle={player.toggleAmbienceSolo}
+                onSoloToggle={ambienceSoloPreviewEnabled ? player.toggleAmbienceSolo : undefined}
               />
             </div>
             <Button
@@ -353,7 +357,7 @@ export function CompactCassettePlayer({ className = "" }: { className?: string }
               status={player.ambienceStatus}
               soloPlaying={player.ambienceSoloPlaying}
               musicPlaying={player.isPlaying}
-              onSoloToggle={player.toggleAmbienceSolo}
+              onSoloToggle={ambienceSoloPreviewEnabled ? player.toggleAmbienceSolo : undefined}
             />
           </div>
         </div>
