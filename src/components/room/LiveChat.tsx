@@ -54,14 +54,15 @@ export function LiveChat({ roomKey, roomName }: LiveChatProps) {
   });
 
   // Custom setter to keep sessionStorage in sync
-  const setMessages = (
-    update: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])
-  ) => {
+  const setMessages = (update: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => {
     setMessagesState((prev) => {
       const next = typeof update === "function" ? update(prev) : update;
       try {
         // Store last 100 messages to keep storage light
-        sessionStorage.setItem("sainik_dhaba_local_chat_messages", JSON.stringify(next.slice(-100)));
+        sessionStorage.setItem(
+          "sainik_dhaba_local_chat_messages",
+          JSON.stringify(next.slice(-100)),
+        );
       } catch (e) {
         console.error("Error writing to sessionStorage:", e);
       }
@@ -107,7 +108,7 @@ export function LiveChat({ roomKey, roomName }: LiveChatProps) {
               }
             });
             return merged.sort(
-              (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+              (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
             );
           });
         }
@@ -139,9 +140,27 @@ export function LiveChat({ roomKey, roomName }: LiveChatProps) {
           const newMsg = payload.new as ChatMessage;
           setMessages((prev) => {
             if (prev.some((m) => m.id === newMsg.id)) return prev;
+            // Also deduplicate if we recently optimistically added the exact same message
+            const isRecentOptimistic = prev.some(
+              (m) =>
+                m.session_display_name === newMsg.session_display_name &&
+                m.text === newMsg.text &&
+                Math.abs(new Date(m.created_at).getTime() - new Date(newMsg.created_at).getTime()) <
+                  15000,
+            );
+            if (isRecentOptimistic) {
+              return prev.map((m) =>
+                m.session_display_name === newMsg.session_display_name &&
+                m.text === newMsg.text &&
+                Math.abs(new Date(m.created_at).getTime() - new Date(newMsg.created_at).getTime()) <
+                  15000
+                  ? newMsg
+                  : m,
+              );
+            }
             return [...prev, newMsg];
           });
-        }
+        },
       )
       .on("broadcast", { event: "chat_message" }, ({ payload }) => {
         const newMsg = payload as ChatMessage;
@@ -182,8 +201,23 @@ export function LiveChat({ roomKey, roomName }: LiveChatProps) {
 
     setTypedMessage("");
 
+    // 1. Optimistically add to local state immediately (0ms lag for sender)
+    setMessages((prev) => {
+      if (prev.some((m) => m.id === tempId)) return prev;
+      return [...prev, tempMsg];
+    });
+
+    // 2. Broadcast immediately to other connected clients via WebSockets
+    if (channelRef.current) {
+      void channelRef.current.send({
+        type: "broadcast",
+        event: "chat_message",
+        payload: tempMsg,
+      });
+    }
+
+    // 3. Persist to database in background
     try {
-      // 1. Try backend server-side DB save (which requires SUPABASE_SECRET_KEY)
       await sendChatMessage({
         data: {
           roomKey,
@@ -192,22 +226,7 @@ export function LiveChat({ roomKey, roomName }: LiveChatProps) {
         },
       });
     } catch (err) {
-      console.warn("DB save failed (usually due to missing server SUPABASE_SECRET_KEY in local dev), broadcasting directly instead:", err);
-
-      // 2. Broadcast directly via Realtime so other active listeners see it
-      if (channelRef.current) {
-        void channelRef.current.send({
-          type: "broadcast",
-          event: "chat_message",
-          payload: tempMsg,
-        });
-      }
-
-      // 3. Add to local state so the sender sees it immediately
-      setMessages((prev) => {
-        if (prev.some((m) => m.id === tempId)) return prev;
-        return [...prev, tempMsg];
-      });
+      console.warn("DB save note (using realtime broadcast):", err);
     }
   };
 
@@ -238,7 +257,7 @@ export function LiveChat({ roomKey, roomName }: LiveChatProps) {
   return (
     <>
       {/* Floating Chat Toggle Button */}
-      <div className="pointer-events-auto absolute left-4 bottom-[calc(1.2rem+env(safe-area-inset-bottom))] z-30 flex items-center sm:left-6 sm:bottom-6">
+      <div className="pointer-events-auto absolute left-3.5 bottom-[calc(10.5rem+env(safe-area-inset-bottom))] z-30 flex items-center sm:left-6 sm:bottom-6">
         <button
           type="button"
           onClick={() => setIsOpen(true)}
@@ -250,9 +269,7 @@ export function LiveChat({ roomKey, roomName }: LiveChatProps) {
             <span className="relative inline-flex rounded-full size-2 bg-amber-500"></span>
           </span>
           <MessageCircle className="size-4 shrink-0 text-cream/80 group-hover:text-amber" />
-          <span className="font-vintage-deva text-[10px] tracking-wider uppercase">
-            Live Chat
-          </span>
+          <span className="font-vintage-deva text-[10px] tracking-wider uppercase">Live Chat</span>
         </button>
       </div>
 
@@ -266,9 +283,7 @@ export function LiveChat({ roomKey, roomName }: LiveChatProps) {
           />
 
           {/* Modal Container */}
-          <div
-            className="relative z-10 flex h-[600px] max-h-[85vh] w-full max-w-[440px] flex-col bg-[#200D02] border border-[#3E1E09] rounded-[20px] shadow-lift overflow-hidden animate-in fade-in zoom-in-95 duration-200"
-          >
+          <div className="relative z-10 flex h-[580px] max-h-[82dvh] w-[calc(100%-2rem)] max-w-[440px] flex-col bg-[#200D02] border border-[#3E1E09] rounded-[20px] shadow-lift overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Header */}
             <div className="flex h-14 shrink-0 items-center justify-between border-b border-cream/10 px-5 bg-[#200D02]">
               <div className="flex items-center gap-2">
@@ -296,8 +311,10 @@ export function LiveChat({ roomKey, roomName }: LiveChatProps) {
               <div className="bg-[#422006]/60 border border-[#3E1E09] text-cream/90 rounded-xl p-3.5 text-xs leading-relaxed flex items-start gap-2.5 shadow-sm">
                 <span className="text-sm shrink-0">📌</span>
                 <div>
-                  <span className="font-bold text-amber-400">{roomName} Admin 👑 :</span>{" "}
-                  Hello all, I am actively monitoring this chat. If you encounter any issues or bugs, please report them here for prompt resolution. Feature requests and new additions are also welcome. Thank you for support.
+                  <span className="font-bold text-amber-400">{roomName} Admin 👑 :</span> Hello all,
+                  I am actively monitoring this chat. If you encounter any issues or bugs, please
+                  report them here for prompt resolution. Feature requests and new additions are
+                  also welcome. Thank you for support.
                 </div>
               </div>
 
@@ -309,7 +326,9 @@ export function LiveChat({ roomKey, roomName }: LiveChatProps) {
               ) : messages.length === 0 ? (
                 <div className="flex h-32 flex-col items-center justify-center text-center px-6">
                   <p className="text-xs font-semibold text-cream/40">Yaha abhi shanti hai...</p>
-                  <p className="text-[10px] text-cream/30 mt-1">Be the first to share a memory or say hello!</p>
+                  <p className="text-[10px] text-cream/30 mt-1">
+                    Be the first to share a memory or say hello!
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-3.5">
@@ -326,7 +345,9 @@ export function LiveChat({ roomKey, roomName }: LiveChatProps) {
                       <div key={msg.id} className="flex flex-col">
                         <div className="bg-[#2D1405] border border-[#3E1E09] rounded-xl px-3.5 py-2.5 w-full shadow-sm">
                           <div className="flex items-center justify-between gap-1.5 mb-1.5">
-                            <span className={`text-[12px] font-bold ${getNameColor(msg.session_display_name)}`}>
+                            <span
+                              className={`text-[12px] font-bold ${getNameColor(msg.session_display_name)}`}
+                            >
                               {msg.session_display_name}
                             </span>
                             {msg.is_ai_host && (
@@ -373,7 +394,9 @@ export function LiveChat({ roomKey, roomName }: LiveChatProps) {
               ) : (
                 <div className="space-y-3">
                   <div className="text-xs">
-                    <span className="font-semibold text-amber-400 block">One last step — what's your name?</span>
+                    <span className="font-semibold text-amber-400 block">
+                      One last step — what's your name?
+                    </span>
                     <span className="text-[11px] text-cream/60 mt-0.5 block italic truncate max-w-full">
                       We'll send this as soon as you enter it: "{typedMessage}"
                     </span>

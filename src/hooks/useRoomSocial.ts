@@ -41,6 +41,8 @@ export function useRoomSocial(roomKey: string | null) {
 
   useEffect(() => {
     if (!roomKey) return;
+    setListeners(1);
+
     const channel = supabase.channel(`room:${roomKey}`, {
       config: { presence: { key: crypto.randomUUID() } },
     });
@@ -48,7 +50,8 @@ export function useRoomSocial(roomKey: string | null) {
 
     channel
       .on("presence", { event: "sync" }, () => {
-        setListeners(Math.max(1, Object.keys(channel.presenceState()).length));
+        const state = channel.presenceState();
+        setListeners(Math.max(1, Object.keys(state).length));
       })
       .on("broadcast", { event: "reaction" }, ({ payload }) => {
         push((payload as { emoji: string }).emoji);
