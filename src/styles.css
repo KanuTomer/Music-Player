@@ -508,3 +508,125 @@
   scrollbar-width: thin;
   scrollbar-color: rgba(220, 199, 170, 0.18) rgba(26, 26, 26, 0.4);
 }
+
+/* Full-room visual response for the functional ambience engine. */
+.ambience-backdrop {
+  opacity: 0;
+  transition: opacity 700ms ease;
+}
+.ambience-backdrop[data-active="true"] {
+  opacity: var(--ambience-strength);
+}
+.ambience-haze {
+  background:
+    radial-gradient(
+      circle at 22% 76%,
+      color-mix(in srgb, var(--ambience-accent) 64%, transparent),
+      transparent 34%
+    ),
+    radial-gradient(
+      circle at 78% 18%,
+      color-mix(in srgb, var(--ambience-haze) 72%, transparent),
+      transparent 42%
+    );
+  filter: blur(34px) saturate(1.18);
+  mix-blend-mode: screen;
+  animation: ambience-haze-drift 18s ease-in-out infinite alternate;
+}
+.ambience-pattern {
+  opacity: 0.32;
+  mix-blend-mode: soft-light;
+  background-image: radial-gradient(circle, var(--ambience-accent) 0 1px, transparent 1.5px);
+  background-size: 34px 34px;
+  animation: ambience-pattern-drift 24s linear infinite;
+}
+.ambience-backdrop[data-pattern="streaks"] .ambience-pattern {
+  background-image: repeating-linear-gradient(
+    104deg,
+    transparent 0 34px,
+    var(--ambience-accent) 35px,
+    transparent 37px
+  );
+}
+.ambience-backdrop[data-pattern="ripples"] .ambience-pattern {
+  background-image: repeating-radial-gradient(
+    ellipse at 50% 72%,
+    transparent 0 24px,
+    var(--ambience-accent) 25px,
+    transparent 28px
+  );
+}
+.ambience-backdrop[data-pattern="scanlines"] .ambience-pattern {
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent 0 4px,
+    var(--ambience-accent) 5px,
+    transparent 6px
+  );
+}
+.ambience-backdrop[data-pattern="grid"] .ambience-pattern {
+  background-image:
+    linear-gradient(var(--ambience-accent) 1px, transparent 1px),
+    linear-gradient(90deg, var(--ambience-accent) 1px, transparent 1px);
+  background-size: 52px 52px;
+}
+.ambience-backdrop[data-pattern="shimmer"] .ambience-pattern {
+  background-image: linear-gradient(
+    112deg,
+    transparent 20%,
+    var(--ambience-accent) 48%,
+    transparent 72%
+  );
+  background-size: 180% 100%;
+}
+.ambience-grain {
+  opacity: 0.18;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
+}
+.ambience-event {
+  border: 1px solid color-mix(in srgb, var(--ambience-accent) 70%, transparent);
+  background: radial-gradient(
+    circle at center,
+    transparent 20%,
+    color-mix(in srgb, var(--ambience-accent) 24%, transparent) 52%,
+    transparent 76%
+  );
+  animation: ambience-event-pulse 1800ms ease-out both;
+}
+@keyframes ambience-haze-drift {
+  from {
+    transform: translate3d(-2%, 1%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(3%, -2%, 0) scale(1.08);
+  }
+}
+@keyframes ambience-pattern-drift {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(34px, -34px, 0);
+  }
+}
+@keyframes ambience-event-pulse {
+  0% {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  22% {
+    opacity: 0.82;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.05);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ambience-haze,
+  .ambience-pattern,
+  .ambience-event {
+    animation: none !important;
+  }
+}

@@ -17,6 +17,7 @@ import { useJagahNavigation } from "@/hooks/useJagahNavigation";
 import { ThemeAbout } from "@/components/ThemeAbout";
 import { ThemeFAQ } from "@/components/ThemeFAQ";
 import { Footer } from "@/components/Footer";
+import { AmbienceBackdrop } from "@/components/room/AmbienceBackdrop";
 
 export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Scene[] }) {
   const { scene, oneliners } = room;
@@ -129,6 +130,12 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
         {(scene.slug === "doordarshan-shaam" || scene.slug === "papa-ke-gaane") && (
           <div className="scanlines pointer-events-none absolute inset-0 opacity-20" aria-hidden />
         )}
+        <AmbienceBackdrop
+          active={player.ambienceActive}
+          level={player.ambienceLevel}
+          eventPulse={player.ambienceEventPulse}
+          profile={room.ambience}
+        />
 
         {/* top row: live pill · Explorer · Home and share */}
         <div className="absolute inset-x-0 top-0 z-50 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 p-2 sm:gap-3 sm:p-3">

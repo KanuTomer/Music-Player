@@ -11,6 +11,8 @@ import { currentDaypart, type Daypart } from "./dayparts";
 import { normalizeAmbienceLevel } from "./player-display";
 import { chooseStart, circularIndex, snapshotQueue, sourceFailureAction } from "./queue";
 import { reportPlaybackSourceFailure, type QueueItem, type RoomPayload } from "./rooms.functions";
+import { useAmbienceEngine } from "@/hooks/useAmbienceEngine";
+import type { AmbienceStatus } from "./ambience";
 
 type YTPlayer = {
   loadVideoById: (id: string) => void;
@@ -60,6 +62,9 @@ type PlayerState = {
   nowPlaying: NowPlaying;
   musicVolume: number;
   ambienceLevel: number;
+  ambienceStatus: AmbienceStatus;
+  ambienceActive: boolean;
+  ambienceEventPulse: number;
   openRoom: (room: RoomPayload) => void;
   toggle: () => void;
   next: () => void;
@@ -130,6 +135,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [ambienceLevel, setAmbienceLevelState] = useState(50);
   const [nowPlaying, setNowPlaying] = useState<NowPlaying>(emptyNowPlaying);
   const track = playlist[index]?.track ?? null;
+  const ambience = useAmbienceEngine(room, isPlaying && !needsGate, ambienceLevel);
+  const resumeAmbienceFromGesture = ambience.resumeFromGesture;
 
   const setIndex = useCallback((next: number) => {
     indexRef.current = next;
@@ -333,20 +340,22 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     [room?.scene.slug, setIndex],
   );
   const start = useCallback(() => {
+    void resumeAmbienceFromGesture();
     intendPlayRef.current = true;
     setNeedsGate(false);
     setIsPlaying(true);
     if (readyRef.current) playerRef.current?.playVideo();
-  }, []);
+  }, [resumeAmbienceFromGesture]);
   const toggle = useCallback(() => {
     if (needsGate) return start();
+    if (!isPlaying) void resumeAmbienceFromGesture();
     intendPlayRef.current = !isPlaying;
     if (readyRef.current) {
       if (isPlaying) playerRef.current?.pauseVideo();
       else playerRef.current?.playVideo();
     }
     setIsPlaying(!isPlaying);
-  }, [isPlaying, needsGate, start]);
+  }, [isPlaying, needsGate, resumeAmbienceFromGesture, start]);
   const next = useCallback(() => advance(1), [advance]);
   const previous = useCallback(() => advance(-1), [advance]);
   const seek = useCallback((seconds: number) => {
@@ -405,6 +414,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     nowPlaying,
     musicVolume,
     ambienceLevel,
+    ambienceStatus: ambience.status,
+    ambienceActive: ambience.active,
+    ambienceEventPulse: ambience.eventPulse,
     openRoom,
     toggle,
     next,

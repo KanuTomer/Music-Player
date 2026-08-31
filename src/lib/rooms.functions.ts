@@ -55,11 +55,43 @@ export type OneLiner = {
   daypart_tag: string;
 };
 
+export type AmbienceSource = {
+  source_url: string;
+  source_title: string;
+  source_order: number;
+};
+
+export type AmbienceStem = {
+  id: string;
+  name: string;
+  role: "base" | "texture" | "event";
+  url: string;
+  default_gain: number;
+  min_gain: number;
+  max_gain: number;
+  crossfade_ms: number;
+  loop_start_seconds: number;
+  loop_end_seconds: number | null;
+  event_min_seconds: number | null;
+  event_max_seconds: number | null;
+  sources: AmbienceSource[];
+};
+
+export type AmbienceProfile = {
+  id: string;
+  max_master_gain: number;
+  fade_out_ms: number;
+  fade_in_ms: number;
+  visual_theme: { accent?: string; haze?: string; pattern?: string };
+  stems: AmbienceStem[];
+};
+
 export type RoomPayload = {
   scene: Scene;
   curatedSet: CuratedSet;
   queue: QueueItem[];
   oneliners: OneLiner[];
+  ambience: AmbienceProfile | null;
 };
 
 export const listScenes = createServerFn({ method: "GET" }).handler(async () => {

@@ -221,7 +221,22 @@ export function FullCassettePlayer() {
             >
               <Volume2 className="size-3.5 sm:size-4" aria-hidden />
             </Button>
-            <AmbienceControl level={player.ambienceLevel} onLevelChange={player.setAmbienceLevel} />
+            <AmbienceControl
+              level={player.ambienceLevel}
+              onLevelChange={player.setAmbienceLevel}
+              active={player.ambienceActive}
+              status={player.ambienceStatus}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => setMoreOpen(true)}
+              aria-label="More player details"
+              className="size-10 shrink-0 rounded-full border border-cream/20 text-cream/70 hover:bg-cream/10 hover:text-cream sm:size-11"
+            >
+              <MoreHorizontal className="size-4" aria-hidden />
+            </Button>
           </div>
         </div>
 
@@ -300,9 +315,11 @@ export function CompactCassettePlayer({ className = "" }: { className?: string }
                 compact
                 level={player.ambienceLevel}
                 onLevelChange={player.setAmbienceLevel}
+                active={player.ambienceActive}
+                status={player.ambienceStatus}
               />
             </div>
-            {/* <Button
+            <Button
               type="button"
               variant="ghost"
               size="icon"
@@ -311,7 +328,7 @@ export function CompactCassettePlayer({ className = "" }: { className?: string }
               className="size-11 shrink-0 rounded-full border border-cream/20 text-cream/70 hover:bg-cream/10 hover:text-cream"
             >
               <MoreHorizontal className="size-4" aria-hidden />
-            </Button> */}
+            </Button>
           </div>
 
           <div className="col-span-3 flex items-center justify-between gap-2 border-t border-cream/10 pt-2 sm:hidden">
@@ -326,6 +343,8 @@ export function CompactCassettePlayer({ className = "" }: { className?: string }
               compact
               level={player.ambienceLevel}
               onLevelChange={player.setAmbienceLevel}
+              active={player.ambienceActive}
+              status={player.ambienceStatus}
             />
           </div>
         </div>

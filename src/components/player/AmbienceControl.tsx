@@ -1,16 +1,24 @@
 import { X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Slider } from "@/components/ui/slider";
-
-export const ambiencePreviewEnabled = import.meta.env["VITE_ENABLE_AMBIENCE_PREVIEW"] === "true";
+import { ambienceEngineEnabled } from "@/hooks/useAmbienceEngine";
+import type { AmbienceStatus } from "@/lib/ambience";
 
 type AmbienceControlProps = {
   level: number;
   onLevelChange: (level: number) => void;
   compact?: boolean;
+  active?: boolean;
+  status?: AmbienceStatus;
 };
 
-export function AmbienceControl({ level, onLevelChange, compact = false }: AmbienceControlProps) {
+export function AmbienceControl({
+  level,
+  onLevelChange,
+  compact = false,
+  active = false,
+  status = "idle",
+}: AmbienceControlProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
@@ -33,7 +41,7 @@ export function AmbienceControl({ level, onLevelChange, compact = false }: Ambie
     };
   }, [open]);
 
-  if (!ambiencePreviewEnabled) return null;
+  if (!ambienceEngineEnabled) return null;
 
   return (
     <div
@@ -51,12 +59,15 @@ export function AmbienceControl({ level, onLevelChange, compact = false }: Ambie
         type="button"
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
-        aria-label={open ? "Collapse Ambience preview" : "Expand Ambience preview"}
+        aria-label={open ? "Collapse Ambience" : "Expand Ambience"}
         className="flex min-h-11 shrink-0 items-center rounded-full px-3 text-[11px] font-semibold text-cream outline-none focus-visible:ring-2 focus-visible:ring-ember"
       >
         Ambience
         {!open ? (
-          <span className="ml-1.5 text-[8px] tracking-wide text-cream/40 uppercase">Preview</span>
+          <span
+            className={`ml-1.5 size-1.5 rounded-full ${active ? "animate-bulb bg-emerald-400" : status === "unavailable" ? "bg-red-400" : "bg-cream/30"}`}
+            aria-hidden
+          />
         ) : null}
       </button>
       {open ? (
@@ -65,7 +76,7 @@ export function AmbienceControl({ level, onLevelChange, compact = false }: Ambie
             value={[level]}
             max={100}
             step={1}
-            aria-label={`Ambience preview level, ${level} percent`}
+            aria-label={`Ambience level, ${level} percent`}
             onValueChange={(value) => onLevelChange(value[0] ?? 0)}
             className="min-w-16 flex-1"
           />
@@ -76,7 +87,7 @@ export function AmbienceControl({ level, onLevelChange, compact = false }: Ambie
               setOpen(false);
               window.requestAnimationFrame(() => triggerRef.current?.focus());
             }}
-            aria-label="Close Ambience preview"
+            aria-label="Close Ambience"
             className="flex size-9 shrink-0 items-center justify-center rounded-full text-cream/55 outline-none hover:text-cream focus-visible:ring-2 focus-visible:ring-ember"
           >
             <X className="size-3.5" aria-hidden />
