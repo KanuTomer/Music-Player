@@ -286,7 +286,7 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
             </div>
           </div>
         )}
-        <LiveChat roomKey="global-chat" roomName="Sainik Dhaba" />
+        <LiveChat roomKey="global-chat" roomName={scene.title_en} />
       </div>
 
       {/* Unique About section */}
