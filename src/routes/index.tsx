@@ -239,11 +239,13 @@ function Home() {
         kind="suggest"
         open={dialog === "suggest"}
         onOpenChange={(open) => setDialog(open ? "suggest" : null)}
+        slug={activeSlug}
       />
       <InfoPlaceholderDialog
         kind="support"
         open={dialog === "support"}
         onOpenChange={(open) => setDialog(open ? "support" : null)}
+        slug={activeSlug}
       />
     </div>
   );

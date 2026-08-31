@@ -85,3 +85,21 @@ export const getRoom = createServerFn({ method: "GET" })
   .handler(async ({ data }): Promise<RoomPayload | null> => {
     return fetchRoom(data.slug);
   });
+
+export const sendChatMessage = createServerFn({ method: "POST" })
+  .validator((data: { roomKey: string; displayName: string; text: string }) => {
+    const roomKey = String(data.roomKey);
+    const displayName = String(data.displayName).trim();
+    const text = String(data.text).trim();
+
+    if (!roomKey) throw new Error("Room key is required");
+    if (!displayName || displayName.length > 50) throw new Error("Invalid display name");
+    if (!text || text.length > 300) throw new Error("Message text must be between 1 and 300 characters");
+
+    return { roomKey, displayName, text };
+  })
+  .handler(async ({ data }) => {
+    const { insertChatMessage } = await import("./rooms.server");
+    return insertChatMessage(data.roomKey, data.displayName, data.text);
+  });
+

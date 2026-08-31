@@ -17,6 +17,7 @@ import { useJagahNavigation } from "@/hooks/useJagahNavigation";
 import { ThemeAbout } from "@/components/ThemeAbout";
 import { ThemeFAQ } from "@/components/ThemeFAQ";
 import { Footer } from "@/components/Footer";
+import { LiveChat } from "@/components/room/LiveChat";
 
 export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Scene[] }) {
   const { scene, oneliners } = room;
@@ -278,6 +279,7 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
             </div>
           </div>
         )}
+        <LiveChat roomKey="global-chat" roomName="Sainik Dhaba" />
       </div>
 
       {/* Unique About section */}
@@ -302,11 +304,13 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
         kind="suggest"
         open={dialog === "suggest"}
         onOpenChange={(open) => setDialog(open ? "suggest" : null)}
+        slug={scene.slug}
       />
       <InfoPlaceholderDialog
         kind="support"
         open={dialog === "support"}
         onOpenChange={(open) => setDialog(open ? "support" : null)}
+        slug={scene.slug}
       />
     </div>
   );
