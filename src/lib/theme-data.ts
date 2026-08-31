@@ -1,9 +1,9 @@
 import newSalon from "@/assets/new_salon.webp";
 import newCorporateMajdoor from "@/assets/new_corporatemajdoor.webp";
-import newBus from "@/assets/new_bus.webp";
-import newChaiKiTapri from "@/assets/new_chaiimage.webp";
+import newBus from "@/assets/newdrivernew.webp";
+import newBartanTime from "@/assets/new_bartantime.webp";
 import newRajMistri from "@/assets/new_rajmistri.webp";
-import newSainikDhaba from "@/assets/sanik dhaba.webp";
+import newSainikDhaba from "@/assets/newsanik.webp";
 import newDoordarshan from "@/assets/new_doordarshan.webp";
 
 export type ThemeFAQItem = {
@@ -153,14 +153,13 @@ export const themeMap: Record<AllowedSlug, ThemeInfo> = {
   "bartan-time": {
     slug: "bartan-time",
     displayName: "Bartan Time",
-    logoSrc: newChaiKiTapri,
+    logoSrc: newBartanTime,
     about: {
       title: "Bartan Time",
       subtitle: "Steel ki khanak, running water, and the kitchen radio",
       paragraphs: [
         "Dinner is over, the sink is full, and the kitchen radio is still playing. Bartan Time turns the familiar rhythm of washing up into a listening room.",
         "Steel plates, running water, and songs between every scrub give this Jagah its everyday character.",
-        "This preview uses the existing chai-room imagery until the final Bartan Time asset package is delivered.",
       ],
     },
     faq: [
@@ -172,7 +171,7 @@ export const themeMap: Record<AllowedSlug, ThemeInfo> = {
       {
         question: "Is this the final room artwork?",
         answer:
-          "Not yet. The current image and footage are temporary placeholders that can be replaced without changing this route or its queue.",
+          "The background image has been updated to the final Bartan Time scene, while the background video preview is still being prepared.",
       },
       {
         question: "How many songs are in the queue?",

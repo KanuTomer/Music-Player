@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { Compass, Heart, Lightbulb, Play } from "lucide-react";
 import { getRoom, listScenes } from "@/lib/rooms.functions";
@@ -63,6 +63,17 @@ function Home() {
     activeSlug,
     closeExplorer: () => setExplorerOpen(false),
   });
+
+  useEffect(() => {
+    const timer = setInterval(
+      () => {
+        setDialog("support");
+      },
+      20 * 60 * 1000,
+    ); // Trigger support modal every 20 minutes
+
+    return () => clearInterval(timer);
+  }, []);
 
   if (!room) return <HomeError />;
   const { scene } = room;
@@ -129,6 +140,16 @@ function Home() {
                 <span className="hidden sm:inline">Jagah Explorer</span>
                 <span className="sm:hidden">Explore</span>
               </button>
+
+              {/* Support Us Button */}
+              <button
+                type="button"
+                onClick={() => setDialog("support")}
+                className="flex min-h-11 items-center gap-2 rounded-full bg-ember border border-cream/20 px-4 text-sm font-bold text-charcoal transition-colors hover:bg-ember/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream cursor-pointer"
+              >
+                Support Us
+              </button>
+
               <ISTClock
                 inherit
                 className="hidden rounded-full border border-cream/15 bg-charcoal/45 px-3 py-2.5 text-cream/60 backdrop-blur md:flex"

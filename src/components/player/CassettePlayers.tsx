@@ -152,7 +152,7 @@ export function FullCassettePlayer() {
   return (
     <>
       {/* Responsive player card: full width on mobile, capped on larger screens */}
-      <div className="pointer-events-auto w-full max-w-[min(96vw,36rem)] rounded-xl border border-charcoal-line/60 bg-charcoal/92 p-2.5 text-cream shadow-lift ring-1 ring-cream/5 backdrop-blur-md sm:p-3">
+      <div className="pointer-events-auto w-full max-w-[min(96vw,36rem)] rounded-xl border border-charcoal-line/60 bg-charcoal/40 p-2.5 text-cream shadow-lift ring-1 ring-cream/5 backdrop-blur-lg sm:p-3">
         {/* Track info row */}
         <div className="flex items-center gap-2.5 border-b border-cream/10 pb-2 sm:gap-3">
           <Cover coverId={display.coverId} title={display.title} compact />
@@ -258,7 +258,7 @@ export function CompactCassettePlayer({ className = "" }: { className?: string }
   return (
     <>
       <div
-        className={`paper border border-cream/10 bg-charcoal/96 text-cream shadow-lift backdrop-blur ${className}`}
+        className={`paper border border-cream/10 bg-charcoal/45 text-cream shadow-lift backdrop-blur-lg ${className}`}
       >
         <div className="mx-auto grid w-full max-w-5xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 px-3 py-2 sm:grid-cols-[auto_auto_minmax(8rem,1fr)_auto] sm:gap-3 sm:px-4">
           <CassetteBody
