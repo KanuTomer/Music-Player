@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { Pause, Play, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Slider } from "@/components/ui/slider";
 import { ambienceEngineEnabled } from "@/hooks/useAmbienceEngine";
@@ -10,6 +10,9 @@ type AmbienceControlProps = {
   compact?: boolean;
   active?: boolean;
   status?: AmbienceStatus;
+  soloPlaying?: boolean;
+  musicPlaying?: boolean;
+  onSoloToggle?: () => void;
 };
 
 export function AmbienceControl({
@@ -18,6 +21,9 @@ export function AmbienceControl({
   compact = false,
   active = false,
   status = "idle",
+  soloPlaying = false,
+  musicPlaying = false,
+  onSoloToggle,
 }: AmbienceControlProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -49,8 +55,8 @@ export function AmbienceControl({
       className={`flex min-h-11 shrink-0 items-center rounded-full border transition-[width,background-color] motion-reduce:transition-none ${
         open
           ? compact
-            ? "w-[min(13rem,60vw)] border-teal-deep/80 bg-teal-deep/25 px-2"
-            : "w-52 border-teal-deep/80 bg-teal-deep/25 px-2"
+            ? "w-[min(15rem,72vw)] border-teal-deep/80 bg-teal-deep/25 px-2"
+            : "w-60 border-teal-deep/80 bg-teal-deep/25 px-2"
           : "w-auto border-teal-deep/70 bg-teal-deep/20"
       }`}
     >
@@ -81,6 +87,25 @@ export function AmbienceControl({
             className="min-w-16 flex-1"
           />
           <span className="w-7 text-right text-[9px] tabular-nums text-cream/55">{level}</span>
+          {onSoloToggle ? (
+            <button
+              type="button"
+              onClick={onSoloToggle}
+              disabled={musicPlaying}
+              aria-pressed={soloPlaying}
+              aria-label={soloPlaying ? "Pause ambience test" : "Play ambience without music"}
+              title={
+                musicPlaying ? "Pause music to use solo ambience testing" : "Test ambience only"
+              }
+              className="flex size-9 shrink-0 items-center justify-center rounded-full border border-cream/15 text-cream/70 outline-none hover:bg-cream/10 hover:text-cream focus-visible:ring-2 focus-visible:ring-ember disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              {soloPlaying ? (
+                <Pause className="size-3.5" aria-hidden />
+              ) : (
+                <Play className="size-3.5" aria-hidden />
+              )}
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => {

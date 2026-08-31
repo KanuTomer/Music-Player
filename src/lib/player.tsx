@@ -64,6 +64,7 @@ type PlayerState = {
   ambienceLevel: number;
   ambienceStatus: AmbienceStatus;
   ambienceActive: boolean;
+  ambienceSoloPlaying: boolean;
   ambienceEventPulse: number;
   openRoom: (room: RoomPayload) => void;
   toggle: () => void;
@@ -72,6 +73,7 @@ type PlayerState = {
   seek: (seconds: number) => void;
   setMusicVolume: (v: number) => void;
   setAmbienceLevel: (level: number) => void;
+  toggleAmbienceSolo: () => void;
   start: () => void;
   fadeForThemeChange: () => Promise<void>;
   leave: () => void;
@@ -133,9 +135,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [apiReady, setApiReady] = useState(false);
   const [musicVolume, setMusicVol] = useState(0.7);
   const [ambienceLevel, setAmbienceLevelState] = useState(50);
+  const [ambienceSoloPlaying, setAmbienceSoloPlaying] = useState(false);
   const [nowPlaying, setNowPlaying] = useState<NowPlaying>(emptyNowPlaying);
   const track = playlist[index]?.track ?? null;
-  const ambience = useAmbienceEngine(room, isPlaying && !needsGate, ambienceLevel);
+  const ambience = useAmbienceEngine(
+    room,
+    (isPlaying && !needsGate) || ambienceSoloPlaying,
+    ambienceLevel,
+  );
   const resumeAmbienceFromGesture = ambience.resumeFromGesture;
 
   const setIndex = useCallback((next: number) => {
@@ -341,6 +348,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   );
   const start = useCallback(() => {
     void resumeAmbienceFromGesture();
+    setAmbienceSoloPlaying(false);
     intendPlayRef.current = true;
     setNeedsGate(false);
     setIsPlaying(true);
@@ -371,6 +379,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     (value: number) => setAmbienceLevelState(normalizeAmbienceLevel(value)),
     [],
   );
+  const toggleAmbienceSolo = useCallback(() => {
+    if (!ambienceSoloPlaying) void resumeAmbienceFromGesture();
+    setAmbienceSoloPlaying((current) => !current);
+  }, [ambienceSoloPlaying, resumeAmbienceFromGesture]);
   const fadeForThemeChange = useCallback(() => {
     themeTransitionRef.current = true;
     const player = playerRef.current;
@@ -399,6 +411,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     queueRef.current = [];
     setNeedsGate(false);
     setIsPlaying(false);
+    setAmbienceSoloPlaying(false);
   }, []);
 
   const value: PlayerState = {
@@ -416,6 +429,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     ambienceLevel,
     ambienceStatus: ambience.status,
     ambienceActive: ambience.active,
+    ambienceSoloPlaying,
     ambienceEventPulse: ambience.eventPulse,
     openRoom,
     toggle,
@@ -424,6 +438,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     seek,
     setMusicVolume,
     setAmbienceLevel,
+    toggleAmbienceSolo,
     start,
     fadeForThemeChange,
     leave,
