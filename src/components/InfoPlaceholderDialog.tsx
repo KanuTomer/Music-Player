@@ -1,11 +1,13 @@
-import { Heart, Lightbulb } from "lucide-react";
+import { useState } from "react";
+import { Heart, Lightbulb, Copy, Check, ExternalLink } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import himanshuQr from "@/assets/newhimanshusirqr.png";
 
 type InfoPlaceholderDialogProps = {
   kind: "suggest" | "support";
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  slug?: string;
+  slug?: string | null;
 };
 
 type DialogTheme = {
@@ -17,15 +19,17 @@ type DialogTheme = {
   glowColor: string;
 };
 
+const defaultTheme: DialogTheme = {
+  accentHex: "#E5A100", // Amber
+  iconBg: "bg-ember",
+  iconText: "text-charcoal",
+  accentText: "text-ember",
+  badgeBg: "bg-ember/15",
+  glowColor: "border-ember/30",
+};
+
 const themeConfigs: Record<string, DialogTheme> = {
-  "sainik-dhaba": {
-    accentHex: "#E5A100", // Amber
-    iconBg: "bg-ember",
-    iconText: "text-charcoal",
-    accentText: "text-ember",
-    badgeBg: "bg-ember/15",
-    glowColor: "border-ember/30",
-  },
+  "sainik-dhaba": defaultTheme,
   "nai-ki-dukaan": {
     accentHex: "#0E5E63", // Cool Teal
     iconBg: "bg-teal-600",
@@ -76,6 +80,8 @@ const themeConfigs: Record<string, DialogTheme> = {
   },
 };
 
+const UPI_ID = "8090446627@upi";
+
 const copy = {
   suggest: {
     title: "Suggest a Jagah",
@@ -95,9 +101,22 @@ export function InfoPlaceholderDialog({
   onOpenChange,
   slug,
 }: InfoPlaceholderDialogProps) {
+  const [copied, setCopied] = useState(false);
   const content = copy[kind];
   const Icon = kind === "support" ? Heart : Lightbulb;
-  const theme = themeConfigs[slug ?? ""] ?? themeConfigs["sainik-dhaba"];
+  const theme = (slug ? themeConfigs[slug] : undefined) ?? defaultTheme;
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(UPI_ID);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback if clipboard API fails
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -122,92 +141,70 @@ export function InfoPlaceholderDialog({
 
             {/* QR Code Container styled with the active theme */}
             <div
-              className={`flex flex-col items-center gap-2 rounded-2xl border bg-night/45 p-5 w-full transition-all duration-300 ${theme.glowColor}`}
+              className={`flex flex-col items-center gap-3 rounded-2xl border bg-night/55 p-5 w-full transition-all duration-300 ${theme.glowColor}`}
             >
-              <svg
-                width="160"
-                height="160"
-                viewBox="0 0 100 100"
-                className="bg-white p-3 rounded-xl shadow-lg"
-                aria-label="Payment QR Code Placeholder"
-              >
-                {/* Corner locator square Top-Left */}
-                <rect x="5" y="5" width="20" height="20" fill="#18181B" rx="2" />
-                <rect x="9" y="9" width="12" height="12" fill="#FFFFFF" rx="1" />
-                <rect x="12" y="12" width="6" height="6" fill="#18181B" rx="0.5" />
-
-                {/* Corner locator square Top-Right */}
-                <rect x="75" y="5" width="20" height="20" fill="#18181B" rx="2" />
-                <rect x="79" y="9" width="12" height="12" fill="#FFFFFF" rx="1" />
-                <rect x="82" y="12" width="6" height="6" fill="#18181B" rx="0.5" />
-
-                {/* Corner locator square Bottom-Left */}
-                <rect x="5" y="75" width="20" height="20" fill="#18181B" rx="2" />
-                <rect x="9" y="79" width="12" height="12" fill="#FFFFFF" rx="1" />
-                <rect x="12" y="82" width="6" height="6" fill="#18181B" rx="0.5" />
-
-                {/* Central logo box / badge with room accent fill */}
-                <rect
-                  x="40"
-                  y="40"
-                  width="20"
-                  height="20"
-                  fill={theme.accentHex}
-                  rx="3"
-                  className="transition-all duration-300"
+              <div className="relative overflow-hidden rounded-xl bg-white p-2.5 shadow-xl transition-transform duration-200 hover:scale-[1.02]">
+                <img
+                  src={himanshuQr}
+                  alt="UPI QR Code for 8090446627@upi"
+                  className="size-44 object-contain rounded-lg"
+                  width={176}
+                  height={176}
                 />
-                {/* Radio Icon / Emoji in center */}
-                <text x="50" y="53" fontSize="10" textAnchor="middle" dominantBaseline="middle">
-                  📻
-                </text>
+              </div>
 
-                {/* QR dot grids/clusters */}
-                <rect x="35" y="5" width="4" height="8" fill="#18181B" />
-                <rect x="45" y="5" width="8" height="4" fill="#18181B" />
-                <rect x="60" y="5" width="4" height="4" fill="#18181B" />
-                <rect x="35" y="15" width="8" height="4" fill="#18181B" />
-                <rect x="50" y="15" width="4" height="8" fill="#18181B" />
-                <rect x="65" y="15" width="4" height="4" fill="#18181B" />
-                <rect x="60" y="21" width="8" height="4" fill="#18181B" />
-                <rect x="75" y="35" width="4" height="8" fill="#18181B" />
-                <rect x="85" y="35" width="8" height="4" fill="#18181B" />
-                <rect x="75" y="48" width="8" height="4" fill="#18181B" />
-                <rect x="88" y="48" width="4" height="8" fill="#18181B" />
-                <rect x="80" y="60" width="12" height="4" fill="#18181B" />
-                <rect x="35" y="75" width="4" height="8" fill="#18181B" />
-                <rect x="45" y="75" width="8" height="4" fill="#18181B" />
-                <rect x="60" y="75" width="4" height="4" fill="#18181B" />
-                <rect x="35" y="87" width="8" height="4" fill="#18181B" />
-                <rect x="50" y="87" width="4" height="8" fill="#18181B" />
-                <rect x="65" y="87" width="4" height="4" fill="#18181B" />
-                <rect x="60" y="93" width="8" height="4" fill="#18181B" />
-                <rect x="5" y="35" width="8" height="4" fill="#18181B" />
-                <rect x="18" y="35" width="4" height="8" fill="#18181B" />
-                <rect x="5" y="48" width="4" height="8" fill="#18181B" />
-                <rect x="15" y="48" width="8" height="4" fill="#18181B" />
-                <rect x="10" y="60" width="12" height="4" fill="#18181B" />
-                <rect x="30" y="30" width="4" height="4" fill="#18181B" />
-                <rect x="66" y="30" width="4" height="4" fill="#18181B" />
-                <rect x="30" y="66" width="4" height="4" fill="#18181B" />
-                <rect x="66" y="66" width="4" height="4" fill="#18181B" />
-              </svg>
-
-              {/* UPI ID Info with room accent color */}
-              <div className="text-center mt-1">
-                <span className="block text-[10px] tracking-wider text-cream/40 uppercase font-semibold">
+              {/* UPI ID Info with copy button */}
+              <div className="flex flex-col items-center gap-1.5 w-full mt-1">
+                <span className="text-[10px] tracking-wider text-cream/40 uppercase font-semibold">
                   UPI ID
                 </span>
-                <span
-                  className={`block font-mono text-sm select-all transition-colors duration-300 ${theme.accentText}`}
-                >
-                  support@upi
-                </span>
+                <div className="flex items-center justify-center gap-2 w-full max-w-xs">
+                  <button
+                    type="button"
+                    onClick={handleCopy}
+                    className={`group flex items-center justify-between gap-3 w-full px-3.5 py-2 rounded-xl bg-night/80 border border-cream/15 hover:border-cream/30 hover:bg-night transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember`}
+                    title="Click to copy UPI ID"
+                  >
+                    <span
+                      className={`font-mono text-sm font-medium select-all transition-colors duration-300 ${theme.accentText}`}
+                    >
+                      {UPI_ID}
+                    </span>
+                    <span
+                      className={`flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-md transition-all duration-200 ${
+                        copied
+                          ? "bg-emerald-500/20 text-emerald-400"
+                          : "bg-cream/10 text-cream/70 group-hover:bg-cream/20 group-hover:text-cream"
+                      }`}
+                    >
+                      {copied ? (
+                        <>
+                          <Check className="size-3.5" />
+                          <span>Copied</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="size-3.5" />
+                          <span>Copy</span>
+                        </>
+                      )}
+                    </span>
+                  </button>
+                </div>
               </div>
+
+              {/* Direct UPI pay link for mobile users */}
+              <a
+                href={`upi://pay?pa=${UPI_ID}&pn=Sainik%20Dhaba&cu=INR`}
+                className="flex sm:hidden items-center gap-1.5 text-xs text-cream/60 hover:text-cream underline underline-offset-4 mt-1 transition-colors"
+              >
+                <span>Open in UPI App</span>
+                <ExternalLink className="size-3" />
+              </a>
             </div>
 
-            <p className="text-[10px] leading-relaxed text-cream/45 italic">
-              *This is a mock QR code for presentation. Real payment integration will be enabled
-              soon.
+            <p className="text-[11px] leading-relaxed text-cream/50">
+              Scan with any UPI app (GPay, PhonePe, Paytm, BHIM) to contribute.
             </p>
           </div>
         ) : (

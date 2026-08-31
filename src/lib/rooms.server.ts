@@ -164,3 +164,42 @@ export async function recordSourceFailure(sourceId: string, errorCode: number) {
   if (error) throw new Error(error.message);
   return { recorded: true };
 }
+
+export async function insertChatMessage(roomKey: string, displayName: string, text: string) {
+  const url = process.env["SUPABASE_URL"];
+  const secret = process.env["SUPABASE_SECRET_KEY"];
+  if (!url || !secret) throw new Error("Database configuration is unavailable");
+
+  const client = createClient<Database>(url, secret, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: {
+      fetch: (input, init) => {
+        const headers = new Headers(init?.headers);
+        if (secret.startsWith("sb_") && headers.get("Authorization") === `Bearer ${secret}`) {
+          headers.delete("Authorization");
+        }
+        headers.set("apikey", secret);
+        return fetch(input, { ...init, headers });
+      },
+    },
+  });
+
+  const { data, error } = await client
+    .from("chat_messages")
+    .insert({
+      room_key: roomKey,
+      session_display_name: displayName,
+      text: text,
+      is_ai_host: false,
+      expires_at: new Date(Date.now() + 45 * 60 * 1000).toISOString(),
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error inserting chat message:", error);
+    throw new Error(error.message);
+  }
+  return data;
+}
+
