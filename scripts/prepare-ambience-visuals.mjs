@@ -3,9 +3,11 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
-const [, , sourceArgument, outputArgument] = process.argv;
+const [, , sourceArgument, outputArgument, slugArgument] = process.argv;
 if (!sourceArgument || !outputArgument) {
-  throw new Error("Usage: bun scripts/prepare-ambience-visuals.mjs <source-dir> <output-dir>");
+  throw new Error(
+    "Usage: bun scripts/prepare-ambience-visuals.mjs <source-dir> <output-dir> [scene-slug]",
+  );
 }
 
 const sourceDir = resolve(sourceArgument);
@@ -109,6 +111,11 @@ const assets = [
   },
 ];
 
+const selectedAssets = slugArgument
+  ? assets.filter((asset) => asset.slug === slugArgument)
+  : assets;
+if (!selectedAssets.length) throw new Error(`No visual asset configured for ${slugArgument}`);
+
 function sha256(data) {
   return createHash("sha256").update(data).digest("hex").toUpperCase();
 }
@@ -118,7 +125,7 @@ if (version.status !== 0) throw new Error(`Unable to run ffmpeg at ${ffmpeg}`);
 const ffmpegVersion = version.stdout.split(/\r?\n/, 1)[0];
 const prepared = [];
 
-for (const asset of assets) {
+for (const asset of selectedAssets) {
   const input = join(sourceDir, asset.sourceFile ?? `${asset.slug}.source.mp4`);
   const source = await readFile(input);
   if (sha256(source) !== asset.sourceSha256) {
@@ -161,10 +168,10 @@ for (const asset of assets) {
   const data = await readFile(output);
   prepared.push({
     ...asset,
-    acquiredAt,
-    licenseName,
-    licenseUrl,
-    publisher: "Mixkit",
+    acquiredAt: asset.acquiredAt ?? acquiredAt,
+    licenseName: asset.licenseName ?? licenseName,
+    licenseUrl: asset.licenseUrl ?? licenseUrl,
+    publisher: asset.publisher ?? "Mixkit",
     storagePath,
     mimeType: "video/mp4",
     durationSeconds: 12,
