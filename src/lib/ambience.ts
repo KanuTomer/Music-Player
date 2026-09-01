@@ -11,7 +11,7 @@ export const ambienceTiming = {
   meanderSeconds: [12, 24] as const,
 };
 
-export const musicDuckRatio = 0.5;
+export const musicDuckRatio = 0.25;
 
 export function effectiveMusicVolume(userVolume: number, ambienceActive: boolean) {
   const clamped = Math.min(1, Math.max(0, userVolume));
