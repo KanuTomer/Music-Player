@@ -12,6 +12,7 @@ type ChatMessage = Database["public"]["Tables"]["chat_messages"]["Row"];
 interface LiveChatProps {
   roomKey: string;
   roomName: string;
+  inlineLauncher?: boolean;
 }
 
 const NAME_COLORS = [
@@ -34,7 +35,7 @@ function getNameColor(name: string): string {
   return NAME_COLORS[index];
 }
 
-export function LiveChat({ roomKey, roomName }: LiveChatProps) {
+export function LiveChat({ roomKey, roomName, inlineLauncher = false }: LiveChatProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [typedMessage, setTypedMessage] = useState("");
@@ -257,8 +258,13 @@ export function LiveChat({ roomKey, roomName }: LiveChatProps) {
 
   return (
     <>
-      {/* Floating Chat Toggle Button */}
-      <div className="pointer-events-auto absolute left-3.5 bottom-[calc(10.5rem+env(safe-area-inset-bottom))] z-30 flex items-center sm:left-6 sm:bottom-6">
+      <div
+        className={
+          inlineLauncher
+            ? "pointer-events-auto relative z-30 flex items-center justify-center"
+            : "pointer-events-auto absolute left-3.5 bottom-[calc(10.5rem+env(safe-area-inset-bottom))] z-30 flex items-center sm:left-6 sm:bottom-6"
+        }
+      >
         <button
           type="button"
           onClick={() => setIsOpen(true)}

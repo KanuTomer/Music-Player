@@ -57,15 +57,6 @@
       "sha256": "07EECEA0DCB4B8D5A4908D229CE4A645DFD113097AAEB4FB30BBF0FEDBB80F4B"
     },
     {
-      "slug": "raj-mistri",
-      "title": "White particles moving on black background",
-      "sourcePage": "https://mixkit.co/free-stock-video/white-particles-moving-on-black-background-4407/",
-      "sourceSha256": "65EC1CB2B6FE5977893841FDCDCFCE2A69CE69B87F92618CFA5CA1706CA986A6",
-      "storagePath": "rooms/raj-mistri/ambience/overlay.mp4",
-      "bytes": 767305,
-      "sha256": "D6D9EE87A229611E406917EAA88756BE69E81948861FBFFDF2DC26DD3775A140"
-    },
-    {
       "slug": "papa-ke-gaane",
       "title": "Television glich texture",
       "sourcePage": "https://mixkit.co/free-stock-video/television-glich-texture-3524/",
@@ -94,6 +85,16 @@
       "bytes": 321620,
       "sha256": "9E0EAEFB59EAE4464FC1A1C0E8546E8642A510DBBADA5D2615A2A215DA710E9F",
       "reason": "Replaced because the dense smoke treatment did not fit the roadside Dhaba scene. The object remains in Storage for rollback."
+    },
+    {
+      "slug": "raj-mistri",
+      "title": "White particles moving on black background",
+      "sourcePage": "https://mixkit.co/free-stock-video/white-particles-moving-on-black-background-4407/",
+      "sourceSha256": "65EC1CB2B6FE5977893841FDCDCFCE2A69CE69B87F92618CFA5CA1706CA986A6",
+      "storagePath": "rooms/raj-mistri/ambience/overlay.mp4",
+      "bytes": 767305,
+      "sha256": "D6D9EE87A229611E406917EAA88756BE69E81948861FBFFDF2DC26DD3775A140",
+      "reason": "Replaced because abstract white particles did not read as a construction-site atmosphere. The object remains in Storage for rollback."
     }
   ]
 }
