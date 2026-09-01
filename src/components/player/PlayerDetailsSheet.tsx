@@ -1,4 +1,4 @@
-import { ExternalLink, ListMusic, Music2, Radio, Volume1 } from "lucide-react";
+import { ExternalLink, ListMusic, Music2, Radio, Volume1, Waves } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getPlayerDisplay } from "@/lib/player-display";
 import { upcomingQueue } from "@/lib/queue";
@@ -93,6 +93,32 @@ export function PlayerDetailsSheet({
                 <ExternalLink className="size-3.5" aria-hidden /> Open source on YouTube
               </a>
             ) : null}
+          </section>
+
+          <section className="rounded-2xl border border-cream/10 p-4">
+            <div className="flex items-center gap-2 text-xs font-semibold text-cream/70">
+              <Waves className="size-4 text-teal-400" aria-hidden /> Ambience
+              <span className="ml-auto capitalize text-cream/45">
+                {player.ambienceEnabled ? player.ambienceStatus : "off"}
+              </span>
+            </div>
+            <p className="mt-2 text-xs leading-relaxed text-cream/50">
+              Three-layer location audio · {player.ambienceLevel}%
+            </p>
+            {player.room.ambience?.stems
+              .flatMap((stem) => stem.sources)
+              .map((source) => (
+                <a
+                  key={`${source.source_url}-${source.source_order}`}
+                  href={source.source_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-2 flex min-h-10 items-center gap-2 rounded-xl border border-cream/10 px-3 text-[11px] text-cream/60 hover:bg-cream/10 hover:text-cream"
+                >
+                  <ExternalLink className="size-3 shrink-0" aria-hidden />
+                  <span className="truncate">{source.source_title}</span>
+                </a>
+              ))}
           </section>
 
           <section className="rounded-2xl border border-cream/10 p-4">

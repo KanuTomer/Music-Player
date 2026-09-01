@@ -43,6 +43,14 @@ export function normalizeAmbienceLevel(level: number) {
   return Math.min(100, Math.max(0, Math.round(level)));
 }
 
+export function nextAmbienceToggle(enabled: boolean, level: number) {
+  const nextEnabled = !enabled;
+  return {
+    enabled: nextEnabled,
+    level: nextEnabled && normalizeAmbienceLevel(level) === 0 ? 50 : normalizeAmbienceLevel(level),
+  };
+}
+
 export type PlayerDisplay = {
   title: string;
   subtitle: string;

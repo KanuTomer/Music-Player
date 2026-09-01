@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { fetchRoom, fetchScenes, recordSourceFailure } from "./rooms.server";
+import { fetchRoom, fetchScenes, insertChatMessage, recordSourceFailure } from "./rooms.server";
 
 export type Scene = {
   id: string;
@@ -55,11 +55,64 @@ export type OneLiner = {
   daypart_tag: string;
 };
 
+export type AmbienceSource = {
+  source_url: string;
+  source_title: string;
+  source_order: number;
+};
+
+export type AmbienceStem = {
+  id: string;
+  name: string;
+  role: "base" | "texture" | "event";
+  url: string;
+  default_gain: number;
+  min_gain: number;
+  max_gain: number;
+  crossfade_ms: number;
+  loop_start_seconds: number;
+  loop_end_seconds: number | null;
+  event_min_seconds: number | null;
+  event_max_seconds: number | null;
+  sources: AmbienceSource[];
+};
+
+export type AmbienceFilter = {
+  highpass_hz?: number;
+  lowpass_hz?: number;
+  peak_hz?: number;
+  peak_gain_db?: number;
+  peak_q?: number;
+};
+
+export type AmbienceVisualTheme = {
+  accent?: string;
+  haze?: string;
+  pattern?: string;
+  overlay_path?: string;
+  overlay_url?: string;
+  blend_mode?: "screen" | "soft-light" | "lighten";
+  playback_rate?: number;
+  opacity_floor?: number;
+  opacity_ceiling?: number;
+};
+
+export type AmbienceProfile = {
+  id: string;
+  max_master_gain: number;
+  fade_out_ms: number;
+  fade_in_ms: number;
+  audio_theme: Partial<Record<AmbienceStem["role"], AmbienceFilter>>;
+  visual_theme: AmbienceVisualTheme;
+  stems: AmbienceStem[];
+};
+
 export type RoomPayload = {
   scene: Scene;
   curatedSet: CuratedSet;
   queue: QueueItem[];
   oneliners: OneLiner[];
+  ambience: AmbienceProfile | null;
 };
 
 export const listScenes = createServerFn({ method: "GET" }).handler(async () => {
@@ -94,12 +147,9 @@ export const sendChatMessage = createServerFn({ method: "POST" })
 
     if (!roomKey) throw new Error("Room key is required");
     if (!displayName || displayName.length > 50) throw new Error("Invalid display name");
-    if (!text || text.length > 300) throw new Error("Message text must be between 1 and 300 characters");
+    if (!text || text.length > 300)
+      throw new Error("Message text must be between 1 and 300 characters");
 
     return { roomKey, displayName, text };
   })
-  .handler(async ({ data }) => {
-    const { insertChatMessage } = await import("./rooms.server");
-    return insertChatMessage(data.roomKey, data.displayName, data.text);
-  });
-
+  .handler(async ({ data }) => insertChatMessage(data.roomKey, data.displayName, data.text));

@@ -1,0 +1,359 @@
+{
+  "manifestVersion": 1,
+  "format": {
+    "mimeType": "audio/wav",
+    "sampleRate": 32000,
+    "channels": 1,
+    "bitsPerSample": 16
+  },
+  "assets": [
+    {
+      "storagePath": "rooms/bartan-time/ambience/base.wav",
+      "role": "base",
+      "bytes": 2099870,
+      "durationSeconds": 32.81,
+      "sha256": "1769AB2C8C93F407A47567D3C108A52A07FD437F2A467263A0B238AF8258B6F9",
+      "sources": [
+        {
+          "key": "washing",
+          "file": "Washing Sound Effect In Kitchen _ Plates Washing Sound SFX _ Real Sound _ Copyright free Bgm_Sound.wav",
+          "sourceUrl": "https://www.youtube.com/watch?v=ODeUNpfDm3E",
+          "sha256": "3DD6594CD5D9BB5EBCD7585302EDDF16BA99D5DEBA4330A9A16BDC1F6B3A4CF0",
+          "selectedStartSeconds": 0,
+          "selectedDurationSeconds": 32.81
+        }
+      ]
+    },
+    {
+      "storagePath": "rooms/bartan-time/ambience/event.wav",
+      "role": "event",
+      "bytes": 768044,
+      "durationSeconds": 12,
+      "sha256": "956B2A2B73B0DEFA9CF160953A45C92FC7BDB7A1086857F143DE0F9A25FA7623",
+      "sources": [
+        {
+          "key": "cooker",
+          "file": "Pressure Cooker Whistle Sound Effect.wav",
+          "sourceUrl": "https://www.youtube.com/watch?v=Ktv4zUGOoRU",
+          "sha256": "67C7F87A61C1FF0D5DB90BC9A3124D9E8508EB99947D9E9F911335ACC69A04F3",
+          "selectedStartSeconds": 2,
+          "selectedDurationSeconds": 12
+        }
+      ]
+    },
+    {
+      "storagePath": "rooms/bartan-time/ambience/texture.wav",
+      "role": "texture",
+      "bytes": 3840044,
+      "durationSeconds": 60,
+      "sha256": "4992E1AC049232AE3D409633B2BEF1609B9B40194F9ECBF292DA65E48D7D8EEB",
+      "sources": [
+        {
+          "key": "sink",
+          "file": "Relaxing water running in the kitchen sink...ambient water sounds! ASMR.wav",
+          "sourceUrl": "https://www.youtube.com/watch?v=U3wH9lNSG2Q",
+          "sha256": "493A49E526DA450A1092B68D0C17DADC1AC0CF080608B526BDA67437D4B85328",
+          "selectedStartSeconds": 60.372,
+          "selectedDurationSeconds": 60
+        }
+      ]
+    },
+    {
+      "storagePath": "rooms/bus-driver/ambience/base.wav",
+      "role": "base",
+      "bytes": 5760044,
+      "durationSeconds": 90,
+      "sha256": "EEFBFAC38D34CBBD38FEAB2F95157DB982F51F117985E9E4B690D2AE04A01DE9",
+      "sources": [
+        {
+          "key": "bus",
+          "file": "Bus Ride Sound Effect - #backgroundsoundeffects.wav",
+          "sourceUrl": "https://www.youtube.com/watch?v=4nnFLAl_UaI",
+          "sha256": "D4FD891AC1D136C79CF914F790A038193A741013729369F6263CA15D93BCBC7C",
+          "selectedStartSeconds": 48.96,
+          "selectedDurationSeconds": 90
+        }
+      ]
+    },
+    {
+      "storagePath": "rooms/bus-driver/ambience/event.wav",
+      "role": "event",
+      "bytes": 283884,
+      "durationSeconds": 4.435,
+      "sha256": "35F7A192FB3DF7A3078BDF71215441EEB9DADD0A332423FDA2C021C9BAE87A21",
+      "sources": [
+        {
+          "key": "horn",
+          "file": "Indian Bus Horn - Sound Effect No Copyright.wav",
+          "sourceUrl": "https://www.youtube.com/watch?v=EewxrgtHehE",
+          "sha256": "B5F24CEB3110F745DC62B7E3987E84F671D190072EF9AE9F9A43527FC92C601D",
+          "selectedStartSeconds": 0,
+          "selectedDurationSeconds": 4.435
+        }
+      ]
+    },
+    {
+      "storagePath": "rooms/corporate-majdoor/ambience/base.wav",
+      "role": "base",
+      "bytes": 3580002,
+      "durationSeconds": 55.937,
+      "sha256": "E529C27491EC45539C637336037A4251BA4BF0AC87415B742605C46872D0C9E3",
+      "sources": [
+        {
+          "key": "office",
+          "file": "Office Ambience Sound Effect [FREE DOWNLOAD _ ROYALTY FREE].wav",
+          "sourceUrl": "https://www.youtube.com/watch?v=m_xf-5ViDuU",
+          "sha256": "0F69CC968D6FAB7EFA93D4D3211F827E21A2E1E45AA19138000233B62F1CE034",
+          "selectedStartSeconds": 0,
+          "selectedDurationSeconds": 55.937
+        }
+      ]
+    },
+    {
+      "storagePath": "rooms/corporate-majdoor/ambience/event.wav",
+      "role": "event",
+      "bytes": 768044,
+      "durationSeconds": 12,
+      "sha256": "831BE4782BD7A438A169FD4DB4DC65C024B5762CED1DD7E41BF32565FEF46E09",
+      "sources": [
+        {
+          "key": "ac",
+          "file": "Sound effect - Bathroom fan, humming of AC unit.wav",
+          "sourceUrl": "https://www.youtube.com/watch?v=R9iWLVO6q7w",
+          "sha256": "6786A343B5D2B54A6EE513EE86A3BF5D65DEBB00A425040C52C6761EC80797D4",
+          "selectedStartSeconds": 3,
+          "selectedDurationSeconds": 12
+        }
+      ]
+    },
+    {
+      "storagePath": "rooms/corporate-majdoor/ambience/texture.wav",
+      "role": "texture",
+      "bytes": 373048,
+      "durationSeconds": 5.828,
+      "sha256": "570C047822B6F994E79327706CBB8F3697DE49D2984617F78A29D6FEBE7317AE",
+      "sources": [
+        {
+          "key": "printer",
+          "file": "Printer Noise _ Sound FX.wav",
+          "sourceUrl": "https://www.youtube.com/watch?v=TzKj7Zk9oiQ",
+          "sha256": "5F739CDCAE614B84840EBB921D6449C9C28F13D1234A7DFD65C777C9CEB51F5E",
+          "selectedStartSeconds": 0,
+          "selectedDurationSeconds": 5.828
+        }
+      ]
+    },
+    {
+      "storagePath": "rooms/nai-ki-dukaan/ambience/base.wav",
+      "role": "base",
+      "bytes": 5760044,
+      "durationSeconds": 90,
+      "sha256": "15BAEA27C9F31C1CCBA363A4B62654993C9903780D490340FE12B8F06822C02A",
+      "sources": [
+        {
+          "key": "salon",
+          "file": "Barber Shop Sound Effects and Stock Video _ Barber Shop Pole.wav",
+          "sourceUrl": "https://www.youtube.com/watch?v=JIzItYl5x5E",
+          "sha256": "3AB80A39B780B42B1CE8E3D61C9EAA70593CC1D206D4B675682104FA335B83E7",
+          "selectedStartSeconds": 132.333,
+          "selectedDurationSeconds": 90
+        }
+      ]
+    },
+    {
+      "storagePath": "rooms/nai-ki-dukaan/ambience/event.wav",
+      "role": "event",
+      "bytes": 768044,
+      "durationSeconds": 12,
+      "sha256": "6DB2CB7634F7A429F1B02A1436E448F771CEC24E725B7B2307444B7E17019B9A",
+      "sources": [
+        {
+          "key": "clipper",
+          "file": "HAIR CUTTING MACHINE - (Sound Effect) ✂✂.wav",
+          "sourceUrl": "https://www.youtube.com/watch?v=9yPNJkADxRA",
+          "sha256": "6016F78CF6B83F40D2EB8C5D5E7DF52C612DA002839290941B30DE3E75166A3A",
+          "selectedStartSeconds": 16,
+          "selectedDurationSeconds": 12
+        }
+      ]
+    },
+    {
+      "storagePath": "rooms/nai-ki-dukaan/ambience/texture.wav",
+      "role": "texture",
+      "bytes": 2532318,
+      "durationSeconds": 39.567,
+      "sha256": "6E5D9F7488AC5DFD8E8A0BD3349FACD0AF2D13C59E8103D6AE9600E4AE91E2DC",
+      "sources": [
+        {
+          "key": "scissors",
+          "file": "Cutting Hair Sound Effect _ Scissors Sound Effect.wav",
+          "sourceUrl": "https://www.youtube.com/watch?v=M5TsssAOJ-w",
+          "sha256": "436700712BEBD5D2ECA783E82AC870803B8F57F2889D1EE0604D1EF3F75FAAA9",
+          "selectedStartSeconds": 0,
+          "selectedDurationSeconds": 39.567
+        }
+      ]
+    },
+    {
+      "storagePath": "rooms/papa-ke-gaane/ambience/base.wav",
+      "role": "base",
+      "bytes": 1024044,
+      "durationSeconds": 16,
+      "sha256": "0FF05457AB7C0EB7619AE0F882FB20787B929C62E9C118D0FF1F2B4AE98A69A7",
+      "sources": [
+        {
+          "key": "fan",
+          "file": "ceiling fan sound effect (royalty free).wav",
+          "sourceUrl": "https://www.youtube.com/watch?v=uPWPMOLokaU",
+          "sha256": "0A2EE5BAAD94142421D72856AB00646230C6C3096EFD89774116B2EC951C0CD5",
+          "selectedStartSeconds": 0.231,
+          "selectedDurationSeconds": 16
+        }
+      ]
+    },
+    {
+      "storagePath": "rooms/papa-ke-gaane/ambience/event.wav",
+      "role": "event",
+      "bytes": 284628,
+      "durationSeconds": 4.447,
+      "sha256": "CFCDF2A85BF2AE092F420B20A4411E4D02745F7AEBBFE6EA89C31061B8D55877",
+      "sources": [
+        {
+          "key": "newspaper",
+          "file": "newspaper page turning sound - Sky Sound Effect _ Sound Effects _ Sound fx _ Free Sound Effects.wav",
+          "sourceUrl": "https://www.youtube.com/watch?v=FJAMat4U2AM",
+          "sha256": "1EFDE9E12649F4625D0D301FD1A79310BC8AACBEE173AD7DC2B9E5A254F32707",
+          "selectedStartSeconds": 0,
+          "selectedDurationSeconds": 4.447
+        }
+      ]
+    },
+    {
+      "storagePath": "rooms/papa-ke-gaane/ambience/texture.wav",
+      "role": "texture",
+      "bytes": 445124,
+      "durationSeconds": 6.954,
+      "sha256": "39A6BB08EC74B32B1C8AAAD23B1E95B58BDAF37A63B8B643CA39E525853587AF",
+      "sources": [
+        {
+          "key": "cassette",
+          "file": "Cassette Tape Sound Effect - Ultimate.wav",
+          "sourceUrl": "https://www.youtube.com/watch?v=GpIC6VX-nAg",
+          "sha256": "81600255F5FD0AE3732F20382CD409A818FEB175496F05E7A3E6184FF8A06FD3",
+          "selectedStartSeconds": 0,
+          "selectedDurationSeconds": 6.954
+        }
+      ]
+    },
+    {
+      "storagePath": "rooms/raj-mistri/ambience/base.wav",
+      "role": "base",
+      "bytes": 5760044,
+      "durationSeconds": 90,
+      "sha256": "32671AC18B76F9202C1B9204CB1579ADB64F2D2D5AE9F09BA34291DADFAA0991",
+      "sources": [
+        {
+          "key": "construction",
+          "file": "Construction Workers Sound Effect.wav",
+          "sourceUrl": "https://www.youtube.com/watch?v=gZ_vEKDLCCo",
+          "sha256": "31E3A43F3961D3279D7827CE0CC0494CB47A789D846FE90652174BC6790E811B",
+          "selectedStartSeconds": 28.201,
+          "selectedDurationSeconds": 90
+        }
+      ]
+    },
+    {
+      "storagePath": "rooms/raj-mistri/ambience/event.wav",
+      "role": "event",
+      "bytes": 960044,
+      "durationSeconds": 15,
+      "sha256": "23D475FA7F354F89A968EFBAD83F0E48C18C6E2AD753E01100B9078CA32FF80A",
+      "sources": [
+        {
+          "key": "construction4",
+          "file": "Construction Workers Sound Effect - #4.wav",
+          "sourceUrl": "https://www.youtube.com/watch?v=eUP8ajzuzR4",
+          "sha256": "716F3F7CD44400593E2CE0A6D2452A353B8F2705CA1D2B101DE10077CB70133D",
+          "selectedStartSeconds": 80,
+          "selectedDurationSeconds": 15
+        }
+      ]
+    },
+    {
+      "storagePath": "rooms/raj-mistri/ambience/texture.wav",
+      "role": "texture",
+      "bytes": 3840044,
+      "durationSeconds": 60,
+      "sha256": "C12F543BD94D5F9742BCF0E4BAD01D4CCF160AE53FEF4594908C3184CA0E3868",
+      "sources": [
+        {
+          "key": "construction2",
+          "file": "Construction Workers Sound Effect - #2.wav",
+          "sourceUrl": "https://www.youtube.com/watch?v=yCZgqZNFOZg",
+          "sha256": "CCB8F0DEB3712BC36FF881C34C735D5358675F98ED423E17AAF5104DFF5D3BA4",
+          "selectedStartSeconds": 77.671,
+          "selectedDurationSeconds": 60
+        }
+      ]
+    },
+    {
+      "storagePath": "rooms/sainik-dhaba/ambience/event.wav",
+      "role": "event",
+      "bytes": 896044,
+      "durationSeconds": 14,
+      "sha256": "A17520EE86B09B52E8538AA20339156E45418A119CA0A9A3599BF070A7D175AC",
+      "sources": [
+        {
+          "key": "sizzling",
+          "file": "Food Sizzling Sound Effect.wav",
+          "sourceUrl": "https://www.youtube.com/watch?v=GMNFph2tn2c",
+          "sha256": "C75E2528FDC56F8EC8A2054FE6735F25DF4B6BDEAD91AD0002E92FB864FC65C1",
+          "selectedStartSeconds": 2,
+          "selectedDurationSeconds": 7
+        },
+        {
+          "key": "cooking",
+          "file": "Cooking sound effect  _ No Copyright _ Free Download.wav",
+          "sourceUrl": "https://www.youtube.com/watch?v=i6PYS0SPwO4",
+          "sha256": "0D504F3B2CC87BCC8975A0A8A6BDC302FB970A5E688EB623485D295BC1D5DA23",
+          "selectedStartSeconds": 0,
+          "selectedDurationSeconds": 8
+        }
+      ]
+    },
+    {
+      "storagePath": "rooms/sainik-dhaba/ambience/texture.wav",
+      "role": "texture",
+      "bytes": 3840044,
+      "durationSeconds": 60,
+      "sha256": "BDE0A1499973FE9379D3F81ABFA9948DF4767AC0038A5729925D41E5FC03A7E7",
+      "sources": [
+        {
+          "key": "dhaba",
+          "file": "Ambience - Indian dhaaba Restaurant & Bar, Food Stall, Tapri, Pan.wav",
+          "sourceUrl": "https://www.youtube.com/watch?v=U3uKZ9jjjaQ",
+          "sha256": "0B1786699311BB2DF6845E593F57AA3E470107A44A421952502469C9E86F7358",
+          "selectedStartSeconds": 63.983,
+          "selectedDurationSeconds": 60
+        }
+      ]
+    },
+    {
+      "storagePath": "shared/indian-highway.wav",
+      "role": "base",
+      "bytes": 5760044,
+      "durationSeconds": 90,
+      "sha256": "9462232CA46F02EFF3555AA54CEECF839BBC424FDF608A1C797DD5EE68C53658",
+      "sources": [
+        {
+          "key": "highway",
+          "file": "Indian highway sound effect.wav",
+          "sourceUrl": "https://www.youtube.com/watch?v=xO0j41GUIZ4",
+          "sha256": "0569229ED15AE4E57D99DE268234658458782A28BB7F35C9B998A58011187C11",
+          "selectedStartSeconds": 49.169,
+          "selectedDurationSeconds": 90
+        }
+      ]
+    }
+  ]
+}

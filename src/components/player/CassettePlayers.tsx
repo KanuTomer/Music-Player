@@ -17,6 +17,7 @@ import { CassetteBody } from "@/components/player/CassetteBody";
 import { PlayerDetailsSheet } from "@/components/player/PlayerDetailsSheet";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { SmoothReveal } from "@/components/ui/smooth-reveal";
 
 function Cover({
   coverId,
@@ -221,12 +222,31 @@ export function FullCassettePlayer() {
             >
               <Volume2 className="size-3.5 sm:size-4" aria-hidden />
             </Button>
-            <AmbienceControl level={player.ambienceLevel} onLevelChange={player.setAmbienceLevel} />
+            <AmbienceControl
+              level={player.ambienceLevel}
+              onLevelChange={player.setAmbienceLevel}
+              enabled={player.ambienceEnabled}
+              active={player.ambienceActive}
+              status={player.ambienceStatus}
+              soloPlaying={player.ambienceSoloPlaying}
+              musicPlaying={player.isPlaying}
+              onToggle={player.toggleAmbience}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => setMoreOpen(true)}
+              aria-label="More player details"
+              className="size-10 shrink-0 rounded-full border border-cream/20 text-cream/70 hover:bg-cream/10 hover:text-cream sm:size-11"
+            >
+              <MoreHorizontal className="size-4" aria-hidden />
+            </Button>
           </div>
         </div>
 
-        {showVolume ? (
-          <div className="mt-2 flex items-center gap-2 border-t border-cream/10 pt-2">
+        <SmoothReveal open={showVolume} className="mt-2">
+          <div className="flex items-center gap-2 border-t border-cream/10 pt-2">
             <Volume1 className="size-3.5 shrink-0 text-cream/60" aria-hidden />
             <span className="hidden w-14 shrink-0 text-[10px] text-cream/60 sm:inline">Music</span>
             <Slider
@@ -237,7 +257,7 @@ export function FullCassettePlayer() {
               onValueChange={(value) => player.setMusicVolume((value[0] ?? 0) / 100)}
             />
           </div>
-        ) : null}
+        </SmoothReveal>
       </div>
       <PlayerDetailsSheet open={moreOpen} onOpenChange={setMoreOpen} />
     </>
@@ -300,9 +320,15 @@ export function CompactCassettePlayer({ className = "" }: { className?: string }
                 compact
                 level={player.ambienceLevel}
                 onLevelChange={player.setAmbienceLevel}
+                enabled={player.ambienceEnabled}
+                active={player.ambienceActive}
+                status={player.ambienceStatus}
+                soloPlaying={player.ambienceSoloPlaying}
+                musicPlaying={player.isPlaying}
+                onToggle={player.toggleAmbience}
               />
             </div>
-            {/* <Button
+            <Button
               type="button"
               variant="ghost"
               size="icon"
@@ -311,7 +337,7 @@ export function CompactCassettePlayer({ className = "" }: { className?: string }
               className="size-11 shrink-0 rounded-full border border-cream/20 text-cream/70 hover:bg-cream/10 hover:text-cream"
             >
               <MoreHorizontal className="size-4" aria-hidden />
-            </Button> */}
+            </Button>
           </div>
 
           <div className="col-span-3 flex items-center justify-between gap-2 border-t border-cream/10 pt-2 sm:hidden">
@@ -326,6 +352,12 @@ export function CompactCassettePlayer({ className = "" }: { className?: string }
               compact
               level={player.ambienceLevel}
               onLevelChange={player.setAmbienceLevel}
+              enabled={player.ambienceEnabled}
+              active={player.ambienceActive}
+              status={player.ambienceStatus}
+              soloPlaying={player.ambienceSoloPlaying}
+              musicPlaying={player.isPlaying}
+              onToggle={player.toggleAmbience}
             />
           </div>
         </div>

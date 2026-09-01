@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { MessageCircle, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -274,165 +275,167 @@ export function LiveChat({ roomKey, roomName }: LiveChatProps) {
       </div>
 
       {/* Centered Chat Modal Dialog */}
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Dark backdrop with blur overlay */}
-          <div
-            onClick={() => setIsOpen(false)}
-            className="absolute inset-0 bg-black/60 backdrop-blur-xs transition-opacity duration-300"
-          />
+      {isOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Dark backdrop with blur overlay */}
+            <div
+              onClick={() => setIsOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-xs transition-opacity duration-300"
+            />
 
-          {/* Modal Container */}
-          <div className="relative z-10 flex h-[580px] max-h-[82dvh] w-[calc(100%-2rem)] max-w-[440px] flex-col bg-[#200D02] border border-[#3E1E09] rounded-[20px] shadow-lift overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            {/* Header */}
-            <div className="flex h-14 shrink-0 items-center justify-between border-b border-cream/10 px-5 bg-[#200D02]">
-              <div className="flex items-center gap-2">
-                <span className="relative flex size-2">
-                  <span className="animate-pulse absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full size-2 bg-amber-500"></span>
-                </span>
-                <span className="font-signage text-base font-bold tracking-wide text-cream">
-                  Live Chat
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsOpen(false)}
-                className="flex size-8 items-center justify-center rounded-full bg-[#3B1E0A] border border-[#4d2810] text-cream/70 hover:bg-[#4d2810] hover:text-cream transition-colors cursor-pointer"
-                aria-label="Close Chat"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-
-            {/* Scrollable messages area */}
-            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3.5 scroll-smooth no-scrollbar">
-              {/* Pinned announcement banner */}
-              <div className="bg-[#422006]/60 border border-[#3E1E09] text-cream/90 rounded-xl p-3.5 text-xs leading-relaxed flex items-start gap-2.5 shadow-sm">
-                <span className="text-sm shrink-0">📌</span>
-                <div>
-                  <span className="font-bold text-amber-400">{roomName} Admin 👑 :</span> Hello all,
-                  I am actively monitoring this chat. If you encounter any issues or bugs, please
-                  report them here for prompt resolution. Feature requests and new additions are
-                  also welcome. Thank you for support.
+            {/* Modal Container */}
+            <div className="relative z-10 flex h-[580px] max-h-[82dvh] w-[calc(100%-2rem)] max-w-[440px] flex-col bg-[#200D02] border border-[#3E1E09] rounded-[20px] shadow-lift overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+              {/* Header */}
+              <div className="flex h-14 shrink-0 items-center justify-between border-b border-cream/10 px-5 bg-[#200D02]">
+                <div className="flex items-center gap-2">
+                  <span className="relative flex size-2">
+                    <span className="animate-pulse absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full size-2 bg-amber-500"></span>
+                  </span>
+                  <span className="font-signage text-base font-bold tracking-wide text-cream">
+                    Live Chat
+                  </span>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setIsOpen(false)}
+                  className="flex size-8 items-center justify-center rounded-full bg-[#3B1E0A] border border-[#4d2810] text-cream/70 hover:bg-[#4d2810] hover:text-cream transition-colors cursor-pointer"
+                  aria-label="Close Chat"
+                >
+                  <X className="size-4" />
+                </button>
               </div>
 
-              {loading ? (
-                <div className="flex h-32 flex-col items-center justify-center text-xs text-cream/40 gap-2">
-                  <span className="animate-spin text-amber-500 text-lg">📻</span>
-                  <span>Tuning in to chat...</span>
+              {/* Scrollable messages area */}
+              <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3.5 scroll-smooth no-scrollbar">
+                {/* Pinned announcement banner */}
+                <div className="bg-[#422006]/60 border border-[#3E1E09] text-cream/90 rounded-xl p-3.5 text-xs leading-relaxed flex items-start gap-2.5 shadow-sm">
+                  <span className="text-sm shrink-0">📌</span>
+                  <div>
+                    <span className="font-bold text-amber-400">{roomName} Admin 👑 :</span> Hello
+                    all, I am actively monitoring this chat. If you encounter any issues or bugs,
+                    please report them here for prompt resolution. Feature requests and new
+                    additions are also welcome. Thank you for support.
+                  </div>
                 </div>
-              ) : messages.length === 0 ? (
-                <div className="flex h-32 flex-col items-center justify-center text-center px-6">
-                  <p className="text-xs font-semibold text-cream/40">Yaha abhi shanti hai...</p>
-                  <p className="text-[10px] text-cream/30 mt-1">
-                    Be the first to share a memory or say hello!
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3.5">
-                  {messages.map((msg) => {
-                    const timeStr = new Date(msg.created_at)
-                      .toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hour12: true,
-                      })
-                      .toLowerCase();
 
-                    return (
-                      <div key={msg.id} className="flex flex-col">
-                        <div className="bg-[#2D1405] border border-[#3E1E09] rounded-xl px-3.5 py-2.5 w-full shadow-sm">
-                          <div className="flex items-center justify-between gap-1.5 mb-1.5">
-                            <span
-                              className={`text-[12px] font-bold ${getNameColor(msg.session_display_name)}`}
-                            >
-                              {msg.session_display_name}
-                            </span>
-                            {msg.is_ai_host && (
-                              <span className="text-[9px] bg-amber-500/20 text-amber-400 px-1 py-0.5 rounded border border-amber-500/30 font-semibold uppercase tracking-wider">
-                                Host
+                {loading ? (
+                  <div className="flex h-32 flex-col items-center justify-center text-xs text-cream/40 gap-2">
+                    <span className="animate-spin text-amber-500 text-lg">📻</span>
+                    <span>Tuning in to chat...</span>
+                  </div>
+                ) : messages.length === 0 ? (
+                  <div className="flex h-32 flex-col items-center justify-center text-center px-6">
+                    <p className="text-xs font-semibold text-cream/40">Yaha abhi shanti hai...</p>
+                    <p className="text-[10px] text-cream/30 mt-1">
+                      Be the first to share a memory or say hello!
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3.5">
+                    {messages.map((msg) => {
+                      const timeStr = new Date(msg.created_at)
+                        .toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: true,
+                        })
+                        .toLowerCase();
+
+                      return (
+                        <div key={msg.id} className="flex flex-col">
+                          <div className="bg-[#2D1405] border border-[#3E1E09] rounded-xl px-3.5 py-2.5 w-full shadow-sm">
+                            <div className="flex items-center justify-between gap-1.5 mb-1.5">
+                              <span
+                                className={`text-[12px] font-bold ${getNameColor(msg.session_display_name)}`}
+                              >
+                                {msg.session_display_name}
                               </span>
-                            )}
-                          </div>
-                          <p className="text-[13px] text-cream/90 leading-relaxed break-words whitespace-pre-wrap">
-                            {msg.text}
-                          </p>
-                          <div className="text-[9px] text-cream/45 mt-2 text-right font-medium">
-                            {timeStr}
+                              {msg.is_ai_host && (
+                                <span className="text-[9px] bg-amber-500/20 text-amber-400 px-1 py-0.5 rounded border border-amber-500/30 font-semibold uppercase tracking-wider">
+                                  Host
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[13px] text-cream/90 leading-relaxed break-words whitespace-pre-wrap">
+                              {msg.text}
+                            </p>
+                            <div className="text-[9px] text-cream/45 mt-2 text-right font-medium">
+                              {timeStr}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                  <div ref={messagesEndRef} />
-                </div>
-              )}
-            </div>
-
-            {/* Input box section */}
-            <div className="border-t border-[#3E1E09] p-5 bg-[#200D02] shrink-0">
-              {flowState === "normal" ? (
-                <form onSubmit={handleMessageSubmit} className="flex items-center gap-2.5">
-                  <input
-                    type="text"
-                    value={typedMessage}
-                    onChange={(e) => setTypedMessage(e.target.value)}
-                    placeholder="Kuchh likhein..."
-                    maxLength={300}
-                    className="h-11 flex-1 rounded-full border border-cream/15 bg-black/40 px-4 text-[13px] text-cream placeholder:text-cream/25 focus:border-amber-500/50 focus:outline-none transition-colors"
-                  />
-                  <button
-                    type="submit"
-                    disabled={!typedMessage.trim()}
-                    className="flex h-11 px-5 items-center justify-center rounded-full bg-amber-500 text-charcoal font-bold text-xs tracking-wider uppercase transition-transform hover:scale-[1.02] active:scale-95 disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
-                  >
-                    Send
-                  </button>
-                </form>
-              ) : (
-                <div className="space-y-3">
-                  <div className="text-xs">
-                    <span className="font-semibold text-amber-400 block">
-                      One last step — what's your name?
-                    </span>
-                    <span className="text-[11px] text-cream/60 mt-0.5 block italic truncate max-w-full">
-                      We'll send this as soon as you enter it: "{typedMessage}"
-                    </span>
+                      );
+                    })}
+                    <div ref={messagesEndRef} />
                   </div>
-                  <form onSubmit={handleNameSubmit} className="flex items-center gap-2.5">
+                )}
+              </div>
+
+              {/* Input box section */}
+              <div className="border-t border-[#3E1E09] p-5 bg-[#200D02] shrink-0">
+                {flowState === "normal" ? (
+                  <form onSubmit={handleMessageSubmit} className="flex items-center gap-2.5">
                     <input
                       type="text"
-                      value={nameInput}
-                      onChange={(e) => setNameInput(e.target.value)}
-                      placeholder="Your name..."
-                      maxLength={50}
-                      required
-                      className="h-11 flex-1 rounded-full border border-amber-600 bg-black/50 px-4 text-[13px] text-cream focus:border-amber-500 focus:outline-none"
-                      autoFocus
+                      value={typedMessage}
+                      onChange={(e) => setTypedMessage(e.target.value)}
+                      placeholder="Kuchh likhein..."
+                      maxLength={300}
+                      className="h-11 flex-1 rounded-full border border-cream/15 bg-black/40 px-4 text-[13px] text-cream placeholder:text-cream/25 focus:border-amber-500/50 focus:outline-none transition-colors"
                     />
                     <button
                       type="submit"
-                      disabled={!nameInput.trim()}
-                      className="flex h-11 px-5 items-center justify-center rounded-full bg-amber-500 text-charcoal font-bold text-xs tracking-wider uppercase transition-transform hover:scale-[1.02] active:scale-95 disabled:opacity-40 cursor-pointer shrink-0"
+                      disabled={!typedMessage.trim()}
+                      className="flex h-11 px-5 items-center justify-center rounded-full bg-amber-500 text-charcoal font-bold text-xs tracking-wider uppercase transition-transform hover:scale-[1.02] active:scale-95 disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
                     >
                       Send
                     </button>
                   </form>
-                  <button
-                    type="button"
-                    onClick={() => setFlowState("normal")}
-                    className="text-[10px] text-cream/45 hover:text-cream transition-colors block text-center w-full mt-1 cursor-pointer underline"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              )}
+                ) : (
+                  <div className="space-y-3">
+                    <div className="text-xs">
+                      <span className="font-semibold text-amber-400 block">
+                        One last step — what's your name?
+                      </span>
+                      <span className="text-[11px] text-cream/60 mt-0.5 block italic truncate max-w-full">
+                        We'll send this as soon as you enter it: "{typedMessage}"
+                      </span>
+                    </div>
+                    <form onSubmit={handleNameSubmit} className="flex items-center gap-2.5">
+                      <input
+                        type="text"
+                        value={nameInput}
+                        onChange={(e) => setNameInput(e.target.value)}
+                        placeholder="Your name..."
+                        maxLength={50}
+                        required
+                        className="h-11 flex-1 rounded-full border border-amber-600 bg-black/50 px-4 text-[13px] text-cream focus:border-amber-500 focus:outline-none"
+                        autoFocus
+                      />
+                      <button
+                        type="submit"
+                        disabled={!nameInput.trim()}
+                        className="flex h-11 px-5 items-center justify-center rounded-full bg-amber-500 text-charcoal font-bold text-xs tracking-wider uppercase transition-transform hover:scale-[1.02] active:scale-95 disabled:opacity-40 cursor-pointer shrink-0"
+                      >
+                        Send
+                      </button>
+                    </form>
+                    <button
+                      type="button"
+                      onClick={() => setFlowState("normal")}
+                      className="text-[10px] text-cream/45 hover:text-cream transition-colors block text-center w-full mt-1 cursor-pointer underline"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </>
   );
 }

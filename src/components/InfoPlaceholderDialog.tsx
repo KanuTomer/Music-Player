@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Heart, Lightbulb, Copy, Check, ExternalLink } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import himanshuQr from "@/assets/newhimanshusirqr.png";
+import himanshuQr from "@/assets/himanshusir_qr.jpeg";
 
 type InfoPlaceholderDialogProps = {
   kind: "suggest" | "support";

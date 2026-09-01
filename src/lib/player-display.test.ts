@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { getPlayerDisplay, normalizeAmbienceLevel, readableTitle } from "./player-display";
+import {
+  getPlayerDisplay,
+  nextAmbienceToggle,
+  normalizeAmbienceLevel,
+  readableTitle,
+} from "./player-display";
 import type { NowPlaying } from "./player";
 
 const empty: NowPlaying = {
@@ -43,5 +48,16 @@ describe("normalizeAmbienceLevel", () => {
     expect(normalizeAmbienceLevel(49.6)).toBe(50);
     expect(normalizeAmbienceLevel(120)).toBe(100);
     expect(normalizeAmbienceLevel(Number.NaN)).toBe(50);
+  });
+});
+
+describe("nextAmbienceToggle", () => {
+  test("turns ambience on and off without coupling it to the slider panel", () => {
+    expect(nextAmbienceToggle(false, 65)).toEqual({ enabled: true, level: 65 });
+    expect(nextAmbienceToggle(true, 65)).toEqual({ enabled: false, level: 65 });
+  });
+
+  test("restores an audible default when enabling from zero", () => {
+    expect(nextAmbienceToggle(false, 0)).toEqual({ enabled: true, level: 50 });
   });
 });

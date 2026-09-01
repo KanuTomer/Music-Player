@@ -18,7 +18,10 @@ export function ThemeFAQ({ slug }: ThemeFAQProps) {
       className="relative overflow-hidden bg-charcoal px-5 py-20 sm:px-10 sm:py-28 lg:px-16"
     >
       {/* Background glowing blob for visual interest */}
-      <div className="absolute top-1/2 right-1/4 -translate-y-1/2 size-80 rounded-full bg-mustard/4 blur-[130px] pointer-events-none" aria-hidden />
+      <div
+        className="absolute top-1/2 right-1/4 -translate-y-1/2 size-80 rounded-full bg-mustard/4 blur-[130px] pointer-events-none"
+        aria-hidden
+      />
 
       <div className="mx-auto max-w-4xl relative z-10">
         <div className="mb-4 flex items-center gap-3">
@@ -52,8 +55,8 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
   return (
     <div
       className={`rounded-2xl border transition-all duration-300 backdrop-blur-md overflow-hidden ${
-        open 
-          ? "border-ember/45 bg-[#200D02]/60 shadow-lg translate-y-[-2px] border-l-4 border-l-ember" 
+        open
+          ? "border-ember/45 bg-[#200D02]/60 shadow-lg translate-y-[-2px] border-l-4 border-l-ember"
           : "border-cream/10 bg-night/20 hover:border-cream/25 hover:bg-night/35 hover:translate-y-[-1px]"
       }`}
     >
@@ -63,7 +66,9 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
         className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember focus-visible:ring-inset rounded-2xl cursor-pointer"
         aria-expanded={open}
       >
-        <span className={`text-sm font-bold sm:text-base transition-colors duration-250 ${open ? "text-amber-400" : "text-cream/90"}`}>
+        <span
+          className={`text-sm font-bold sm:text-base transition-colors duration-250 ${open ? "text-amber-400" : "text-cream/90"}`}
+        >
           {question}
         </span>
         <ChevronDown

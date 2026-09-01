@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
-import type { RoomPayload, Scene } from "./rooms.functions";
+import type { AmbienceProfile, AmbienceStem, RoomPayload, Scene } from "./rooms.functions";
 
 function publicClient() {
   const url = process.env["SUPABASE_URL"];
@@ -45,7 +45,7 @@ export async function fetchRoom(slug: string): Promise<RoomPayload | null> {
   if (error) throw new Error(error.message);
   if (!scene) return null;
 
-  const [curatedSet, oneliners] = await Promise.all([
+  const [curatedSet, oneliners, ambienceProfile, ambienceStems] = await Promise.all([
     client
       .from("curated_sets")
       .select("id, title, shuffle_start")
@@ -53,8 +53,24 @@ export async function fetchRoom(slug: string): Promise<RoomPayload | null> {
       .eq("is_active", true)
       .single(),
     client.from("oneliners").select("id, text_en, text_hi, daypart_tag").eq("scene_id", scene.id),
+    client
+      .from("ambience_profiles")
+      .select("id, max_master_gain, fade_out_ms, fade_in_ms, audio_theme, visual_theme")
+      .eq("scene_id", scene.id)
+      .eq("enabled", true)
+      .maybeSingle(),
+    client
+      .from("sound_stems")
+      .select(
+        "id, name, role, default_volume, min_gain, max_gain, crossfade_ms, loop_start_seconds, loop_end_seconds, event_min_seconds, event_max_seconds, sort_order, ambience_assets!inner(storage_path, ambience_asset_sources(source_url, source_title, source_order))",
+      )
+      .eq("scene_id", scene.id)
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true }),
   ]);
   if (curatedSet.error) throw new Error(curatedSet.error.message);
+  if (ambienceProfile.error) throw new Error(ambienceProfile.error.message);
+  if (ambienceStems.error) throw new Error(ambienceStems.error.message);
 
   const memberships = await client
     .from("curated_set_tracks")
@@ -82,6 +98,45 @@ export async function fetchRoom(slug: string): Promise<RoomPayload | null> {
       };
     }) as RoomPayload["queue"],
     oneliners: (oneliners.data ?? []) as RoomPayload["oneliners"],
+    ambience: ambienceProfile.data
+      ? {
+          ...ambienceProfile.data,
+          max_master_gain: Number(ambienceProfile.data.max_master_gain),
+          audio_theme: ambienceProfile.data.audio_theme as AmbienceProfile["audio_theme"],
+          visual_theme: (() => {
+            const visual = ambienceProfile.data.visual_theme as AmbienceProfile["visual_theme"];
+            return {
+              ...visual,
+              overlay_url: visual.overlay_path
+                ? client.storage.from("scene-media").getPublicUrl(visual.overlay_path).data
+                    .publicUrl
+                : undefined,
+            };
+          })(),
+          stems: (ambienceStems.data ?? []).map((stem) => {
+            const asset = stem.ambience_assets;
+            return {
+              id: stem.id,
+              name: stem.name,
+              role: stem.role,
+              url: client.storage.from("ambience-audio").getPublicUrl(asset.storage_path).data
+                .publicUrl,
+              default_gain: Number(stem.default_volume),
+              min_gain: Number(stem.min_gain),
+              max_gain: Number(stem.max_gain),
+              crossfade_ms: stem.crossfade_ms,
+              loop_start_seconds: Number(stem.loop_start_seconds),
+              loop_end_seconds:
+                stem.loop_end_seconds == null ? null : Number(stem.loop_end_seconds),
+              event_min_seconds: stem.event_min_seconds,
+              event_max_seconds: stem.event_max_seconds,
+              sources: [...asset.ambience_asset_sources].sort(
+                (a, b) => a.source_order - b.source_order,
+              ),
+            };
+          }) as AmbienceStem[],
+        }
+      : null,
   };
 }
 
@@ -147,4 +202,3 @@ export async function insertChatMessage(roomKey: string, displayName: string, te
   }
   return data;
 }
-

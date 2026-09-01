@@ -213,7 +213,7 @@ export const themeMap: Record<AllowedSlug, ThemeInfo> = {
       {
         question: "Does Ambience change the sound?",
         answer:
-          "Ambience is still a preview control. Its level is remembered during the session but does not mix additional audio yet.",
+          "Yes. Ambience mixes the room's base, texture, and occasional event sounds beneath the music. Its level is remembered while you move between Jagahs in the current session.",
       },
       {
         question: "Why listen to plates clattering?",

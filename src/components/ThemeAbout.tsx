@@ -16,8 +16,14 @@ export function ThemeAbout({ slug }: ThemeAboutProps) {
       className="relative overflow-hidden bg-night px-5 py-20 sm:px-10 sm:py-28 lg:px-16 border-b border-cream/5"
     >
       {/* Decorative blurred background blobs for premium aesthetic */}
-      <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 size-80 rounded-full bg-ember/8 blur-[130px] pointer-events-none" aria-hidden />
-      <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 size-96 rounded-full bg-terracotta/6 blur-[150px] pointer-events-none" aria-hidden />
+      <div
+        className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 size-80 rounded-full bg-ember/8 blur-[130px] pointer-events-none"
+        aria-hidden
+      />
+      <div
+        className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 size-96 rounded-full bg-terracotta/6 blur-[150px] pointer-events-none"
+        aria-hidden
+      />
 
       {/* Background logo watermark */}
       <div
@@ -47,11 +53,11 @@ export function ThemeAbout({ slug }: ThemeAboutProps) {
           {about.subtitle}
         </p>
         <span className="mt-6 block h-[3px] w-20 rounded-full bg-ember" aria-hidden />
-        
+
         <div className="mt-8 space-y-5">
           {about.paragraphs.map((p, i) => (
-            <p 
-              key={i} 
+            <p
+              key={i}
               className="text-sm sm:text-base leading-relaxed text-cream/70 tracking-wide font-normal"
             >
               {p}
