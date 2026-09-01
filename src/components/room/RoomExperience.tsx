@@ -17,6 +17,9 @@ import { useJagahNavigation } from "@/hooks/useJagahNavigation";
 import { ThemeAbout } from "@/components/ThemeAbout";
 import { ThemeFAQ } from "@/components/ThemeFAQ";
 import { Footer } from "@/components/Footer";
+import { AmbienceBackdrop } from "@/components/room/AmbienceBackdrop";
+import { LiveChat } from "@/components/room/LiveChat";
+import { useSupportAutoPrompt } from "@/hooks/useSupportPrompt";
 
 export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Scene[] }) {
   const { scene, oneliners } = room;
@@ -31,21 +34,12 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
     closeExplorer: () => setExplorerOpen(false),
   });
 
+  useSupportAutoPrompt(() => setDialog("support"));
+
   useEffect(() => {
     player.openRoom(room);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room.scene.slug]);
-
-  useEffect(() => {
-    const timer = setInterval(
-      () => {
-        setDialog("support");
-      },
-      20 * 60 * 1000,
-    ); // Trigger every 20 minutes
-
-    return () => clearInterval(timer);
-  }, []);
 
   useEffect(() => {
     const video = sceneVideoRef.current;
@@ -129,6 +123,12 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
         {(scene.slug === "doordarshan-shaam" || scene.slug === "papa-ke-gaane") && (
           <div className="scanlines pointer-events-none absolute inset-0 opacity-20" aria-hidden />
         )}
+        <AmbienceBackdrop
+          active={player.ambienceActive}
+          level={player.ambienceLevel}
+          eventPulse={player.ambienceEventPulse}
+          profile={room.ambience}
+        />
 
         {/* top row: live pill · Explorer · Home and share */}
         <div className="absolute inset-x-0 top-0 z-50 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 p-2 sm:gap-3 sm:p-3">
@@ -278,6 +278,7 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
             </div>
           </div>
         )}
+        <LiveChat roomKey="global-chat" roomName={scene.title_en} />
       </div>
 
       {/* Unique About section */}
@@ -302,11 +303,13 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
         kind="suggest"
         open={dialog === "suggest"}
         onOpenChange={(open) => setDialog(open ? "suggest" : null)}
+        slug={scene.slug}
       />
       <InfoPlaceholderDialog
         kind="support"
         open={dialog === "support"}
         onOpenChange={(open) => setDialog(open ? "support" : null)}
+        slug={scene.slug}
       />
     </div>
   );

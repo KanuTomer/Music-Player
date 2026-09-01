@@ -8,9 +8,11 @@ import {
   type ReactNode,
 } from "react";
 import { currentDaypart, type Daypart } from "./dayparts";
-import { normalizeAmbienceLevel } from "./player-display";
+import { nextAmbienceToggle, normalizeAmbienceLevel } from "./player-display";
 import { chooseStart, circularIndex, snapshotQueue, sourceFailureAction } from "./queue";
 import { reportPlaybackSourceFailure, type QueueItem, type RoomPayload } from "./rooms.functions";
+import { useAmbienceEngine } from "@/hooks/useAmbienceEngine";
+import { effectiveMusicVolume, type AmbienceStatus } from "./ambience";
 
 type YTPlayer = {
   loadVideoById: (id: string) => void;
@@ -60,6 +62,11 @@ type PlayerState = {
   nowPlaying: NowPlaying;
   musicVolume: number;
   ambienceLevel: number;
+  ambienceEnabled: boolean;
+  ambienceStatus: AmbienceStatus;
+  ambienceActive: boolean;
+  ambienceSoloPlaying: boolean;
+  ambienceEventPulse: number;
   openRoom: (room: RoomPayload) => void;
   toggle: () => void;
   next: () => void;
@@ -67,6 +74,8 @@ type PlayerState = {
   seek: (seconds: number) => void;
   setMusicVolume: (v: number) => void;
   setAmbienceLevel: (level: number) => void;
+  toggleAmbience: () => void;
+  toggleAmbienceSolo: () => void;
   start: () => void;
   fadeForThemeChange: () => Promise<void>;
   leave: () => void;
@@ -109,7 +118,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const generationRef = useRef(0);
   const intendPlayRef = useRef(false);
   const volumeRef = useRef(0.7);
+  const outputVolumeRef = useRef(0.7);
+  const ambienceActiveRef = useRef(false);
   const fadeTimerRef = useRef<number | null>(null);
+  const volumeRampTimerRef = useRef<number | null>(null);
   const themeTransitionRef = useRef(false);
   const queueRef = useRef<QueueItem[]>([]);
   const indexRef = useRef(0);
@@ -128,8 +140,60 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [apiReady, setApiReady] = useState(false);
   const [musicVolume, setMusicVol] = useState(0.7);
   const [ambienceLevel, setAmbienceLevelState] = useState(50);
+  const [ambienceEnabled, setAmbienceEnabled] = useState(false);
+  const [ambienceSoloPlaying, setAmbienceSoloPlaying] = useState(false);
   const [nowPlaying, setNowPlaying] = useState<NowPlaying>(emptyNowPlaying);
   const track = playlist[index]?.track ?? null;
+  const ambience = useAmbienceEngine(
+    room,
+    ambienceEnabled && ((isPlaying && !needsGate) || ambienceSoloPlaying),
+    ambienceLevel,
+  );
+  const resumeAmbienceFromGesture = ambience.resumeFromGesture;
+
+  const setPlayerOutputVolume = useCallback((player: YTPlayer, value: number) => {
+    const clamped = Math.min(1, Math.max(0, value));
+    outputVolumeRef.current = clamped;
+    player.setVolume(Math.round(clamped * 100));
+  }, []);
+  const rampMusicOutput = useCallback(
+    (target: number, durationMs: number) => {
+      const player = playerRef.current;
+      const clamped = Math.min(1, Math.max(0, target));
+      if (volumeRampTimerRef.current != null) {
+        window.clearInterval(volumeRampTimerRef.current);
+        volumeRampTimerRef.current = null;
+      }
+      if (!player || !readyRef.current || durationMs <= 0) {
+        outputVolumeRef.current = clamped;
+        if (player && readyRef.current) setPlayerOutputVolume(player, clamped);
+        return;
+      }
+      const start = outputVolumeRef.current;
+      const steps = Math.max(1, Math.round(durationMs / 50));
+      let step = 0;
+      volumeRampTimerRef.current = window.setInterval(() => {
+        if (playerRef.current !== player || !readyRef.current) {
+          if (volumeRampTimerRef.current != null) window.clearInterval(volumeRampTimerRef.current);
+          volumeRampTimerRef.current = null;
+          return;
+        }
+        step += 1;
+        setPlayerOutputVolume(player, start + (clamped - start) * (step / steps));
+        if (step >= steps) {
+          if (volumeRampTimerRef.current != null) window.clearInterval(volumeRampTimerRef.current);
+          volumeRampTimerRef.current = null;
+        }
+      }, durationMs / steps);
+    },
+    [setPlayerOutputVolume],
+  );
+
+  useEffect(() => {
+    ambienceActiveRef.current = ambience.active;
+    if (themeTransitionRef.current) return;
+    rampMusicOutput(effectiveMusicVolume(volumeRef.current, ambience.active), 500);
+  }, [ambience.active, rampMusicOutput]);
 
   const setIndex = useCallback((next: number) => {
     indexRef.current = next;
@@ -137,32 +201,36 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setIndexState(next);
     setNowPlaying(emptyNowPlaying(next, queueRef.current.length));
   }, []);
-  const cueCurrent = useCallback((player: YTPlayer, autoplay: boolean) => {
-    const source = queueRef.current[indexRef.current]?.sources[sourceIndexRef.current];
-    if (!source) {
-      setMusicBlocked(true);
-      return false;
-    }
-    player.loadVideoById(source.provider_item_id);
-    player.setVolume(themeTransitionRef.current ? 0 : Math.round(volumeRef.current * 100));
-    intendPlayRef.current = autoplay;
-    if (autoplay) player.playVideo();
-    else player.pauseVideo();
-    if (autoplay && themeTransitionRef.current) {
-      let step = 0;
-      if (fadeTimerRef.current != null) window.clearInterval(fadeTimerRef.current);
-      fadeTimerRef.current = window.setInterval(() => {
-        step += 1;
-        player.setVolume(Math.round((volumeRef.current * 100 * step) / 8));
-        if (step >= 8) {
-          if (fadeTimerRef.current != null) window.clearInterval(fadeTimerRef.current);
-          fadeTimerRef.current = null;
-          themeTransitionRef.current = false;
-        }
-      }, 100);
-    }
-    return true;
-  }, []);
+  const cueCurrent = useCallback(
+    (player: YTPlayer, autoplay: boolean) => {
+      const source = queueRef.current[indexRef.current]?.sources[sourceIndexRef.current];
+      if (!source) {
+        setMusicBlocked(true);
+        return false;
+      }
+      player.loadVideoById(source.provider_item_id);
+      const target = effectiveMusicVolume(volumeRef.current, ambienceActiveRef.current);
+      setPlayerOutputVolume(player, themeTransitionRef.current ? 0 : target);
+      intendPlayRef.current = autoplay;
+      if (autoplay) player.playVideo();
+      else player.pauseVideo();
+      if (autoplay && themeTransitionRef.current) {
+        let step = 0;
+        if (fadeTimerRef.current != null) window.clearInterval(fadeTimerRef.current);
+        fadeTimerRef.current = window.setInterval(() => {
+          step += 1;
+          setPlayerOutputVolume(player, target * (step / 8));
+          if (step >= 8) {
+            if (fadeTimerRef.current != null) window.clearInterval(fadeTimerRef.current);
+            fadeTimerRef.current = null;
+            themeTransitionRef.current = false;
+          }
+        }, 100);
+      }
+      return true;
+    },
+    [setPlayerOutputVolume],
+  );
   const advance = useCallback(
     (delta: number) => {
       const next = circularIndex(indexRef.current, delta, queueRef.current.length);
@@ -333,45 +401,71 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     [room?.scene.slug, setIndex],
   );
   const start = useCallback(() => {
+    void resumeAmbienceFromGesture();
+    setAmbienceSoloPlaying(false);
     intendPlayRef.current = true;
     setNeedsGate(false);
     setIsPlaying(true);
     if (readyRef.current) playerRef.current?.playVideo();
-  }, []);
+  }, [resumeAmbienceFromGesture]);
   const toggle = useCallback(() => {
     if (needsGate) return start();
+    if (!isPlaying) void resumeAmbienceFromGesture();
     intendPlayRef.current = !isPlaying;
     if (readyRef.current) {
       if (isPlaying) playerRef.current?.pauseVideo();
       else playerRef.current?.playVideo();
     }
     setIsPlaying(!isPlaying);
-  }, [isPlaying, needsGate, start]);
+  }, [isPlaying, needsGate, resumeAmbienceFromGesture, start]);
   const next = useCallback(() => advance(1), [advance]);
   const previous = useCallback(() => advance(-1), [advance]);
   const seek = useCallback((seconds: number) => {
     if (readyRef.current) playerRef.current?.seekTo(Math.max(0, seconds), true);
   }, []);
-  const setMusicVolume = useCallback((value: number) => {
-    const clamped = Math.min(1, Math.max(0, value));
-    volumeRef.current = clamped;
-    setMusicVol(clamped);
-    if (readyRef.current) playerRef.current?.setVolume(Math.round(clamped * 100));
-  }, []);
+  const setMusicVolume = useCallback(
+    (value: number) => {
+      const clamped = Math.min(1, Math.max(0, value));
+      volumeRef.current = clamped;
+      setMusicVol(clamped);
+      rampMusicOutput(effectiveMusicVolume(clamped, ambienceActiveRef.current), 160);
+    },
+    [rampMusicOutput],
+  );
   const setAmbienceLevel = useCallback(
     (value: number) => setAmbienceLevelState(normalizeAmbienceLevel(value)),
     [],
   );
+  const toggleAmbience = useCallback(() => {
+    const next = nextAmbienceToggle(ambienceEnabled, ambienceLevel);
+    setAmbienceEnabled(next.enabled);
+    setAmbienceLevelState(next.level);
+    if (next.enabled) void resumeAmbienceFromGesture();
+    else setAmbienceSoloPlaying(false);
+  }, [ambienceEnabled, ambienceLevel, resumeAmbienceFromGesture]);
+  const toggleAmbienceSolo = useCallback(() => {
+    if (!ambienceSoloPlaying) {
+      if (!ambienceEnabled) setAmbienceEnabled(true);
+      if (ambienceLevel === 0) setAmbienceLevelState(50);
+      void resumeAmbienceFromGesture();
+    }
+    setAmbienceSoloPlaying((current) => !current);
+  }, [ambienceEnabled, ambienceLevel, ambienceSoloPlaying, resumeAmbienceFromGesture]);
   const fadeForThemeChange = useCallback(() => {
     themeTransitionRef.current = true;
     const player = playerRef.current;
     if (!player || !isPlaying) return Promise.resolve();
     if (fadeTimerRef.current != null) window.clearInterval(fadeTimerRef.current);
+    if (volumeRampTimerRef.current != null) {
+      window.clearInterval(volumeRampTimerRef.current);
+      volumeRampTimerRef.current = null;
+    }
     return new Promise<void>((resolve) => {
       let step = 7;
+      const startVolume = outputVolumeRef.current;
       fadeTimerRef.current = window.setInterval(() => {
         step -= 1;
-        player.setVolume(Math.max(0, Math.round((volumeRef.current * 100 * step) / 7)));
+        setPlayerOutputVolume(player, Math.max(0, startVolume * (step / 7)));
         if (step <= 0) {
           if (fadeTimerRef.current != null) window.clearInterval(fadeTimerRef.current);
           fadeTimerRef.current = null;
@@ -379,7 +473,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         }
       }, 45);
     });
-  }, [isPlaying]);
+  }, [isPlaying, setPlayerOutputVolume]);
   const leave = useCallback(() => {
     generationRef.current += 1;
     readyRef.current = false;
@@ -390,6 +484,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     queueRef.current = [];
     setNeedsGate(false);
     setIsPlaying(false);
+    setAmbienceSoloPlaying(false);
   }, []);
 
   const value: PlayerState = {
@@ -405,6 +500,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     nowPlaying,
     musicVolume,
     ambienceLevel,
+    ambienceEnabled,
+    ambienceStatus: ambience.status,
+    ambienceActive: ambience.active,
+    ambienceSoloPlaying,
+    ambienceEventPulse: ambience.eventPulse,
     openRoom,
     toggle,
     next,
@@ -412,6 +512,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     seek,
     setMusicVolume,
     setAmbienceLevel,
+    toggleAmbience,
+    toggleAmbienceSolo,
     start,
     fadeForThemeChange,
     leave,

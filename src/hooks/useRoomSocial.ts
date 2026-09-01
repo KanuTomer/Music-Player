@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  DEMO_LISTENER_FALLBACK,
+  combinedDemoListenerCount,
+  getOrCreateDemoListenerBaseline,
+} from "@/lib/demo-listeners";
 
 export type FloatingReaction = { id: number; emoji: string; x: number };
 
@@ -26,11 +31,17 @@ export function randomDesiName(): string {
  * A single channel per room handles both, torn down on unmount.
  */
 export function useRoomSocial(roomKey: string | null) {
-  const [listeners, setListeners] = useState(1);
+  const [demoBaseline, setDemoBaseline] = useState(DEMO_LISTENER_FALLBACK);
+  const [presenceListeners, setPresenceListeners] = useState(1);
   const [floating, setFloating] = useState<FloatingReaction[]>([]);
   const [connected, setConnected] = useState(false);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const seq = useRef(0);
+  const listeners = combinedDemoListenerCount(demoBaseline, presenceListeners);
+
+  useEffect(() => {
+    setDemoBaseline(getOrCreateDemoListenerBaseline(window.sessionStorage));
+  }, []);
 
   const push = useCallback((emoji: string) => {
     seq.current += 1;
@@ -41,6 +52,8 @@ export function useRoomSocial(roomKey: string | null) {
 
   useEffect(() => {
     if (!roomKey) return;
+    setPresenceListeners(1);
+
     const channel = supabase.channel(`room:${roomKey}`, {
       config: { presence: { key: crypto.randomUUID() } },
     });
@@ -48,7 +61,8 @@ export function useRoomSocial(roomKey: string | null) {
 
     channel
       .on("presence", { event: "sync" }, () => {
-        setListeners(Math.max(1, Object.keys(channel.presenceState()).length));
+        const state = channel.presenceState();
+        setPresenceListeners(Math.max(1, Object.keys(state).length));
       })
       .on("broadcast", { event: "reaction" }, ({ payload }) => {
         push((payload as { emoji: string }).emoji);

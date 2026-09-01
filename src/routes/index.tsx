@@ -15,6 +15,7 @@ import { isAllowedSlug } from "@/lib/theme-data";
 import { ThemeAbout } from "@/components/ThemeAbout";
 import { ThemeFAQ } from "@/components/ThemeFAQ";
 import { Footer } from "@/components/Footer";
+import { useSupportAutoPrompt } from "@/hooks/useSupportPrompt";
 
 const TITLE = "Sainik Dhaba 📻";
 const DESC =
@@ -64,16 +65,7 @@ function Home() {
     closeExplorer: () => setExplorerOpen(false),
   });
 
-  useEffect(() => {
-    const timer = setInterval(
-      () => {
-        setDialog("support");
-      },
-      20 * 60 * 1000,
-    ); // Trigger support modal every 20 minutes
-
-    return () => clearInterval(timer);
-  }, []);
+  useSupportAutoPrompt(() => setDialog("support"));
 
   if (!room) return <HomeError />;
   const { scene } = room;
@@ -239,11 +231,13 @@ function Home() {
         kind="suggest"
         open={dialog === "suggest"}
         onOpenChange={(open) => setDialog(open ? "suggest" : null)}
+        slug={activeSlug}
       />
       <InfoPlaceholderDialog
         kind="support"
         open={dialog === "support"}
         onOpenChange={(open) => setDialog(open ? "support" : null)}
+        slug={activeSlug}
       />
     </div>
   );
