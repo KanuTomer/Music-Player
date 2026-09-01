@@ -50,6 +50,7 @@ describe("ambience asset manifest", () => {
         bytes: number;
         sha256: string;
       }>;
+      supersededAssets: Array<{ storagePath: string; reason: string }>;
     };
     expect(manifest.license.commercialUse).toBe(true);
     expect(manifest.license.url).toEndWith("#videoFree");
@@ -59,10 +60,16 @@ describe("ambience asset manifest", () => {
     expect(new Set(manifest.assets.map((asset) => asset.slug)).size).toBe(7);
     for (const asset of manifest.assets) {
       expect(asset.sourcePage).toStartWith("https://mixkit.co/free-stock-video/");
-      expect(asset.storagePath).toBe(`rooms/${asset.slug}/ambience/overlay.mp4`);
+      expect(asset.storagePath).toStartWith(`rooms/${asset.slug}/ambience/`);
+      expect(asset.storagePath).toEndWith(".mp4");
       expect(asset.bytes).toBeLessThan(15 * 1024 * 1024);
       expect(asset.sourceSha256).toMatch(/^[A-F0-9]{64}$/);
       expect(asset.sha256).toMatch(/^[A-F0-9]{64}$/);
     }
+    expect(manifest.supersededAssets).toHaveLength(1);
+    expect(manifest.supersededAssets[0]?.storagePath).toBe(
+      "rooms/sainik-dhaba/ambience/overlay.mp4",
+    );
+    expect(manifest.supersededAssets[0]?.reason).toContain("did not fit");
   });
 });

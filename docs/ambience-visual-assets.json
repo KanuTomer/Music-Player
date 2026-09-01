@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "acquiredAt": "2026-09-01",
   "publisher": "Mixkit",
   "license": {
@@ -21,12 +21,13 @@
   "assets": [
     {
       "slug": "sainik-dhaba",
-      "title": "Smoke in motion",
-      "sourcePage": "https://mixkit.co/free-stock-video/smoke-in-motion-1964/",
-      "sourceSha256": "59A924DBEE56EE8B82E488D6992D2F8FCE95693D78AE674001CBBAE8F8410882",
-      "storagePath": "rooms/sainik-dhaba/ambience/overlay.mp4",
-      "bytes": 321620,
-      "sha256": "9E0EAEFB59EAE4464FC1A1C0E8546E8642A510DBBADA5D2615A2A215DA710E9F"
+      "title": "Lens flares from the sun through the out-of-focus trees",
+      "sourcePage": "https://mixkit.co/free-stock-video/lens-flares-from-the-sun-through-the-out-of-focus-trees-34372/",
+      "sourceSha256": "34B80568F79A6C54986B6D1511DA99A1353144C2ECBB99FEEC6D42FB66B050C8",
+      "storagePath": "rooms/sainik-dhaba/ambience/warm-road-light-v2.mp4",
+      "bytes": 264041,
+      "sha256": "2DFDB2D1352DC92D86B4A8805ED830D246721FFE6C2F651F57B7B4DBF55AB1EC",
+      "treatment": "Horizontally flipped, gently warmed, and used as a low-opacity soft-light roadside glow."
     },
     {
       "slug": "nai-ki-dukaan",
@@ -81,6 +82,18 @@
       "storagePath": "rooms/corporate-majdoor/ambience/overlay.mp4",
       "bytes": 246822,
       "sha256": "2E0174E27CDAAA8F8546C755DB5B532A1C6E976784E3A3E5B3B7A30F870D2BBD"
+    }
+  ],
+  "supersededAssets": [
+    {
+      "slug": "sainik-dhaba",
+      "title": "Smoke in motion",
+      "sourcePage": "https://mixkit.co/free-stock-video/smoke-in-motion-1964/",
+      "sourceSha256": "59A924DBEE56EE8B82E488D6992D2F8FCE95693D78AE674001CBBAE8F8410882",
+      "storagePath": "rooms/sainik-dhaba/ambience/overlay.mp4",
+      "bytes": 321620,
+      "sha256": "9E0EAEFB59EAE4464FC1A1C0E8546E8642A510DBBADA5D2615A2A215DA710E9F",
+      "reason": "Replaced because the dense smoke treatment did not fit the roadside Dhaba scene. The object remains in Storage for rollback."
     }
   ]
 }

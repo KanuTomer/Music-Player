@@ -18,15 +18,19 @@ const licenseUrl = "https://mixkit.co/license/#videoFree";
 const assets = [
   {
     slug: "sainik-dhaba",
-    title: "Smoke in motion",
-    sourcePage: "https://mixkit.co/free-stock-video/smoke-in-motion-1964/",
-    downloadUrl: "https://assets.mixkit.co/videos/1964/1964-720.mp4",
-    sourceDurationSeconds: 22,
-    sourceSha256: "59A924DBEE56EE8B82E488D6992D2F8FCE95693D78AE674001CBBAE8F8410882",
-    blendMode: "screen",
-    playbackRate: 0.72,
-    opacityFloor: 0.42,
-    opacityCeiling: 0.72,
+    title: "Lens flares from the sun through the out-of-focus trees",
+    sourcePage:
+      "https://mixkit.co/free-stock-video/lens-flares-from-the-sun-through-the-out-of-focus-trees-34372/",
+    downloadUrl: "https://assets.mixkit.co/videos/34372/34372-720.mp4",
+    sourceDurationSeconds: 8,
+    sourceSha256: "34B80568F79A6C54986B6D1511DA99A1353144C2ECBB99FEEC6D42FB66B050C8",
+    sourceFile: "nai-ki-dukaan.source.mp4",
+    storagePath: "rooms/sainik-dhaba/ambience/warm-road-light-v2.mp4",
+    videoFilters: "hflip,colorbalance=rs=.08:gs=.025:bs=-.06",
+    blendMode: "soft-light",
+    playbackRate: 0.58,
+    opacityFloor: 0.16,
+    opacityCeiling: 0.3,
   },
   {
     slug: "nai-ki-dukaan",
@@ -115,17 +119,17 @@ const ffmpegVersion = version.stdout.split(/\r?\n/, 1)[0];
 const prepared = [];
 
 for (const asset of assets) {
-  const input = join(sourceDir, `${asset.slug}.source.mp4`);
+  const input = join(sourceDir, asset.sourceFile ?? `${asset.slug}.source.mp4`);
   const source = await readFile(input);
   if (sha256(source) !== asset.sourceSha256) {
     throw new Error(`Source checksum mismatch: ${asset.slug}`);
   }
-  const storagePath = `rooms/${asset.slug}/ambience/overlay.mp4`;
+  const storagePath = asset.storagePath ?? `rooms/${asset.slug}/ambience/overlay.mp4`;
   const output = join(outputDir, storagePath);
   await mkdir(resolve(output, ".."), { recursive: true });
   const filter =
     "[0:v]trim=start=0:duration=6,setpts=PTS-STARTPTS," +
-    "scale=640:-2:flags=lanczos,fps=24,format=yuv420p,split=2[f][r];" +
+    `scale=640:-2:flags=lanczos,fps=24,${asset.videoFilters ? `${asset.videoFilters},` : ""}format=yuv420p,split=2[f][r];` +
     "[r]reverse[rr];[f][rr]concat=n=2:v=1:a=0[outv]";
   const result = spawnSync(
     ffmpeg,

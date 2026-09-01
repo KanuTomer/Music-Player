@@ -228,10 +228,12 @@ export function FullCassettePlayer() {
             <AmbienceControl
               level={player.ambienceLevel}
               onLevelChange={player.setAmbienceLevel}
+              enabled={player.ambienceEnabled}
               active={player.ambienceActive}
               status={player.ambienceStatus}
               soloPlaying={player.ambienceSoloPlaying}
               musicPlaying={player.isPlaying}
+              onToggle={player.toggleAmbience}
               onSoloToggle={ambienceSoloPreviewEnabled ? player.toggleAmbienceSolo : undefined}
             />
             <Button
@@ -322,10 +324,12 @@ export function CompactCassettePlayer({ className = "" }: { className?: string }
                 compact
                 level={player.ambienceLevel}
                 onLevelChange={player.setAmbienceLevel}
+                enabled={player.ambienceEnabled}
                 active={player.ambienceActive}
                 status={player.ambienceStatus}
                 soloPlaying={player.ambienceSoloPlaying}
                 musicPlaying={player.isPlaying}
+                onToggle={player.toggleAmbience}
                 onSoloToggle={ambienceSoloPreviewEnabled ? player.toggleAmbienceSolo : undefined}
               />
             </div>
@@ -353,10 +357,12 @@ export function CompactCassettePlayer({ className = "" }: { className?: string }
               compact
               level={player.ambienceLevel}
               onLevelChange={player.setAmbienceLevel}
+              enabled={player.ambienceEnabled}
               active={player.ambienceActive}
               status={player.ambienceStatus}
               soloPlaying={player.ambienceSoloPlaying}
               musicPlaying={player.isPlaying}
+              onToggle={player.toggleAmbience}
               onSoloToggle={ambienceSoloPreviewEnabled ? player.toggleAmbienceSolo : undefined}
             />
           </div>

@@ -98,7 +98,9 @@ export function PlayerDetailsSheet({
           <section className="rounded-2xl border border-cream/10 p-4">
             <div className="flex items-center gap-2 text-xs font-semibold text-cream/70">
               <Waves className="size-4 text-teal-400" aria-hidden /> Ambience
-              <span className="ml-auto capitalize text-cream/45">{player.ambienceStatus}</span>
+              <span className="ml-auto capitalize text-cream/45">
+                {player.ambienceEnabled ? player.ambienceStatus : "off"}
+              </span>
             </div>
             <p className="mt-2 text-xs leading-relaxed text-cream/50">
               Three-layer location audio · {player.ambienceLevel}%

@@ -3,9 +3,11 @@ import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 
-const [, , assetArgument] = process.argv;
+const [, , assetArgument, slugArgument] = process.argv;
 if (!assetArgument) {
-  throw new Error("Usage: bun scripts/upload-ambience-visuals.mjs <prepared-asset-dir>");
+  throw new Error(
+    "Usage: bun scripts/upload-ambience-visuals.mjs <prepared-asset-dir> [scene-slug]",
+  );
 }
 const assetDir = resolve(assetArgument);
 const url = process.env.SUPABASE_URL;
@@ -16,7 +18,12 @@ const client = createClient(url, secret, {
 });
 const manifest = JSON.parse(await readFile(join(assetDir, "ambience-visual-assets.json"), "utf8"));
 
-for (const asset of manifest.assets) {
+const selectedAssets = slugArgument
+  ? manifest.assets.filter((asset) => asset.slug === slugArgument)
+  : manifest.assets;
+if (!selectedAssets.length) throw new Error(`No prepared asset found for ${slugArgument}`);
+
+for (const asset of selectedAssets) {
   const data = await readFile(join(assetDir, asset.storagePath));
   const hash = createHash("sha256").update(data).digest("hex").toUpperCase();
   if (data.length !== asset.bytes || hash !== asset.sha256) {

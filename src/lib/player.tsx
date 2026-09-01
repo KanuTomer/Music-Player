@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { currentDaypart, type Daypart } from "./dayparts";
-import { normalizeAmbienceLevel } from "./player-display";
+import { nextAmbienceToggle, normalizeAmbienceLevel } from "./player-display";
 import { chooseStart, circularIndex, snapshotQueue, sourceFailureAction } from "./queue";
 import { reportPlaybackSourceFailure, type QueueItem, type RoomPayload } from "./rooms.functions";
 import { useAmbienceEngine } from "@/hooks/useAmbienceEngine";
@@ -62,6 +62,7 @@ type PlayerState = {
   nowPlaying: NowPlaying;
   musicVolume: number;
   ambienceLevel: number;
+  ambienceEnabled: boolean;
   ambienceStatus: AmbienceStatus;
   ambienceActive: boolean;
   ambienceSoloPlaying: boolean;
@@ -73,6 +74,7 @@ type PlayerState = {
   seek: (seconds: number) => void;
   setMusicVolume: (v: number) => void;
   setAmbienceLevel: (level: number) => void;
+  toggleAmbience: () => void;
   toggleAmbienceSolo: () => void;
   start: () => void;
   fadeForThemeChange: () => Promise<void>;
@@ -138,12 +140,13 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [apiReady, setApiReady] = useState(false);
   const [musicVolume, setMusicVol] = useState(0.7);
   const [ambienceLevel, setAmbienceLevelState] = useState(50);
+  const [ambienceEnabled, setAmbienceEnabled] = useState(false);
   const [ambienceSoloPlaying, setAmbienceSoloPlaying] = useState(false);
   const [nowPlaying, setNowPlaying] = useState<NowPlaying>(emptyNowPlaying);
   const track = playlist[index]?.track ?? null;
   const ambience = useAmbienceEngine(
     room,
-    (isPlaying && !needsGate) || ambienceSoloPlaying,
+    ambienceEnabled && ((isPlaying && !needsGate) || ambienceSoloPlaying),
     ambienceLevel,
   );
   const resumeAmbienceFromGesture = ambience.resumeFromGesture;
@@ -433,10 +436,21 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     (value: number) => setAmbienceLevelState(normalizeAmbienceLevel(value)),
     [],
   );
+  const toggleAmbience = useCallback(() => {
+    const next = nextAmbienceToggle(ambienceEnabled, ambienceLevel);
+    setAmbienceEnabled(next.enabled);
+    setAmbienceLevelState(next.level);
+    if (next.enabled) void resumeAmbienceFromGesture();
+    else setAmbienceSoloPlaying(false);
+  }, [ambienceEnabled, ambienceLevel, resumeAmbienceFromGesture]);
   const toggleAmbienceSolo = useCallback(() => {
-    if (!ambienceSoloPlaying) void resumeAmbienceFromGesture();
+    if (!ambienceSoloPlaying) {
+      if (!ambienceEnabled) setAmbienceEnabled(true);
+      if (ambienceLevel === 0) setAmbienceLevelState(50);
+      void resumeAmbienceFromGesture();
+    }
     setAmbienceSoloPlaying((current) => !current);
-  }, [ambienceSoloPlaying, resumeAmbienceFromGesture]);
+  }, [ambienceEnabled, ambienceLevel, ambienceSoloPlaying, resumeAmbienceFromGesture]);
   const fadeForThemeChange = useCallback(() => {
     themeTransitionRef.current = true;
     const player = playerRef.current;
@@ -486,6 +500,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     nowPlaying,
     musicVolume,
     ambienceLevel,
+    ambienceEnabled,
     ambienceStatus: ambience.status,
     ambienceActive: ambience.active,
     ambienceSoloPlaying,
@@ -497,6 +512,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     seek,
     setMusicVolume,
     setAmbienceLevel,
+    toggleAmbience,
     toggleAmbienceSolo,
     start,
     fadeForThemeChange,
