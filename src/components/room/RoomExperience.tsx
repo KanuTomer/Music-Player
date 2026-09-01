@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Compass, Share2, Sparkles } from "lucide-react";
+import { ChevronUp, Compass, Share2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import type { RoomPayload, Scene } from "@/lib/rooms.functions";
 import { artFor } from "@/lib/scene-art";
@@ -11,7 +11,6 @@ import { FullCassettePlayer } from "@/components/player/CassettePlayers";
 import { OneLinerCaption } from "@/components/room/OneLinerCaption";
 import { JagahExplorer } from "@/components/JagahExplorer";
 import { InfoPlaceholderDialog } from "@/components/InfoPlaceholderDialog";
-import { ISTClock } from "@/components/ISTClock";
 import { useJagahNavigation } from "@/hooks/useJagahNavigation";
 import { AmbienceBackdrop } from "@/components/room/AmbienceBackdrop";
 import { LiveChat } from "@/components/room/LiveChat";
@@ -23,6 +22,7 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
   const social = useRoomSocial(`scene:${scene.slug}`);
   const sceneVideo = videoForScene(scene.slug);
   const sceneVideoRef = useRef<HTMLVideoElement | null>(null);
+  const explorerTriggerRef = useRef<HTMLButtonElement | null>(null);
   const [explorerOpen, setExplorerOpen] = useState(false);
   const [dialog, setDialog] = useState<"suggest" | "support" | null>(null);
   const { selectScene, switchingSlug } = useJagahNavigation({
@@ -126,8 +126,8 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
           sceneSlug={scene.slug}
         />
 
-        {/* top row: live pill · Explorer · Home and share */}
-        <div className="absolute inset-x-0 top-0 z-50 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 p-2 sm:gap-3 sm:p-3">
+        {/* top row: listener pill · support and share */}
+        <div className="absolute inset-x-0 top-0 z-50 flex items-center justify-between gap-2 p-2 sm:gap-3 sm:p-3">
           <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-cream/12 bg-charcoal/60 px-2.5 py-1.5 backdrop-blur-md sm:gap-2 sm:px-3">
             <span
               className="animate-bulb inline-block size-1.5 rounded-full bg-ember"
@@ -136,23 +136,7 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
             <span className="text-[12px] font-semibold text-cream tabular-nums">
               {social.listeners}
             </span>
-            <span className="hidden text-[11px] text-cream/55 sm:inline">sun rahe hain</span>
-            <span className="hidden text-cream/25 sm:inline">·</span>
-            <ISTClock
-              inherit
-              className="hidden items-center gap-1.5 text-[11px] text-cream/55 sm:flex"
-            />
-          </div>
-
-          <div className="flex min-w-0 items-center justify-center">
-            <button
-              type="button"
-              onClick={() => setExplorerOpen(true)}
-              className="flex h-11 min-w-0 items-center gap-2 rounded-full border border-cream/25 bg-night/55 px-3.5 text-[13px] font-semibold text-cream outline-none backdrop-blur transition-colors hover:bg-night/70 focus-visible:ring-2 focus-visible:ring-accent/70 sm:h-10 sm:px-4 sm:text-sm"
-            >
-              <Compass className="size-4 shrink-0" aria-hidden />
-              <span className="truncate">Jagah Explorer</span>
-            </button>
+            <span className="text-[11px] text-cream/55">sun rahe hain</span>
           </div>
 
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
@@ -176,7 +160,7 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
         </div>
 
         {/* room title, signage-style, centred */}
-        <div className="pointer-events-none absolute inset-x-0 top-[15dvh] z-20 flex flex-col items-center px-6 text-center">
+        <div className="pointer-events-none absolute inset-x-0 top-[clamp(4.75rem,10dvh,6.5rem)] z-20 flex flex-col items-center px-6 text-center">
           <h1 className="signage-text font-deva text-4xl leading-[1.05] text-cream sm:text-6xl">
             {scene.title_hi}
           </h1>
@@ -192,9 +176,21 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
           trackKey={player.nowPlaying?.title ?? player.track?.title ?? null}
         />
 
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex flex-col items-center gap-2 px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] sm:gap-3 sm:px-4 sm:pb-[calc(1rem+env(safe-area-inset-bottom))]">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex flex-col items-center gap-2 px-2 pb-[env(safe-area-inset-bottom)] sm:gap-3 sm:px-4">
           <LiveChat roomKey="global-chat" roomName={scene.title_en} inlineLauncher />
           <FullCassettePlayer />
+          <button
+            ref={explorerTriggerRef}
+            type="button"
+            aria-expanded={explorerOpen}
+            aria-controls="jagah-explorer-sheet"
+            onClick={() => setExplorerOpen(true)}
+            className="pointer-events-auto flex min-h-11 w-full max-w-[min(97vw,54rem)] items-center justify-center gap-2 rounded-xl border border-cream/15 bg-charcoal/80 px-5 text-sm font-semibold text-cream shadow-lift outline-none backdrop-blur-lg transition-[background-color,transform] hover:-translate-y-0.5 hover:bg-charcoal/95 focus-visible:ring-2 focus-visible:ring-ember motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+          >
+            <Compass className="size-4" aria-hidden />
+            <span>Jagah Explorer</span>
+            <ChevronUp className="size-4" aria-hidden />
+          </button>
         </div>
 
         {player.needsGate && (
@@ -239,6 +235,7 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
         onSelect={selectScene}
         onPlaceholder={setDialog}
         switchingSlug={switchingSlug}
+        triggerRef={explorerTriggerRef}
       />
       <InfoPlaceholderDialog
         kind="suggest"
