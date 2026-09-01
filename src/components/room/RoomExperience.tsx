@@ -123,6 +123,7 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
           level={player.ambienceLevel}
           eventPulse={player.ambienceEventPulse}
           profile={room.ambience}
+          sceneSlug={scene.slug}
         />
 
         {/* top row: live pill · Explorer · Home and share */}
