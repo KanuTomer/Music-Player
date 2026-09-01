@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AmbienceEngine, type AmbienceStatus } from "@/lib/ambience";
 import type { RoomPayload } from "@/lib/rooms.functions";
 
-export function useAmbienceEngine(room: RoomPayload | null, playing: boolean, level: number) {
+export function useAmbienceEngine(room: RoomPayload | null, enabled: boolean, level: number) {
   const engineRef = useRef<AmbienceEngine | null>(null);
   const [status, setStatus] = useState<AmbienceStatus>("idle");
   const [eventPulse, setEventPulse] = useState(0);
@@ -21,7 +21,7 @@ export function useAmbienceEngine(room: RoomPayload | null, playing: boolean, le
   }, [room]);
 
   useEffect(() => engineRef.current?.setLevel(level), [level]);
-  useEffect(() => engineRef.current?.setPlaying(playing && level > 0), [level, playing]);
+  useEffect(() => engineRef.current?.setPlaying(enabled && level > 0), [enabled, level]);
 
   const resumeFromGesture = useCallback(
     () => engineRef.current?.resumeFromGesture() ?? Promise.resolve(),
@@ -32,7 +32,7 @@ export function useAmbienceEngine(room: RoomPayload | null, playing: boolean, le
     enabled: true,
     status,
     eventPulse,
-    active: playing && level > 0 && status !== "unavailable",
+    active: enabled && level > 0 && status !== "unavailable",
     resumeFromGesture,
   };
 }

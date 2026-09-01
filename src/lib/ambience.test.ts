@@ -10,17 +10,17 @@ import {
 } from "./ambience";
 
 describe("ambience engine decisions", () => {
-  test("maps the session level to a bounded quadratic gain", () => {
+  test("maps the session level to a stronger bounded gain curve", () => {
     expect(ambienceGain(0, 0.3)).toBe(0);
-    expect(ambienceGain(50, 0.3)).toBeCloseTo(0.075);
+    expect(ambienceGain(50, 0.3)).toBeCloseTo(0.121837, 5);
     expect(ambienceGain(100, 0.3)).toBeCloseTo(0.3);
     expect(ambienceGain(150, 2)).toBe(1);
   });
 
   test("ducks effective music output without changing the user volume", () => {
     expect(effectiveMusicVolume(0.7, false)).toBeCloseTo(0.7);
-    expect(effectiveMusicVolume(0.7, true)).toBeCloseTo(0.56);
-    expect(effectiveMusicVolume(2, true)).toBeCloseTo(0.8);
+    expect(effectiveMusicVolume(0.7, true)).toBeCloseTo(0.35);
+    expect(effectiveMusicVolume(2, true)).toBeCloseTo(0.5);
     expect(effectiveMusicVolume(-1, true)).toBe(0);
   });
 
