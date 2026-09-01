@@ -200,6 +200,7 @@ export function JagahExplorer({
               >
                 <Heart className="size-4 text-ember" aria-hidden />
                 Support Us
+                <span className="text-[9px] tracking-wide text-cream/40 uppercase">Soon</span>
               </button>
             </div>
           </div>

@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { fetchRoom, fetchScenes, recordSourceFailure } from "./rooms.server";
+import { fetchRoom, fetchScenes, insertChatMessage, recordSourceFailure } from "./rooms.server";
 
 export type Scene = {
   id: string;
@@ -147,12 +147,9 @@ export const sendChatMessage = createServerFn({ method: "POST" })
 
     if (!roomKey) throw new Error("Room key is required");
     if (!displayName || displayName.length > 50) throw new Error("Invalid display name");
-    if (!text || text.length > 300) throw new Error("Message text must be between 1 and 300 characters");
+    if (!text || text.length > 300)
+      throw new Error("Message text must be between 1 and 300 characters");
 
     return { roomKey, displayName, text };
   })
-  .handler(async ({ data }) => {
-    const { insertChatMessage } = await import("./rooms.server");
-    return insertChatMessage(data.roomKey, data.displayName, data.text);
-  });
-
+  .handler(async ({ data }) => insertChatMessage(data.roomKey, data.displayName, data.text));
