@@ -39,7 +39,7 @@ export function clock(seconds: number) {
 }
 
 export function normalizeAmbienceLevel(level: number) {
-  if (!Number.isFinite(level)) return 50;
+  if (!Number.isFinite(level)) return 65;
   return Math.min(100, Math.max(0, Math.round(level)));
 }
 
@@ -47,7 +47,7 @@ export function nextAmbienceToggle(enabled: boolean, level: number) {
   const nextEnabled = !enabled;
   return {
     enabled: nextEnabled,
-    level: nextEnabled && normalizeAmbienceLevel(level) === 0 ? 50 : normalizeAmbienceLevel(level),
+    level: nextEnabled && normalizeAmbienceLevel(level) === 0 ? 65 : normalizeAmbienceLevel(level),
   };
 }
 
