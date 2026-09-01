@@ -12,9 +12,6 @@ import { ISTClock } from "@/components/ISTClock";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useJagahNavigation } from "@/hooks/useJagahNavigation";
 import { isAllowedSlug } from "@/lib/theme-data";
-import { ThemeAbout } from "@/components/ThemeAbout";
-import { ThemeFAQ } from "@/components/ThemeFAQ";
-import { Footer } from "@/components/Footer";
 import { useSupportAutoPrompt } from "@/hooks/useSupportPrompt";
 
 const TITLE = "Sainik Dhaba 📻";
@@ -78,9 +75,9 @@ function Home() {
   };
   return (
     <div className="dark flex h-dvh flex-col overflow-hidden bg-night text-cream">
-      <main className="relative min-h-0 flex-1 overflow-y-auto no-scrollbar scroll-smooth">
+      <main className="relative min-h-0 flex-1 overflow-hidden">
         {/* Hero Section Container */}
-        <div className="relative h-dvh w-full shrink-0 flex flex-col justify-between overflow-hidden">
+        <div className="relative flex size-full flex-col justify-between overflow-hidden">
           {sceneVideo ? (
             <video
               src={sceneVideo}
@@ -203,15 +200,6 @@ function Home() {
             </div>
           </section>
         </div>
-
-        {/* Unique About section */}
-        <ThemeAbout slug={scene.slug} />
-
-        {/* Unique FAQ section */}
-        <ThemeFAQ slug={scene.slug} />
-
-        {/* Common Footer */}
-        <Footer />
       </main>
 
       {player.room && !explorerOpen ? (

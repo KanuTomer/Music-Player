@@ -613,12 +613,20 @@
   animation: ambience-pattern-drift 24s linear infinite;
 }
 .ambience-backdrop[data-pattern="streaks"] .ambience-pattern {
-  background-image: repeating-linear-gradient(
-    104deg,
-    transparent 0 34px,
-    var(--ambience-accent) 35px,
-    transparent 37px
-  );
+  opacity: 0.2;
+  background-image:
+    linear-gradient(90deg, transparent 0 12%, var(--ambience-accent) 20%, transparent 31%),
+    linear-gradient(90deg, transparent 0 56%, var(--ambience-haze) 68%, transparent 82%);
+  background-size:
+    210% 100%,
+    260% 100%;
+  filter: blur(18px);
+  animation: ambience-road-lights 14s ease-in-out infinite alternate;
+}
+.ambience-backdrop[data-pattern="streaks"] .ambience-overlay {
+  opacity: calc(var(--ambience-overlay-opacity) * 0.46);
+  mix-blend-mode: soft-light;
+  filter: blur(4px) saturate(0.78) contrast(1.02);
 }
 .ambience-backdrop[data-pattern="ripples"] .ambience-pattern {
   background-image: repeating-radial-gradient(
@@ -680,6 +688,14 @@
   }
   to {
     transform: translate3d(34px, -34px, 0);
+  }
+}
+@keyframes ambience-road-lights {
+  from {
+    transform: translate3d(-16%, 0, 0) scaleX(1.05);
+  }
+  to {
+    transform: translate3d(16%, 0, 0) scaleX(1.12);
   }
 }
 @keyframes ambience-event-pulse {
