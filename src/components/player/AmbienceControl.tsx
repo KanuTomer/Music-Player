@@ -120,15 +120,14 @@ export function AmbienceControl({
           className="min-w-16 flex-1"
         />
         <span className="w-7 text-right text-[9px] tabular-nums text-cream/55">{level}</span>
-        {onSoloToggle ? (
+        {onSoloToggle && !musicPlaying ? (
           <button
             type="button"
             onClick={onSoloToggle}
-            disabled={musicPlaying}
             aria-pressed={soloPlaying}
             aria-label={soloPlaying ? "Pause ambience test" : "Play ambience without music"}
-            title={musicPlaying ? "Pause music to use solo ambience testing" : "Test ambience only"}
-            className="flex size-9 shrink-0 items-center justify-center rounded-full border border-cream/15 text-cream/70 outline-none hover:bg-cream/10 hover:text-cream focus-visible:ring-2 focus-visible:ring-ember disabled:cursor-not-allowed disabled:opacity-35"
+            title="Test ambience only"
+            className="flex size-9 shrink-0 items-center justify-center rounded-full border border-cream/15 text-cream/70 outline-none hover:bg-cream/10 hover:text-cream focus-visible:ring-2 focus-visible:ring-ember"
           >
             {soloPlaying ? (
               <Pause className="size-3.5" aria-hidden />
