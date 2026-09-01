@@ -1,7 +1,6 @@
 import { Pause, Play, SlidersHorizontal, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Slider } from "@/components/ui/slider";
-import { ambienceEngineEnabled } from "@/hooks/useAmbienceEngine";
 import type { AmbienceStatus } from "@/lib/ambience";
 
 type AmbienceControlProps = {
@@ -50,8 +49,6 @@ export function AmbienceControl({
       document.removeEventListener("keydown", closeWithEscape);
     };
   }, [open]);
-
-  if (!ambienceEngineEnabled) return null;
 
   return (
     <div
