@@ -152,7 +152,7 @@ export function FullCassettePlayer() {
 
   return (
     <>
-      <div className="pointer-events-auto w-full max-w-[min(97vw,54rem)] rounded-2xl border border-charcoal-line/60 bg-charcoal/55 p-3 text-cream shadow-lift ring-1 ring-cream/5 backdrop-blur-lg sm:p-4">
+      <div className="pointer-events-auto isolate w-full max-w-[min(97vw,54rem)] rounded-2xl border border-charcoal-line/60 bg-charcoal/55 p-3 text-cream shadow-lift ring-1 ring-cream/5 backdrop-blur-lg sm:p-4">
         {/* Track info row */}
         <div className="flex items-center gap-2.5 border-b border-cream/10 pb-2 sm:gap-3">
           <Cover coverId={display.coverId} title={display.title} compact />
@@ -227,8 +227,6 @@ export function FullCassettePlayer() {
               enabled={player.ambienceEnabled}
               active={player.ambienceActive}
               status={player.ambienceStatus}
-              soloPlaying={player.ambienceSoloPlaying}
-              musicPlaying={player.isPlaying}
               onToggle={player.toggleAmbience}
             />
             <Button
@@ -322,8 +320,6 @@ export function CompactCassettePlayer({ className = "" }: { className?: string }
                 enabled={player.ambienceEnabled}
                 active={player.ambienceActive}
                 status={player.ambienceStatus}
-                soloPlaying={player.ambienceSoloPlaying}
-                musicPlaying={player.isPlaying}
                 onToggle={player.toggleAmbience}
               />
             </div>
@@ -354,8 +350,6 @@ export function CompactCassettePlayer({ className = "" }: { className?: string }
               enabled={player.ambienceEnabled}
               active={player.ambienceActive}
               status={player.ambienceStatus}
-              soloPlaying={player.ambienceSoloPlaying}
-              musicPlaying={player.isPlaying}
               onToggle={player.toggleAmbience}
             />
           </div>

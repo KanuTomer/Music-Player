@@ -47,7 +47,7 @@ describe("normalizeAmbienceLevel", () => {
     expect(normalizeAmbienceLevel(-3)).toBe(0);
     expect(normalizeAmbienceLevel(49.6)).toBe(50);
     expect(normalizeAmbienceLevel(120)).toBe(100);
-    expect(normalizeAmbienceLevel(Number.NaN)).toBe(50);
+    expect(normalizeAmbienceLevel(Number.NaN)).toBe(65);
   });
 });
 
@@ -58,6 +58,6 @@ describe("nextAmbienceToggle", () => {
   });
 
   test("restores an audible default when enabling from zero", () => {
-    expect(nextAmbienceToggle(false, 0)).toEqual({ enabled: true, level: 50 });
+    expect(nextAmbienceToggle(false, 0)).toEqual({ enabled: true, level: 65 });
   });
 });
