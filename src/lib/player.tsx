@@ -65,7 +65,6 @@ type PlayerState = {
   ambienceEnabled: boolean;
   ambienceStatus: AmbienceStatus;
   ambienceActive: boolean;
-  ambienceSoloPlaying: boolean;
   ambienceEventPulse: number;
   openRoom: (room: RoomPayload) => void;
   toggle: () => void;
@@ -75,7 +74,6 @@ type PlayerState = {
   setMusicVolume: (v: number) => void;
   setAmbienceLevel: (level: number) => void;
   toggleAmbience: () => void;
-  toggleAmbienceSolo: () => void;
   start: () => void;
   fadeForThemeChange: () => Promise<void>;
   leave: () => void;
@@ -120,6 +118,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const volumeRef = useRef(0.7);
   const outputVolumeRef = useRef(0.7);
   const ambienceActiveRef = useRef(false);
+  const expectedVideoIdRef = useRef<string | null>(null);
   const fadeTimerRef = useRef<number | null>(null);
   const volumeRampTimerRef = useRef<number | null>(null);
   const themeTransitionRef = useRef(false);
@@ -141,12 +140,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [musicVolume, setMusicVol] = useState(0.7);
   const [ambienceLevel, setAmbienceLevelState] = useState(50);
   const [ambienceEnabled, setAmbienceEnabled] = useState(false);
-  const [ambienceSoloPlaying, setAmbienceSoloPlaying] = useState(false);
   const [nowPlaying, setNowPlaying] = useState<NowPlaying>(emptyNowPlaying);
   const track = playlist[index]?.track ?? null;
   const ambience = useAmbienceEngine(
     room,
-    ambienceEnabled && ((isPlaying && !needsGate) || ambienceSoloPlaying),
+    ambienceEnabled && !needsGate,
     ambienceLevel,
   );
   const resumeAmbienceFromGesture = ambience.resumeFromGesture;
@@ -208,6 +206,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         setMusicBlocked(true);
         return false;
       }
+      expectedVideoIdRef.current = source.provider_item_id;
       player.loadVideoById(source.provider_item_id);
       const target = effectiveMusicVolume(volumeRef.current, ambienceActiveRef.current);
       setPlayerOutputVolume(player, themeTransitionRef.current ? 0 : target);
@@ -250,6 +249,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       const item = queueRef.current[indexRef.current];
       const source = item?.sources[sourceIndexRef.current];
       if (!item || !source) return;
+      const reportedVideoId = player.getVideoData()?.video_id;
+      if (reportedVideoId && reportedVideoId !== expectedVideoIdRef.current) return;
       const fallback = item.sources.findIndex(
         (candidate, candidateIndex) =>
           candidateIndex > sourceIndexRef.current && !failedSourcesRef.current.has(candidate.id),
@@ -329,6 +330,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           },
           onStateChange: (event: YTPlayerStateEvent) => {
             if (!current(event.target)) return;
+            const reportedVideoId = event.target.getVideoData()?.video_id;
+            if (reportedVideoId && reportedVideoId !== expectedVideoIdRef.current) return;
             if (event.data === 0) advance(1);
             if (event.data === 1) {
               setIsPlaying(true);
@@ -379,8 +382,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     return () => window.clearInterval(timer);
   }, []);
   useEffect(() => {
-    if (room && !needsGate && apiReady) buildPlayer(true);
-  }, [apiReady, buildPlayer, needsGate, room]);
+    if (!room || needsGate || !apiReady) return;
+    const player = playerRef.current;
+    if (!player) {
+      buildPlayer(true);
+      return;
+    }
+    if (!readyRef.current) return;
+    cueCurrent(player, intendPlayRef.current);
+  }, [apiReady, buildPlayer, cueCurrent, needsGate, room]);
 
   const openRoom = useCallback(
     (nextRoom: RoomPayload) => {
@@ -402,7 +412,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   );
   const start = useCallback(() => {
     void resumeAmbienceFromGesture();
-    setAmbienceSoloPlaying(false);
     intendPlayRef.current = true;
     setNeedsGate(false);
     setIsPlaying(true);
@@ -441,20 +450,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setAmbienceEnabled(next.enabled);
     setAmbienceLevelState(next.level);
     if (next.enabled) void resumeAmbienceFromGesture();
-    else setAmbienceSoloPlaying(false);
   }, [ambienceEnabled, ambienceLevel, resumeAmbienceFromGesture]);
-  const toggleAmbienceSolo = useCallback(() => {
-    if (!ambienceSoloPlaying) {
-      if (!ambienceEnabled) setAmbienceEnabled(true);
-      if (ambienceLevel === 0) setAmbienceLevelState(50);
-      void resumeAmbienceFromGesture();
-    }
-    setAmbienceSoloPlaying((current) => !current);
-  }, [ambienceEnabled, ambienceLevel, ambienceSoloPlaying, resumeAmbienceFromGesture]);
   const fadeForThemeChange = useCallback(() => {
-    themeTransitionRef.current = true;
     const player = playerRef.current;
-    if (!player || !isPlaying) return Promise.resolve();
+    if (!player || !readyRef.current || !isPlaying) {
+      themeTransitionRef.current = false;
+      return Promise.resolve();
+    }
+    themeTransitionRef.current = true;
     if (fadeTimerRef.current != null) window.clearInterval(fadeTimerRef.current);
     if (volumeRampTimerRef.current != null) {
       window.clearInterval(volumeRampTimerRef.current);
@@ -482,9 +485,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setRoom(null);
     setPlaylist([]);
     queueRef.current = [];
+    expectedVideoIdRef.current = null;
     setNeedsGate(false);
     setIsPlaying(false);
-    setAmbienceSoloPlaying(false);
   }, []);
 
   const value: PlayerState = {
@@ -503,7 +506,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     ambienceEnabled,
     ambienceStatus: ambience.status,
     ambienceActive: ambience.active,
-    ambienceSoloPlaying,
     ambienceEventPulse: ambience.eventPulse,
     openRoom,
     toggle,
@@ -513,7 +515,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setMusicVolume,
     setAmbienceLevel,
     toggleAmbience,
-    toggleAmbienceSolo,
     start,
     fadeForThemeChange,
     leave,

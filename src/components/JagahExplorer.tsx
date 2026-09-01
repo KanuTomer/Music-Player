@@ -1,18 +1,7 @@
-import { useMemo, useState } from "react";
-import {
-  Check,
-  ChevronDown,
-  Compass,
-  Heart,
-  Lightbulb,
-  Loader2,
-  MapPin,
-  Search,
-} from "lucide-react";
+import { Check, ChevronDown, Heart, Lightbulb, Loader2 } from "lucide-react";
 import type { RefObject } from "react";
 import type { Scene } from "@/lib/rooms.functions";
 import { artFor } from "@/lib/scene-art";
-import { explorerFilters, filterScenes, type ExplorerFilter } from "@/lib/scene-search";
 import {
   Sheet,
   SheetClose,
@@ -21,14 +10,6 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { CompactCassettePlayer } from "@/components/player/CassettePlayers";
-
-const filterLabels: Record<ExplorerFilter, string> = {
-  all: "All",
-  safar: "Safar",
-  shaam: "Shaam",
-  kaam: "Kaam",
-  yaadein: "Yaadein",
-};
 
 type JagahExplorerProps = {
   scenes: Scene[];
@@ -51,10 +32,6 @@ export function JagahExplorer({
   switchingSlug = null,
   triggerRef,
 }: JagahExplorerProps) {
-  const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<ExplorerFilter>("all");
-  const results = useMemo(() => filterScenes(scenes, query, filter), [filter, query, scenes]);
-
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -83,64 +60,26 @@ export function JagahExplorer({
           >
             <ChevronDown className="size-5" aria-hidden />
           </SheetClose>
-
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <label className="relative min-w-0 flex-1">
-              <span className="sr-only">Search Jagahs</span>
-              <Search
-                className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-cream/45"
-                aria-hidden
-              />
-              <input
-                type="search"
-                value={query}
-                onChange={(event) => setQuery(event.currentTarget.value)}
-                placeholder="Search by name, place or feeling…"
-                className="h-11 w-full rounded-full border border-cream/15 bg-night/55 pr-4 pl-10 text-sm text-cream outline-none placeholder:text-cream/35 focus-visible:ring-2 focus-visible:ring-ember"
-              />
-            </label>
-            <div className="flex min-h-11 gap-2 overflow-x-auto pb-1" aria-label="Filter Jagahs">
-              {explorerFilters.map((item) => {
-                const selected = filter === item;
-                return (
-                  <button
-                    key={item}
-                    type="button"
-                    aria-pressed={selected}
-                    onClick={() => setFilter(item)}
-                    className={`min-h-11 shrink-0 rounded-full border px-4 text-xs font-semibold tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember ${
-                      selected
-                        ? "border-ember bg-ember text-charcoal"
-                        : "border-cream/15 bg-cream/5 text-cream/70 hover:bg-cream/10 hover:text-cream"
-                    }`}
-                  >
-                    {filterLabels[item]}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
         </div>
 
         <div className="overflow-y-auto overscroll-contain px-4 py-5 sm:px-7 sm:py-6">
-          {results.length ? (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {results.map((scene) => {
-                const active = scene.slug === activeSlug;
-                const switching = scene.slug === switchingSlug;
-                return (
-                  <button
-                    key={scene.slug}
-                    type="button"
-                    disabled={Boolean(switchingSlug)}
-                    onClick={() => void onSelect(scene)}
-                    aria-current={active ? "location" : undefined}
-                    className={`group relative min-h-44 overflow-hidden rounded-2xl border text-left shadow-lg transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember disabled:cursor-progress ${
-                      active
-                        ? "border-ember"
-                        : "border-cream/10 hover:-translate-y-0.5 hover:border-cream/30"
-                    }`}
-                  >
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {scenes.map((scene) => {
+              const active = scene.slug === activeSlug;
+              const switching = scene.slug === switchingSlug;
+              return (
+                <button
+                  key={scene.slug}
+                  type="button"
+                  disabled={Boolean(switchingSlug)}
+                  onClick={() => void onSelect(scene)}
+                  aria-current={active ? "location" : undefined}
+                  className={`group relative min-h-44 overflow-hidden rounded-2xl border text-left shadow-lg transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember disabled:cursor-progress ${
+                    active
+                      ? "border-ember"
+                      : "border-cream/10 hover:-translate-y-0.5 hover:border-cream/30"
+                  }`}
+                >
                     <img
                       src={artFor(scene.art_key)}
                       alt=""
@@ -177,29 +116,10 @@ export function JagahExplorer({
                         </span>
                       )}
                     </span>
-                  </button>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="flex min-h-56 flex-col items-center justify-center px-6 text-center">
-              <Compass className="size-8 text-ember" aria-hidden />
-              <p className="mt-3 font-signage text-xl text-cream">No Jagah found</p>
-              <p className="mt-1 max-w-sm text-sm text-cream/55">
-                Try another search or switch back to All.
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setQuery("");
-                  setFilter("all");
-                }}
-                className="mt-4 min-h-11 rounded-full border border-cream/20 px-4 text-sm text-cream hover:bg-cream/10"
-              >
-                Clear filters
-              </button>
-            </div>
-          )}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div className="border-t border-cream/10 bg-night/45">

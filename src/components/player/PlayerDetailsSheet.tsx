@@ -6,6 +6,7 @@ import { usePlayer } from "@/lib/player";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
+import { AmbienceControl } from "@/components/player/AmbienceControl";
 
 export function PlayerDetailsSheet({
   open,
@@ -87,6 +88,16 @@ export function PlayerDetailsSheet({
                 <p className="mt-2 text-xs leading-relaxed text-cream/50">
                   Location atmosphere · {player.ambienceLevel}%
                 </p>
+                <div className="mt-4 flex justify-start">
+                  <AmbienceControl
+                    level={player.ambienceLevel}
+                    onLevelChange={player.setAmbienceLevel}
+                    enabled={player.ambienceEnabled}
+                    active={player.ambienceActive}
+                    status={player.ambienceStatus}
+                    onToggle={player.toggleAmbience}
+                  />
+                </div>
               </section>
 
               <section className="rounded-2xl border border-cream/10 p-4">
