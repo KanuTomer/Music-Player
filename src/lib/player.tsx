@@ -138,7 +138,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [musicBlocked, setMusicBlocked] = useState(false);
   const [apiReady, setApiReady] = useState(false);
   const [musicVolume, setMusicVol] = useState(0.7);
-  const [ambienceLevel, setAmbienceLevelState] = useState(50);
+  const [ambienceLevel, setAmbienceLevelState] = useState(65);
   const [ambienceEnabled, setAmbienceEnabled] = useState(false);
   const [nowPlaying, setNowPlaying] = useState<NowPlaying>(emptyNowPlaying);
   const track = playlist[index]?.track ?? null;
