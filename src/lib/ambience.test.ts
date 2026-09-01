@@ -19,8 +19,8 @@ describe("ambience engine decisions", () => {
 
   test("ducks effective music output without changing the user volume", () => {
     expect(effectiveMusicVolume(0.7, false)).toBeCloseTo(0.7);
-    expect(effectiveMusicVolume(0.7, true)).toBeCloseTo(0.35);
-    expect(effectiveMusicVolume(2, true)).toBeCloseTo(0.5);
+    expect(effectiveMusicVolume(0.7, true)).toBeCloseTo(0.175);
+    expect(effectiveMusicVolume(2, true)).toBeCloseTo(0.25);
     expect(effectiveMusicVolume(-1, true)).toBe(0);
   });
 
