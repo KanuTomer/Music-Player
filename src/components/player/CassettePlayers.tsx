@@ -19,9 +19,6 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { SmoothReveal } from "@/components/ui/smooth-reveal";
 
-const ambienceSoloPreviewEnabled =
-  import.meta.env.DEV || import.meta.env["VITE_ENABLE_AMBIENCE_SOLO_PREVIEW"] === "true";
-
 function Cover({
   coverId,
   title,
@@ -234,7 +231,6 @@ export function FullCassettePlayer() {
               soloPlaying={player.ambienceSoloPlaying}
               musicPlaying={player.isPlaying}
               onToggle={player.toggleAmbience}
-              onSoloToggle={ambienceSoloPreviewEnabled ? player.toggleAmbienceSolo : undefined}
             />
             <Button
               type="button"
@@ -330,7 +326,6 @@ export function CompactCassettePlayer({ className = "" }: { className?: string }
                 soloPlaying={player.ambienceSoloPlaying}
                 musicPlaying={player.isPlaying}
                 onToggle={player.toggleAmbience}
-                onSoloToggle={ambienceSoloPreviewEnabled ? player.toggleAmbienceSolo : undefined}
               />
             </div>
             <Button
@@ -363,7 +358,6 @@ export function CompactCassettePlayer({ className = "" }: { className?: string }
               soloPlaying={player.ambienceSoloPlaying}
               musicPlaying={player.isPlaying}
               onToggle={player.toggleAmbience}
-              onSoloToggle={ambienceSoloPreviewEnabled ? player.toggleAmbienceSolo : undefined}
             />
           </div>
         </div>
