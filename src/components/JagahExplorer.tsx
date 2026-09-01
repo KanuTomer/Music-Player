@@ -1,9 +1,25 @@
 import { useMemo, useState } from "react";
-import { Check, Compass, Heart, Lightbulb, Loader2, MapPin, Search } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  Compass,
+  Heart,
+  Lightbulb,
+  Loader2,
+  MapPin,
+  Search,
+} from "lucide-react";
+import type { RefObject } from "react";
 import type { Scene } from "@/lib/rooms.functions";
 import { artFor } from "@/lib/scene-art";
 import { explorerFilters, filterScenes, type ExplorerFilter } from "@/lib/scene-search";
-import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { CompactCassettePlayer } from "@/components/player/CassettePlayers";
 
 const filterLabels: Record<ExplorerFilter, string> = {
@@ -22,6 +38,7 @@ type JagahExplorerProps = {
   onSelect: (scene: Scene) => void | Promise<void>;
   onPlaceholder: (kind: "suggest" | "support") => void;
   switchingSlug?: string | null;
+  triggerRef?: RefObject<HTMLButtonElement | null>;
 };
 
 export function JagahExplorer({
@@ -32,6 +49,7 @@ export function JagahExplorer({
   onSelect,
   onPlaceholder,
   switchingSlug = null,
+  triggerRef,
 }: JagahExplorerProps) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<ExplorerFilter>("all");
@@ -40,8 +58,15 @@ export function JagahExplorer({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
+        id="jagah-explorer-sheet"
         side="bottom"
-        className="grid h-[92dvh] w-full max-w-none grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden rounded-t-3xl border-cream/15 bg-charcoal p-0 text-cream shadow-2xl motion-reduce:transition-none motion-reduce:data-[state=closed]:animate-none motion-reduce:data-[state=open]:animate-none sm:mx-auto sm:h-[calc(100dvh-2rem)] sm:w-[min(1180px,calc(100%-2rem))] sm:rounded-t-2xl"
+        showCloseButton={false}
+        onCloseAutoFocus={(event) => {
+          if (!triggerRef?.current) return;
+          event.preventDefault();
+          triggerRef.current.focus();
+        }}
+        className="mx-auto grid h-[92dvh] w-[calc(100%-1rem)] max-w-[54rem] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden rounded-t-2xl border-cream/15 bg-charcoal p-0 text-cream shadow-2xl motion-reduce:transition-none motion-reduce:data-[state=closed]:animate-none motion-reduce:data-[state=open]:animate-none sm:h-[calc(100dvh-2rem)]"
       >
         <div className="border-b border-cream/10 px-4 pt-5 pb-4 sm:px-7 sm:pt-6">
           <div className="pr-10">
@@ -52,6 +77,12 @@ export function JagahExplorer({
               Pick a familiar corner. Your music keeps playing while you look around.
             </SheetDescription>
           </div>
+          <SheetClose
+            aria-label="Close Jagah Explorer"
+            className="absolute top-2 right-2 flex size-11 items-center justify-center rounded-full border border-cream/15 bg-cream/5 text-cream/70 outline-none transition-colors hover:bg-cream/10 hover:text-cream focus-visible:ring-2 focus-visible:ring-ember sm:top-3 sm:right-3 sm:size-10"
+          >
+            <ChevronDown className="size-5" aria-hidden />
+          </SheetClose>
 
           <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
             <label className="relative min-w-0 flex-1">
