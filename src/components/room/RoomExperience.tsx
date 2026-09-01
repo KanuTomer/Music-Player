@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "@tanstack/react-router";
 import { Compass, Share2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import type { RoomPayload, Scene } from "@/lib/rooms.functions";
@@ -14,9 +13,6 @@ import { JagahExplorer } from "@/components/JagahExplorer";
 import { InfoPlaceholderDialog } from "@/components/InfoPlaceholderDialog";
 import { ISTClock } from "@/components/ISTClock";
 import { useJagahNavigation } from "@/hooks/useJagahNavigation";
-import { ThemeAbout } from "@/components/ThemeAbout";
-import { ThemeFAQ } from "@/components/ThemeFAQ";
-import { Footer } from "@/components/Footer";
 import { AmbienceBackdrop } from "@/components/room/AmbienceBackdrop";
 import { LiveChat } from "@/components/room/LiveChat";
 import { useSupportAutoPrompt } from "@/hooks/useSupportPrompt";
@@ -86,10 +82,9 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
   return (
     <div
       id="room-experience-top"
-      className={`room-scene-enter relative h-dvh w-full overflow-y-auto no-scrollbar scroll-smooth ${gradeClass} ${scene.is_dark ? "room-dark" : ""}`}
+      className={`room-scene-enter relative h-dvh w-full overflow-hidden ${gradeClass} ${scene.is_dark ? "room-dark" : ""}`}
     >
-      {/* Immersive View Area (100dvh height) */}
-      <div className="relative h-dvh w-full shrink-0 overflow-hidden">
+      <div className="relative size-full overflow-hidden">
         {sceneVideo ? (
           <video
             ref={sceneVideoRef}
@@ -128,6 +123,7 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
           level={player.ambienceLevel}
           eventPulse={player.ambienceEventPulse}
           profile={room.ambience}
+          sceneSlug={scene.slug}
         />
 
         {/* top row: live pill · Explorer · Home and share */}
@@ -160,31 +156,6 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
           </div>
 
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-            {/* About Pill Button */}
-            <button
-              type="button"
-              onClick={() => {
-                const el = document.getElementById(`about-${scene.slug}`);
-                if (el) el.scrollIntoView({ behavior: "smooth" });
-              }}
-              className="flex h-9 items-center justify-center rounded-full bg-charcoal/80 border border-cream/15 px-3.5 text-xs font-bold text-cream transition-colors hover:bg-charcoal/95 hover:text-amber active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember cursor-pointer"
-            >
-              About
-            </button>
-
-            {/* FAQ Pill Button */}
-            <button
-              type="button"
-              onClick={() => {
-                const el = document.getElementById(`faq-${scene.slug}`);
-                if (el) el.scrollIntoView({ behavior: "smooth" });
-              }}
-              className="flex h-9 items-center justify-center rounded-full bg-charcoal/80 border border-cream/15 px-3.5 text-xs font-bold text-cream transition-colors hover:bg-charcoal/95 hover:text-amber active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember cursor-pointer"
-            >
-              FAQ
-            </button>
-
-            {/* Support Us Button */}
             <button
               type="button"
               onClick={() => setDialog("support")}
@@ -221,28 +192,8 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
           trackKey={player.nowPlaying?.title ?? player.track?.title ?? null}
         />
 
-        {/* Floating Scroll Down Indicator (bottom-right) */}
-        <div className="pointer-events-auto absolute right-4 bottom-[calc(1.2rem+env(safe-area-inset-bottom))] z-30 flex items-center sm:right-6 sm:bottom-6">
-          <button
-            type="button"
-            onClick={() => {
-              document
-                .getElementById(`about-${scene.slug}`)
-                ?.scrollIntoView({ behavior: "smooth" });
-            }}
-            className="group flex h-9 items-center gap-2 rounded-full border border-cream/15 bg-charcoal/65 px-3.5 text-xs font-bold text-cream/90 backdrop-blur-md transition-all hover:bg-charcoal/85 hover:text-ember active:scale-95 cursor-pointer"
-            aria-label="Scroll down for details"
-          >
-            <span className="font-vintage-deva text-[10px] tracking-wider uppercase">
-              Neeche chalo · Details
-            </span>
-            <span className="animate-bounce text-xs font-bold" aria-hidden>
-              ↓
-            </span>
-          </button>
-        </div>
-
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-center px-3 pb-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:pb-4">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex flex-col items-center gap-2 px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] sm:gap-3 sm:px-4 sm:pb-[calc(1rem+env(safe-area-inset-bottom))]">
+          <LiveChat roomKey="global-chat" roomName={scene.title_en} inlineLauncher />
           <FullCassettePlayer />
         </div>
 
@@ -278,17 +229,7 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
             </div>
           </div>
         )}
-        <LiveChat roomKey="global-chat" roomName={scene.title_en} />
       </div>
-
-      {/* Unique About section */}
-      <ThemeAbout slug={scene.slug} />
-
-      {/* Unique FAQ section */}
-      <ThemeFAQ slug={scene.slug} />
-
-      {/* Common Footer */}
-      <Footer />
 
       <JagahExplorer
         scenes={scenes}

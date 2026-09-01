@@ -9,12 +9,6 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 export default defineConfig({
   vite: {
     define: {
-      "import.meta.env.VITE_ENABLE_AMBIENCE_ENGINE": JSON.stringify(
-        process.env["VITE_ENABLE_AMBIENCE_ENGINE"] === "true" ||
-          process.env["VERCEL_ENV"] === "preview"
-          ? "true"
-          : "false",
-      ),
       "import.meta.env.VITE_ENABLE_AMBIENCE_SOLO_PREVIEW": JSON.stringify(
         process.env["VITE_ENABLE_AMBIENCE_SOLO_PREVIEW"] === "true" ||
           process.env["VERCEL_ENV"] === "preview"

@@ -36,7 +36,7 @@ describe("ambience asset manifest", () => {
     }
   });
 
-  test("records seven licensed, muted visual overlays", async () => {
+  test("records active and superseded licensed visual overlays", async () => {
     const manifest = (await Bun.file(
       new URL("../../docs/ambience-visual-assets.json", import.meta.url),
     ).json()) as {
@@ -50,14 +50,15 @@ describe("ambience asset manifest", () => {
         bytes: number;
         sha256: string;
       }>;
-      supersededAssets: Array<{ storagePath: string; reason: string }>;
+      supersededAssets: Array<{ slug: string; storagePath: string; reason: string }>;
     };
     expect(manifest.license.commercialUse).toBe(true);
     expect(manifest.license.url).toEndWith("#videoFree");
     expect(manifest.processing.audioRemoved).toBe(true);
     expect(manifest.processing.durationSeconds).toBe(12);
-    expect(manifest.assets).toHaveLength(7);
-    expect(new Set(manifest.assets.map((asset) => asset.slug)).size).toBe(7);
+    expect(manifest.assets).toHaveLength(6);
+    expect(new Set(manifest.assets.map((asset) => asset.slug)).size).toBe(6);
+    expect(manifest.assets.some((asset) => asset.slug === "raj-mistri")).toBe(false);
     for (const asset of manifest.assets) {
       expect(asset.sourcePage).toStartWith("https://mixkit.co/free-stock-video/");
       expect(asset.storagePath).toStartWith(`rooms/${asset.slug}/ambience/`);
@@ -66,10 +67,13 @@ describe("ambience asset manifest", () => {
       expect(asset.sourceSha256).toMatch(/^[A-F0-9]{64}$/);
       expect(asset.sha256).toMatch(/^[A-F0-9]{64}$/);
     }
-    expect(manifest.supersededAssets).toHaveLength(1);
-    expect(manifest.supersededAssets[0]?.storagePath).toBe(
-      "rooms/sainik-dhaba/ambience/overlay.mp4",
-    );
-    expect(manifest.supersededAssets[0]?.reason).toContain("did not fit");
+    expect(manifest.supersededAssets).toHaveLength(2);
+    expect(manifest.supersededAssets.map((asset) => asset.slug)).toEqual([
+      "sainik-dhaba",
+      "raj-mistri",
+    ]);
+    for (const asset of manifest.supersededAssets) {
+      expect(asset.reason).toContain("did not");
+    }
   });
 });

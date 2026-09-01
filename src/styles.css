@@ -613,12 +613,20 @@
   animation: ambience-pattern-drift 24s linear infinite;
 }
 .ambience-backdrop[data-pattern="streaks"] .ambience-pattern {
-  background-image: repeating-linear-gradient(
-    104deg,
-    transparent 0 34px,
-    var(--ambience-accent) 35px,
-    transparent 37px
-  );
+  opacity: 0.2;
+  background-image:
+    linear-gradient(90deg, transparent 0 12%, var(--ambience-accent) 20%, transparent 31%),
+    linear-gradient(90deg, transparent 0 56%, var(--ambience-haze) 68%, transparent 82%);
+  background-size:
+    210% 100%,
+    260% 100%;
+  filter: blur(18px);
+  animation: ambience-road-lights 14s ease-in-out infinite alternate;
+}
+.ambience-backdrop[data-pattern="streaks"] .ambience-overlay {
+  opacity: calc(var(--ambience-overlay-opacity) * 0.46);
+  mix-blend-mode: soft-light;
+  filter: blur(4px) saturate(0.78) contrast(1.02);
 }
 .ambience-backdrop[data-pattern="ripples"] .ambience-pattern {
   background-image: repeating-radial-gradient(
@@ -651,6 +659,49 @@
   );
   background-size: 180% 100%;
 }
+.ambience-backdrop[data-pattern="construction-dust"] .ambience-haze {
+  background:
+    radial-gradient(
+      ellipse at 48% 88%,
+      color-mix(in srgb, #b96b35 48%, transparent),
+      transparent 48%
+    ),
+    radial-gradient(
+      ellipse at 82% 72%,
+      color-mix(in srgb, #d9a25f 28%, transparent),
+      transparent 38%
+    );
+  filter: blur(42px) saturate(0.78);
+  mix-blend-mode: soft-light;
+  animation: ambience-construction-haze 16s ease-in-out infinite alternate;
+}
+.ambience-backdrop[data-pattern="construction-dust"] .ambience-pattern {
+  opacity: 0.28;
+  background-image:
+    radial-gradient(circle at 12% 84%, #d9a25f 0 1.5px, transparent 2px),
+    radial-gradient(circle at 34% 72%, #c8844d 0 1px, transparent 1.8px),
+    radial-gradient(circle at 58% 90%, #efc889 0 1.3px, transparent 2px),
+    radial-gradient(circle at 78% 76%, #b96b35 0 1.2px, transparent 2px),
+    radial-gradient(circle at 92% 88%, #d9a25f 0 1px, transparent 1.8px);
+  background-size:
+    170px 150px,
+    210px 180px,
+    260px 220px,
+    190px 170px,
+    230px 200px;
+  filter: blur(0.45px);
+  mix-blend-mode: screen;
+  animation: ambience-construction-motes 20s linear infinite;
+}
+.ambience-construction-dust {
+  opacity: 0.22;
+  background:
+    linear-gradient(104deg, transparent 34%, rgb(242 190 118 / 16%) 48%, transparent 62%),
+    radial-gradient(ellipse at 50% 104%, rgb(112 60 31 / 42%), transparent 58%);
+  filter: blur(12px);
+  mix-blend-mode: soft-light;
+  animation: ambience-construction-shaft 13s ease-in-out infinite alternate;
+}
 .ambience-grain {
   opacity: 0.18;
   mix-blend-mode: overlay;
@@ -680,6 +731,38 @@
   }
   to {
     transform: translate3d(34px, -34px, 0);
+  }
+}
+@keyframes ambience-road-lights {
+  from {
+    transform: translate3d(-16%, 0, 0) scaleX(1.05);
+  }
+  to {
+    transform: translate3d(16%, 0, 0) scaleX(1.12);
+  }
+}
+@keyframes ambience-construction-haze {
+  from {
+    transform: translate3d(-2%, 2%, 0) scale(1.02);
+  }
+  to {
+    transform: translate3d(3%, -1%, 0) scale(1.08);
+  }
+}
+@keyframes ambience-construction-motes {
+  from {
+    transform: translate3d(0, 16px, 0);
+  }
+  to {
+    transform: translate3d(12px, -150px, 0);
+  }
+}
+@keyframes ambience-construction-shaft {
+  from {
+    transform: translate3d(-3%, 1%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(4%, -1%, 0) scale(1.05);
   }
 }
 @keyframes ambience-event-pulse {

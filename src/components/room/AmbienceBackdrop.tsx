@@ -6,12 +6,20 @@ type AmbienceBackdropProps = {
   level: number;
   eventPulse: number;
   profile: AmbienceProfile | null;
+  sceneSlug: string;
 };
 
-export function AmbienceBackdrop({ active, level, eventPulse, profile }: AmbienceBackdropProps) {
+export function AmbienceBackdrop({
+  active,
+  level,
+  eventPulse,
+  profile,
+  sceneSlug,
+}: AmbienceBackdropProps) {
   const theme = profile?.visual_theme;
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const constructionDust = sceneSlug === "raj-mistri";
   const normalizedLevel = Math.min(100, Math.max(0, level)) / 100;
   const opacityFloor = theme?.opacity_floor ?? 0.34;
   const opacityCeiling = theme?.opacity_ceiling ?? 0.66;
@@ -48,11 +56,12 @@ export function AmbienceBackdrop({ active, level, eventPulse, profile }: Ambienc
     <div
       aria-hidden
       data-active={active ? "true" : "false"}
-      data-pattern={theme?.pattern ?? "dust"}
+      data-pattern={constructionDust ? "construction-dust" : (theme?.pattern ?? "dust")}
+      data-scene={sceneSlug}
       className="ambience-backdrop pointer-events-none absolute inset-0 z-10 overflow-hidden"
       style={style}
     >
-      {theme?.overlay_url ? (
+      {theme?.overlay_url && !constructionDust ? (
         <video
           ref={videoRef}
           key={theme.overlay_url}
@@ -67,6 +76,7 @@ export function AmbienceBackdrop({ active, level, eventPulse, profile }: Ambienc
       ) : null}
       <span className="ambience-haze absolute inset-[-18%]" />
       <span className="ambience-pattern absolute inset-0" />
+      {constructionDust ? <span className="ambience-construction-dust absolute inset-0" /> : null}
       <span className="ambience-grain absolute inset-0" />
       {eventPulse > 0 ? (
         <span key={eventPulse} className="ambience-event absolute inset-0" />

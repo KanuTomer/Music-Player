@@ -24,7 +24,7 @@ describe("seven-Jagah launch catalogue", () => {
     expect(isAllowedSlug("doordarshan-shaam")).toBe(false);
   });
 
-  test("provides theme content and video media for every launch room", () => {
+  test("provides theme metadata and video media for every launch room", () => {
     for (const slug of expectedSlugs) {
       expect(getThemeInfo(slug)?.displayName).toBeTruthy();
       const video = videoForScene(slug);
