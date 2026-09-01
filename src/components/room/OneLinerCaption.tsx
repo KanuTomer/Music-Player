@@ -53,7 +53,7 @@ export function OneLinerCaption({
   return (
     <div
       aria-live="polite"
-      className="pointer-events-none absolute top-1/2 left-1/2 z-20 w-[min(94vw,44rem)] -translate-x-1/2 -translate-y-1/2 px-3 text-center"
+      className="pointer-events-none absolute top-[36dvh] left-1/2 z-20 w-[min(94vw,44rem)] -translate-x-1/2 -translate-y-1/2 px-3 text-center sm:top-[40dvh]"
     >
       <div className="animate-in fade-in zoom-in-95 duration-700">
         <p
