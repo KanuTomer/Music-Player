@@ -1,4 +1,4 @@
-import { Pause, Play, SlidersHorizontal, X } from "lucide-react";
+import { SlidersHorizontal, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Slider } from "@/components/ui/slider";
 import type { AmbienceStatus } from "@/lib/ambience";
@@ -10,10 +10,7 @@ type AmbienceControlProps = {
   enabled?: boolean;
   active?: boolean;
   status?: AmbienceStatus;
-  soloPlaying?: boolean;
-  musicPlaying?: boolean;
   onToggle: () => void;
-  onSoloToggle?: () => void;
 };
 
 export function AmbienceControl({
@@ -23,10 +20,7 @@ export function AmbienceControl({
   enabled = false,
   active = false,
   status = "idle",
-  soloPlaying = false,
-  musicPlaying = false,
   onToggle,
-  onSoloToggle,
 }: AmbienceControlProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -117,22 +111,6 @@ export function AmbienceControl({
           className="min-w-16 flex-1"
         />
         <span className="w-7 text-right text-[9px] tabular-nums text-cream/55">{level}</span>
-        {onSoloToggle && !musicPlaying ? (
-          <button
-            type="button"
-            onClick={onSoloToggle}
-            aria-pressed={soloPlaying}
-            aria-label={soloPlaying ? "Pause ambience test" : "Play ambience without music"}
-            title="Test ambience only"
-            className="flex size-9 shrink-0 items-center justify-center rounded-full border border-cream/15 text-cream/70 outline-none hover:bg-cream/10 hover:text-cream focus-visible:ring-2 focus-visible:ring-ember"
-          >
-            {soloPlaying ? (
-              <Pause className="size-3.5" aria-hidden />
-            ) : (
-              <Play className="size-3.5" aria-hidden />
-            )}
-          </button>
-        ) : null}
         <button
           type="button"
           onClick={() => {
