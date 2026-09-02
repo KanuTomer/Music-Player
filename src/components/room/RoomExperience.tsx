@@ -185,7 +185,7 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
             aria-expanded={explorerOpen}
             aria-controls="jagah-explorer-sheet"
             onClick={() => setExplorerOpen(true)}
-            className="pointer-events-auto flex min-h-11 w-full max-w-[min(97vw,54rem)] items-center justify-center gap-2 rounded-xl border border-cream/15 bg-charcoal/80 px-5 text-sm font-semibold text-cream shadow-lift outline-none backdrop-blur-lg transition-[background-color,transform] hover:-translate-y-0.5 hover:bg-charcoal/95 focus-visible:ring-2 focus-visible:ring-ember motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+            className="pointer-events-auto flex min-h-10 w-full max-w-[min(94vw,34rem)] items-center justify-center gap-2 rounded-xl border border-white/15 bg-black/35 px-4 text-xs font-semibold text-cream shadow-md outline-none backdrop-blur-xl transition-[background-color,transform] hover:-translate-y-0.5 hover:bg-black/55 focus-visible:ring-2 focus-visible:ring-ember motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:text-sm"
           >
             <Compass className="size-4" aria-hidden />
             <span>Jagah Explorer</span>
