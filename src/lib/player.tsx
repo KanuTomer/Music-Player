@@ -8,7 +8,15 @@ import {
   type ReactNode,
 } from "react";
 import { currentDaypart, type Daypart } from "./dayparts";
-import { chooseStart, circularIndex, snapshotQueue, sourceFailureAction } from "./queue";
+import {
+  circularIndex,
+  getOrCreateQueueSessionSeed,
+  isConfirmedPlaying,
+  shouldRetryExpectedPlayback,
+  shuffleQueueForSession,
+  snapshotQueue,
+  sourceFailureAction,
+} from "./queue";
 import { reportPlaybackSourceFailure, type QueueItem, type RoomPayload } from "./rooms.functions";
 import { useAmbienceEngine } from "@/hooks/useAmbienceEngine";
 import { effectiveMusicVolume, fixedAmbienceLevel, type AmbienceStatus } from "./ambience";
@@ -122,13 +130,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const expectedVideoIdRef = useRef<string | null>(null);
   const fadeTimerRef = useRef<number | null>(null);
   const volumeRampTimerRef = useRef<number | null>(null);
+  const playRetryTimerRef = useRef<number | null>(null);
   const themeTransitionRef = useRef(false);
   const queueRef = useRef<QueueItem[]>([]);
   const indexRef = useRef(0);
   const sourceIndexRef = useRef(0);
   const failedSourcesRef = useRef<Set<string>>(new Set());
   const failedItemsRef = useRef<Set<string>>(new Set());
-  const previousStartsRef = useRef<Map<string, number>>(new Map());
+  const sessionSeedRef = useRef<string | null>(null);
   const ambienceSuppressedRef = useRef(false);
   const [room, setRoom] = useState<RoomPayload | null>(null);
   const [daypart, setDaypart] = useState<Daypart>(() => currentDaypart());
@@ -197,6 +206,22 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setIndexState(next);
     setNowPlaying(emptyNowPlaying(next, queueRef.current.length));
   }, []);
+  const scheduleExpectedPlayback = useCallback((player: YTPlayer, videoId: string) => {
+    if (playRetryTimerRef.current != null) window.clearTimeout(playRetryTimerRef.current);
+    playRetryTimerRef.current = window.setTimeout(() => {
+      playRetryTimerRef.current = null;
+      if (
+        playerRef.current !== player ||
+        !readyRef.current ||
+        !intendPlayRef.current ||
+        expectedVideoIdRef.current !== videoId
+      )
+        return;
+      const reportedVideoId = player.getVideoData()?.video_id;
+      if (reportedVideoId && reportedVideoId !== videoId) return;
+      if (player.getPlayerState() !== 1) player.playVideo();
+    }, 180);
+  }, []);
   const cueCurrent = useCallback(
     (player: YTPlayer, autoplay: boolean) => {
       const source = queueRef.current[indexRef.current]?.sources[sourceIndexRef.current];
@@ -205,11 +230,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         return false;
       }
       expectedVideoIdRef.current = source.provider_item_id;
+      setIsPlaying(false);
+      setMusicReady(false);
+      setMusicBlocked(false);
+      setNowPlaying(emptyNowPlaying(indexRef.current, queueRef.current.length));
       player.loadVideoById(source.provider_item_id);
       const target = effectiveMusicVolume(volumeRef.current, ambienceActiveRef.current);
       setPlayerOutputVolume(player, themeTransitionRef.current ? 0 : target);
       intendPlayRef.current = autoplay;
-      if (autoplay) player.playVideo();
+      if (autoplay) scheduleExpectedPlayback(player, source.provider_item_id);
       else player.pauseVideo();
       if (autoplay && themeTransitionRef.current) {
         let step = 0;
@@ -226,7 +255,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       }
       return true;
     },
-    [setPlayerOutputVolume],
+    [scheduleExpectedPlayback, setPlayerOutputVolume],
   );
   const advance = useCallback(
     (delta: number) => {
@@ -329,19 +358,31 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           onStateChange: (event: YTPlayerStateEvent) => {
             if (!current(event.target)) return;
             const reportedVideoId = event.target.getVideoData()?.video_id;
-            if (reportedVideoId && reportedVideoId !== expectedVideoIdRef.current) return;
+            if (!reportedVideoId || reportedVideoId !== expectedVideoIdRef.current) return;
             if (event.data === 0) advance(1);
-            if (event.data === 1) {
+            if (isConfirmedPlaying(event.data, reportedVideoId, expectedVideoIdRef.current)) {
               setIsPlaying(true);
+              setMusicReady(true);
               setMusicBlocked(false);
             }
-            if (event.data === 2) setIsPlaying(false);
+            if (event.data === 2 && !intendPlayRef.current) setIsPlaying(false);
+            if ([2, 5].includes(event.data)) setMusicReady(true);
+            if (
+              shouldRetryExpectedPlayback(
+                intendPlayRef.current,
+                event.data,
+                reportedVideoId,
+                expectedVideoIdRef.current,
+              )
+            ) {
+              scheduleExpectedPlayback(event.target, reportedVideoId);
+            }
           },
         },
       });
       playerRef.current = created;
     },
-    [advance, cueCurrent, handleSourceError],
+    [advance, cueCurrent, handleSourceError, scheduleExpectedPlayback],
   );
 
   useEffect(() => {
@@ -372,7 +413,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           index: indexRef.current,
           total: queueRef.current.length,
         });
-        if (intendPlayRef.current && ![1, 3].includes(player.getPlayerState())) player.playVideo();
+        if (
+          intendPlayRef.current &&
+          data?.video_id === expectedVideoIdRef.current &&
+          ![1, 3].includes(player.getPlayerState())
+        )
+          player.playVideo();
       } catch {
         /* not ready */
       }
@@ -393,33 +439,37 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const openRoom = useCallback(
     (nextRoom: RoomPayload) => {
       if (room?.scene.slug === nextRoom.scene.slug) return;
+      const switchingRooms = room !== null;
       ambienceSuppressedRef.current = false;
-      intendPlayRef.current = true;
-      setNeedsGate(false);
-      setIsPlaying(true);
-      setAmbienceEnabled(true);
-      void resumeAmbienceFromGesture();
-      const snapshot = snapshotQueue(nextRoom.queue, currentDaypart());
-      const previous = previousStartsRef.current.get(nextRoom.scene.slug) ?? -1;
-      const startIndex = nextRoom.curatedSet.shuffle_start
-        ? chooseStart(snapshot.length, previous)
-        : 0;
-      previousStartsRef.current.set(nextRoom.scene.slug, startIndex);
+      intendPlayRef.current = switchingRooms;
+      setNeedsGate(!switchingRooms);
+      setIsPlaying(false);
+      setMusicReady(false);
+      setMusicBlocked(false);
+      setAmbienceEnabled(switchingRooms);
+      if (switchingRooms) void resumeAmbienceFromGesture();
+      const eligible = snapshotQueue(nextRoom.queue, currentDaypart());
+      if (!sessionSeedRef.current && typeof window !== "undefined") {
+        sessionSeedRef.current = getOrCreateQueueSessionSeed(window.sessionStorage);
+      }
+      const snapshot =
+        nextRoom.curatedSet.shuffle_start && sessionSeedRef.current
+          ? shuffleQueueForSession(eligible, sessionSeedRef.current, nextRoom.scene.slug)
+          : eligible;
       queueRef.current = snapshot;
       failedSourcesRef.current.clear();
       failedItemsRef.current.clear();
       setPlaylist(snapshot);
-      setIndex(startIndex);
+      setIndex(0);
       setRoom(nextRoom);
     },
-    [resumeAmbienceFromGesture, room?.scene.slug, setIndex],
+    [resumeAmbienceFromGesture, room, setIndex],
   );
   const start = useCallback(() => {
     void resumeAmbienceFromGesture();
     if (!ambienceSuppressedRef.current) setAmbienceEnabled(true);
     intendPlayRef.current = true;
     setNeedsGate(false);
-    setIsPlaying(true);
     if (readyRef.current) playerRef.current?.playVideo();
   }, [resumeAmbienceFromGesture]);
   const toggle = useCallback(() => {
@@ -431,7 +481,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       if (isPlaying) playerRef.current?.pauseVideo();
       else playerRef.current?.playVideo();
     }
-    setIsPlaying(!isPlaying);
   }, [isPlaying, needsGate, resumeAmbienceFromGesture, start]);
   const next = useCallback(() => advance(1), [advance]);
   const previous = useCallback(() => advance(-1), [advance]);

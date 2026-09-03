@@ -1,7 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import {
   chooseStart,
+  getOrCreateQueueSessionSeed,
+  isConfirmedPlaying,
   circularIndex,
+  queueSessionSeedKey,
+  shouldRetryExpectedPlayback,
+  shuffleQueueForSession,
   snapshotQueue,
   sourceFailureAction,
   upcomingQueue,
@@ -43,6 +48,44 @@ describe("authoritative queue", () => {
     expect(circularIndex(0, -1, queue.length)).toBe(2);
     expect(circularIndex(2, 1, queue.length)).toBe(0);
     expect(upcomingQueue(queue, 2).map((entry) => entry.id)).toEqual(["3", "1", "2"]);
+  });
+});
+
+describe("session queue shuffle", () => {
+  const seed = "0123456789abcdef0123456789abcdef";
+
+  test("keeps one deterministic permutation per session and Jagah", () => {
+    const queue = [item("1"), item("2"), item("3"), item("4"), item("5")];
+    const first = shuffleQueueForSession(queue, seed, "sainik-dhaba");
+    const revisit = shuffleQueueForSession(queue, seed, "sainik-dhaba");
+    expect(revisit.map(({ id }) => id)).toEqual(first.map(({ id }) => id));
+    expect(new Set(first.map(({ id }) => id))).toEqual(new Set(queue.map(({ id }) => id)));
+    expect(shuffleQueueForSession(queue, "f".repeat(32), "sainik-dhaba")).not.toEqual(first);
+  });
+
+  test("reuses a valid tab seed and replaces an invalid one", () => {
+    const values = new Map<string, string>([[queueSessionSeedKey, seed]]);
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => void values.set(key, value),
+    };
+    expect(getOrCreateQueueSessionSeed(storage, () => "a".repeat(32))).toBe(seed);
+    values.set(queueSessionSeedKey, "invalid");
+    expect(getOrCreateQueueSessionSeed(storage, () => "a".repeat(32))).toBe("a".repeat(32));
+  });
+});
+
+describe("confirmed playback state", () => {
+  test("shows playing only for the expected confirmed video", () => {
+    expect(isConfirmedPlaying(1, "current", "current")).toBe(true);
+    expect(isConfirmedPlaying(1, "stale", "current")).toBe(false);
+    expect(isConfirmedPlaying(3, "current", "current")).toBe(false);
+  });
+
+  test("retries only a current expected video with active play intent", () => {
+    expect(shouldRetryExpectedPlayback(true, 5, "current", "current")).toBe(true);
+    expect(shouldRetryExpectedPlayback(true, 2, "stale", "current")).toBe(false);
+    expect(shouldRetryExpectedPlayback(false, 2, "current", "current")).toBe(false);
   });
 });
 
