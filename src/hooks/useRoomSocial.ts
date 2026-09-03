@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   DEMO_LISTENER_FALLBACK,
+  DEMO_LISTENER_MAX,
+  DEMO_LISTENER_MIN,
   combinedDemoListenerCount,
   getOrCreateDemoListenerBaseline,
 } from "@/lib/demo-listeners";
@@ -40,8 +42,32 @@ export function useRoomSocial(roomKey: string | null) {
   const listeners = combinedDemoListenerCount(demoBaseline, presenceListeners);
 
   useEffect(() => {
-    setDemoBaseline(getOrCreateDemoListenerBaseline(window.sessionStorage));
-  }, []);
+    try {
+      setDemoBaseline(getOrCreateDemoListenerBaseline(window.sessionStorage, roomKey));
+    } catch {
+      setDemoBaseline(getOrCreateDemoListenerBaseline(null, roomKey));
+    }
+  }, [roomKey]);
+
+  // Periodic organic fluctuation (up & down by 1-4 listeners every 2.5-6.5 seconds)
+  useEffect(() => {
+    let timer: number;
+    const tick = () => {
+      // Random short interval between 2.5s and 6.5s
+      const delay = 2500 + Math.random() * 4000;
+      timer = window.setTimeout(() => {
+        setDemoBaseline((prev) => {
+          const deltas = [-3, -2, -2, -1, -1, 0, 1, 1, 2, 2, 3];
+          const delta = deltas[Math.floor(Math.random() * deltas.length)] ?? 0;
+          return Math.min(DEMO_LISTENER_MAX, Math.max(DEMO_LISTENER_MIN, prev + delta));
+        });
+        tick();
+      }, delay);
+    };
+
+    tick();
+    return () => window.clearTimeout(timer);
+  }, [roomKey]);
 
   const push = useCallback((emoji: string) => {
     seq.current += 1;

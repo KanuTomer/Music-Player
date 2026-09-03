@@ -337,6 +337,36 @@
   }
 }
 
+@keyframes audio-wave-1 {
+  0%, 100% { height: 4px; }
+  50% { height: 16px; }
+}
+@keyframes audio-wave-2 {
+  0%, 100% { height: 14px; }
+  50% { height: 6px; }
+}
+@keyframes audio-wave-3 {
+  0%, 100% { height: 8px; }
+  50% { height: 18px; }
+}
+@keyframes audio-wave-4 {
+  0%, 100% { height: 16px; }
+  50% { height: 4px; }
+}
+
+.animate-wave-1 {
+  animation: audio-wave-1 0.85s ease-in-out infinite;
+}
+.animate-wave-2 {
+  animation: audio-wave-2 0.75s ease-in-out infinite 0.15s;
+}
+.animate-wave-3 {
+  animation: audio-wave-3 0.95s ease-in-out infinite 0.3s;
+}
+.animate-wave-4 {
+  animation: audio-wave-4 0.8s ease-in-out infinite 0.45s;
+}
+
 @keyframes cassette-spin {
   to {
     transform: rotate(360deg);
@@ -345,7 +375,7 @@
 
 @keyframes cassette-tape-travel {
   to {
-    background-position: 10px 0;
+    background-position: 12px 0;
   }
 }
 
@@ -358,13 +388,13 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 0.42rem;
-  height: 0.68rem;
-  margin-left: -0.21rem;
-  margin-top: -0.34rem;
+  width: 0.44rem;
+  height: 0.72rem;
+  margin-left: -0.22rem;
+  margin-top: -0.36rem;
   border-radius: 999px;
   background: var(--color-cinema-gold);
-  transform-origin: 50% 0.34rem;
+  transform-origin: 50% 0.36rem;
 }
 
 .cassette-reel-hole-a {
@@ -380,30 +410,46 @@
 }
 
 .cassette-spool-left {
-  box-shadow: inset 0 0 0 0.28rem var(--color-ink);
+  box-shadow: inset 0 0 0 0.24rem var(--color-ink), 0 0 4px rgba(0, 0, 0, 0.5);
 }
 
 .cassette-spool-right {
-  box-shadow: inset 0 0 0 0.14rem var(--color-ink);
+  box-shadow: inset 0 0 0 0.14rem var(--color-ink), 0 0 4px rgba(0, 0, 0, 0.5);
 }
 
 .cassette-shell {
-  background-image: linear-gradient(
+  background: linear-gradient(
     180deg,
-    oklch(0.26 0.02 60) 0%,
-    oklch(0.2 0.02 55) 55%,
-    oklch(0.17 0.02 55) 100%
+    rgba(255, 255, 255, 0.08) 0%,
+    rgba(18, 16, 14, 0.45) 50%,
+    rgba(10, 8, 7, 0.65) 100%
   );
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.15),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.6),
+    0 4px 16px -4px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
 }
 
 .cassette-screw {
   position: absolute;
-  width: 0.4rem;
-  height: 0.4rem;
+  width: 0.38rem;
+  height: 0.38rem;
   border-radius: 999px;
-  background: var(--color-cinema-gold);
-  box-shadow: inset 0 0 0 1px oklch(0 0 0 / 0.55);
-  opacity: 0.75;
+  background: radial-gradient(circle at 35% 35%, #f4d084, #9a7b42 65%, #46361a 100%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.5);
+  opacity: 0.85;
+}
+
+.cassette-screw::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 18%;
+  right: 18%;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.75);
+  transform: translateY(-50%) rotate(45deg);
 }
 
 .cassette-tape {
@@ -414,8 +460,8 @@
     var(--color-cinema-gold) 5px,
     var(--color-cinema-gold) 7px
   );
-  background-size: 10px 100%;
-  opacity: 0.75;
+  background-size: 12px 100%;
+  opacity: 0.85;
 }
 
 .cassette-running .cassette-tape {
