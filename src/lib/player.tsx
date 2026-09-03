@@ -144,11 +144,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [ambienceEnabled, setAmbienceEnabled] = useState(false);
   const [nowPlaying, setNowPlaying] = useState<NowPlaying>(emptyNowPlaying);
   const track = playlist[index]?.track ?? null;
-  const ambience = useAmbienceEngine(
-    room,
-    ambienceEnabled && !needsGate,
-    ambienceLevel,
-  );
+  const ambience = useAmbienceEngine(room, ambienceEnabled && !needsGate, ambienceLevel);
   const resumeAmbienceFromGesture = ambience.resumeFromGesture;
 
   const setPlayerOutputVolume = useCallback((player: YTPlayer, value: number) => {
@@ -457,10 +453,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setAmbienceEnabled(nextEnabled);
     if (nextEnabled) void resumeAmbienceFromGesture();
   }, [ambienceEnabled, resumeAmbienceFromGesture]);
-  const triggerAmbienceEvent = useCallback(
-    () => ambience.triggerEvent(),
-    [ambience],
-  );
+  const triggerAmbienceEvent = useCallback(() => ambience.triggerEvent(), [ambience]);
   const fadeForThemeChange = useCallback(() => {
     const player = playerRef.current;
     if (!player || !readyRef.current || !isPlaying) {
