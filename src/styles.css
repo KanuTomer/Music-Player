@@ -49,12 +49,12 @@
   --color-charcoal-soft: var(--charcoal-soft);
   --color-charcoal-line: var(--charcoal-line);
   --color-ember: var(--ember);
-  --font-display: "Abril Fatface", "Georgia", serif;
+  --font-display: "Cabin", system-ui, sans-serif;
   --font-signage: "Cabin", system-ui, sans-serif;
   --font-sans: "Cabin", system-ui, sans-serif;
   --font-deva: "Baloo 2", "Noto Sans Devanagari", sans-serif;
-  --font-vintage-deva: "Tiro Devanagari Hindi", "Noto Serif Devanagari", serif;
-  --font-cinema-display: "Abril Fatface", Georgia, serif;
+  --font-vintage-deva: "Baloo 2", "Noto Sans Devanagari", sans-serif;
+  --font-cinema-display: "Cabin", system-ui, sans-serif;
   --font-cinema-body: "Cabin", system-ui, sans-serif;
   --shadow-tile: 0 10px 24px -12px oklch(0.28 0.06 60 / 0.45);
   --shadow-lift: 0 18px 40px -18px oklch(0.28 0.06 60 / 0.55);
@@ -125,6 +125,15 @@
   --accent-foreground: oklch(0.221 0.024 55);
   --border: oklch(0.945 0.028 86 / 14%);
   --input: oklch(0.945 0.028 86 / 18%);
+}
+
+[data-scene="sainik-dhaba"] .scene-media {
+  filter: brightness(0.62) saturate(0.72) contrast(1.06);
+}
+
+.sainik-night-veil {
+  background: linear-gradient(180deg, rgb(1 5 12 / 36%), rgb(0 0 0 / 18%) 46%, rgb(0 2 8 / 42%));
+  mix-blend-mode: multiply;
 }
 
 @layer base {
@@ -637,12 +646,12 @@
     radial-gradient(
       circle at 22% 76%,
       color-mix(in srgb, var(--ambience-accent) 64%, transparent),
-      transparent 34%
+      transparent 10%
     ),
     radial-gradient(
       circle at 78% 18%,
       color-mix(in srgb, var(--ambience-haze) 72%, transparent),
-      transparent 42%
+      transparent 10%
     );
   filter: blur(34px) saturate(1.18);
   mix-blend-mode: screen;
@@ -669,7 +678,7 @@
 }
 .ambience-backdrop[data-effect="dhaba-heat"] .ambience-motion {
   background: repeating-linear-gradient(
-    174deg,
+    17deg,
     transparent 0 34px,
     color-mix(in srgb, var(--ambience-accent) 24%, transparent) 40px,
     transparent 48px
@@ -680,7 +689,7 @@
 .ambience-backdrop[data-effect="dhaba-heat"] .ambience-particles,
 .ambience-backdrop[data-effect="construction-dust"] .ambience-particles {
   background-image:
-    radial-gradient(circle at 12% 84%, #efc889 0 1.5px, transparent 2px),
+    radial-gradient(circle at 12% 84%, #001257 0 1.5px, transparent 2px),
     radial-gradient(circle at 34% 72%, #c8844d 0 1px, transparent 1.8px),
     radial-gradient(circle at 58% 90%, #efc889 0 1.3px, transparent 2px),
     radial-gradient(circle at 78% 76%, #b96b35 0 1.2px, transparent 2px),
@@ -693,7 +702,7 @@
     112deg,
     transparent 18%,
     rgb(178 255 244 / 10%) 38%,
-    rgb(255 245 210 / 42%) 49%,
+    rgba(0, 23, 60, 0.267) 49%,
     transparent 66%
   );
   background-size: 220% 100%;
@@ -746,12 +755,12 @@
   background:
     radial-gradient(
       ellipse at 48% 88%,
-      color-mix(in srgb, #b96b35 48%, transparent),
+      color-mix(in srgb, #0c015e8f 48%, transparent),
       transparent 48%
     ),
     radial-gradient(
       ellipse at 82% 72%,
-      color-mix(in srgb, #d9a25f 28%, transparent),
+      color-mix(in srgb, #000d4595 28%, transparent),
       transparent 38%
     );
   filter: blur(42px) saturate(0.78);

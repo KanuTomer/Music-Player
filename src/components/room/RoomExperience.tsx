@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Compass, Share2, Sparkles } from "lucide-react";
+import { Compass, Share2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import type { RoomPayload, Scene } from "@/lib/rooms.functions";
 import { artFor } from "@/lib/scene-art";
@@ -14,6 +14,7 @@ import { InfoPlaceholderDialog } from "@/components/InfoPlaceholderDialog";
 import { useJagahNavigation } from "@/hooks/useJagahNavigation";
 import { AmbienceBackdrop } from "@/components/room/AmbienceBackdrop";
 import { LiveChat } from "@/components/room/LiveChat";
+import { AmbienceEventButton } from "@/components/room/AmbienceEventButton";
 import { useSupportAutoPrompt } from "@/hooks/useSupportPrompt";
 
 export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Scene[] }) {
@@ -82,6 +83,7 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
   return (
     <div
       id="room-experience-top"
+      data-scene={scene.slug}
       className={`room-scene-enter relative h-dvh w-full overflow-hidden ${gradeClass} ${scene.is_dark ? "room-dark" : ""}`}
     >
       <div className="relative size-full overflow-hidden">
@@ -118,6 +120,9 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
         {(scene.slug === "doordarshan-shaam" || scene.slug === "papa-ke-gaane") && (
           <div className="scanlines pointer-events-none absolute inset-0 opacity-20" aria-hidden />
         )}
+        {scene.slug === "sainik-dhaba" ? (
+          <div className="sainik-night-veil pointer-events-none absolute inset-0 z-[9]" aria-hidden />
+        ) : null}
         <AmbienceBackdrop
           active={player.ambienceActive}
           level={player.ambienceLevel}
@@ -163,14 +168,11 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
               <Compass className="size-3.5 sm:size-4 shrink-0" aria-hidden />
               <span className="hidden sm:inline">Jagah Explorer</span>
               <span className="sm:hidden">Explore</span>
-              <ChevronDown className="size-3.5 sm:size-4 shrink-0" aria-hidden />
             </button>
           </div>
 
-          {/* Right: live chat · support & share */}
+          {/* Right: support and share */}
           <div className="pointer-events-auto flex shrink-0 items-center gap-1 sm:gap-2 ml-3.5 sm:ml-0">
-            <LiveChat roomKey="global-chat" roomName={scene.title_en} inlineLauncher />
-
             <button
               type="button"
               onClick={() => setDialog("support")}
@@ -209,6 +211,10 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
         />
 
         <div className="pointer-events-none absolute inset-x-0 bottom-1.5 sm:bottom-2.5 z-30 flex flex-col items-center gap-2 px-2 pb-[env(safe-area-inset-bottom)] sm:gap-3 sm:px-4">
+          <div className="pointer-events-auto flex w-full max-w-[min(92vw,27.5rem)] flex-wrap items-center justify-center gap-2">
+            <LiveChat roomKey="global-chat" roomName={scene.title_en} inlineLauncher />
+            <AmbienceEventButton sceneSlug={scene.slug} />
+          </div>
           <FullCassettePlayer />
         </div>
 
