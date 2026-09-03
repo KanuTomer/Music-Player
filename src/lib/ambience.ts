@@ -240,9 +240,20 @@ export class AmbienceEngine {
 
   async triggerEvent() {
     const buffered = this.buffers.find(({ stem }) => stem.role === "event");
-    if (!buffered || !this.context || !this.compressor || !this.profile || this.manualEventSource)
-      return false;
+    if (!buffered || !this.context || !this.compressor || !this.profile) return false;
     await this.resumeFromGesture();
+    if (this.manualEventSource) {
+      const outgoing = this.manualEventSource;
+      this.manualEventSource = null;
+      this.sources.delete(outgoing);
+      outgoing.onended = null;
+      try {
+        outgoing.stop();
+      } catch {
+        // The previous one-shot may have ended between the click and restart.
+      }
+      outgoing.disconnect();
+    }
     const generation = this.generation;
     const source = this.context.createBufferSource();
     const gain = this.context.createGain();
