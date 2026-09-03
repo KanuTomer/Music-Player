@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import {
+  avoidRepeatedFirst,
   chooseStart,
-  getOrCreateQueueSessionSeed,
+  createQueueSessionSeed,
   isConfirmedPlaying,
   circularIndex,
-  queueSessionSeedKey,
   shouldRetryExpectedPlayback,
   shuffleQueueForSession,
   snapshotQueue,
@@ -63,15 +63,19 @@ describe("session queue shuffle", () => {
     expect(shuffleQueueForSession(queue, "f".repeat(32), "sainik-dhaba")).not.toEqual(first);
   });
 
-  test("reuses a valid tab seed and replaces an invalid one", () => {
-    const values = new Map<string, string>([[queueSessionSeedKey, seed]]);
-    const storage = {
-      getItem: (key: string) => values.get(key) ?? null,
-      setItem: (key: string, value: string) => void values.set(key, value),
-    };
-    expect(getOrCreateQueueSessionSeed(storage, () => "a".repeat(32))).toBe(seed);
-    values.set(queueSessionSeedKey, "invalid");
-    expect(getOrCreateQueueSessionSeed(storage, () => "a".repeat(32))).toBe("a".repeat(32));
+  test("creates a fresh page-load seed from random values", () => {
+    expect(createQueueSessionSeed((values) => values.fill(1))).toBe("00000001".repeat(4));
+    expect(createQueueSessionSeed((values) => values.fill(2))).toBe("00000002".repeat(4));
+  });
+
+  test("does not repeat the previous page-load starting track", () => {
+    const queue = [item("1"), item("2"), item("3")];
+    expect(avoidRepeatedFirst(queue, "1", (entry) => entry.id).map(({ id }) => id)).toEqual([
+      "2",
+      "1",
+      "3",
+    ]);
+    expect(avoidRepeatedFirst(queue, "3", (entry) => entry.id)).toBe(queue);
   });
 });
 

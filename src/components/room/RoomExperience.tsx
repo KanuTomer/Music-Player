@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Compass, Share2, Sparkles } from "lucide-react";
+import { Compass, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import type { RoomPayload, Scene } from "@/lib/rooms.functions";
 import { artFor } from "@/lib/scene-art";
@@ -75,7 +75,7 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
     toast.success("Link copied — bhej do kisi ko");
   };
 
-  const active = !player.needsGate && player.isPlaying;
+  const active = player.isPlaying;
   // Scenes that are night-bound by nature keep their own light.
   const gradeless = scene.slug === "raat-ki-bus";
   const gradeClass = gradeless ? "" : `grade-${player.daypart}`;
@@ -226,39 +226,6 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
           </div>
           <FullCassettePlayer />
         </div>
-
-        {player.needsGate && (
-          <div className="absolute inset-0 z-40 flex flex-col items-center justify-center px-6 text-center">
-            <div className="absolute inset-0 bg-charcoal/78 backdrop-blur-[4px]" aria-hidden />
-            <div className="vignette absolute inset-0" aria-hidden />
-
-            <div className="relative flex w-full max-w-sm flex-col items-center gap-3 rounded-2xl border border-cream/10 bg-charcoal/45 px-6 py-8 shadow-lift overflow-hidden">
-              <span className="rounded-full border border-ember/50 px-3 py-[3px] text-[9.5px] font-bold tracking-[0.22em] text-ember uppercase relative z-10">
-                {scene.region ?? scene.category} · live
-              </span>
-              <h2 className="signage-text font-deva text-3xl leading-tight text-cream relative z-10">
-                {scene.title_hi}
-              </h2>
-              <p className="text-[12.5px] font-medium tracking-[0.22em] text-cream/55 uppercase relative z-10">
-                {scene.title_en}
-              </p>
-              <p className="max-w-xs text-sm leading-relaxed text-cream/70 relative z-10">
-                {scene.hook}
-              </p>
-              <button
-                type="button"
-                onClick={player.start}
-                className="mt-2 flex items-center gap-2 rounded-full bg-ember px-7 py-3.5 text-sm font-bold text-charcoal shadow-lift transition-transform hover:scale-[1.03] active:scale-95 relative z-10"
-              >
-                <Sparkles className="size-4" aria-hidden />
-                Andar aa jao — press play
-              </button>
-              <p className="text-[11px] text-cream/45 relative z-10">
-                Headphones lagao. Ye kamra chalta rahega.
-              </p>
-            </div>
-          </div>
-        )}
       </div>
 
       <JagahExplorer

@@ -1,31 +1,12 @@
 import type { Daypart } from "./dayparts";
 import type { QueueItem } from "./rooms.functions";
 
-export const queueSessionSeedKey = "sd.queue-session-seed.v1";
-
-type SessionStorageLike = Pick<Storage, "getItem" | "setItem">;
-
-export function isValidQueueSessionSeed(value: string | null): value is string {
-  return Boolean(value && /^[0-9a-f]{32}$/i.test(value));
-}
-
 export function createQueueSessionSeed(
   fill = (values: Uint32Array) => crypto.getRandomValues(values),
 ) {
   return Array.from(fill(new Uint32Array(4)), (value) => value.toString(16).padStart(8, "0")).join(
     "",
   );
-}
-
-export function getOrCreateQueueSessionSeed(
-  storage: SessionStorageLike,
-  create = createQueueSessionSeed,
-) {
-  const stored = storage.getItem(queueSessionSeedKey);
-  if (isValidQueueSessionSeed(stored)) return stored;
-  const seed = create();
-  storage.setItem(queueSessionSeedKey, seed);
-  return seed;
 }
 
 function hashSeed(value: string) {
@@ -53,9 +34,24 @@ export function shuffleQueueForSession<T>(items: T[], sessionSeed: string, scene
   const random = seededRandom(hashSeed(`${sessionSeed}:${sceneSlug}`));
   for (let index = shuffled.length - 1; index > 0; index -= 1) {
     const swapIndex = Math.floor(random() * (index + 1));
-    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+    const current = shuffled[index]!;
+    shuffled[index] = shuffled[swapIndex]!;
+    shuffled[swapIndex] = current;
   }
   return shuffled;
+}
+
+export function avoidRepeatedFirst<T>(
+  items: T[],
+  previousKey: string | null,
+  keyOf: (item: T) => string,
+) {
+  if (items.length < 2 || !previousKey || keyOf(items[0] as T) !== previousKey) return items;
+  const adjusted = [...items];
+  const first = adjusted[0]!;
+  adjusted[0] = adjusted[1]!;
+  adjusted[1] = first;
+  return adjusted;
 }
 
 export function isConfirmedPlaying(

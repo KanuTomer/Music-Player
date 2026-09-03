@@ -9,8 +9,9 @@ import {
 } from "react";
 import { currentDaypart, type Daypart } from "./dayparts";
 import {
+  avoidRepeatedFirst,
   circularIndex,
-  getOrCreateQueueSessionSeed,
+  createQueueSessionSeed,
   isConfirmedPlaying,
   shouldRetryExpectedPlayback,
   shuffleQueueForSession,
@@ -62,7 +63,6 @@ type PlayerState = {
   playlist: QueueItem[];
   track: QueueItem["track"] | null;
   isPlaying: boolean;
-  needsGate: boolean;
   musicReady: boolean;
   musicBlocked: boolean;
   isCuratedPlaylist: boolean;
@@ -138,13 +138,13 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const failedSourcesRef = useRef<Set<string>>(new Set());
   const failedItemsRef = useRef<Set<string>>(new Set());
   const sessionSeedRef = useRef<string | null>(null);
+  const shuffledQueuesRef = useRef<Map<string, QueueItem[]>>(new Map());
   const ambienceSuppressedRef = useRef(false);
   const [room, setRoom] = useState<RoomPayload | null>(null);
   const [daypart, setDaypart] = useState<Daypart>(() => currentDaypart());
   const [playlist, setPlaylist] = useState<QueueItem[]>([]);
   const [index, setIndexState] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [needsGate, setNeedsGate] = useState(false);
   const [musicReady, setMusicReady] = useState(false);
   const [musicBlocked, setMusicBlocked] = useState(false);
   const [apiReady, setApiReady] = useState(false);
@@ -153,7 +153,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [ambienceEnabled, setAmbienceEnabled] = useState(false);
   const [nowPlaying, setNowPlaying] = useState<NowPlaying>(emptyNowPlaying);
   const track = playlist[index]?.track ?? null;
-  const ambience = useAmbienceEngine(room, ambienceEnabled && !needsGate, ambienceLevel);
+  const ambience = useAmbienceEngine(room, ambienceEnabled, ambienceLevel);
   const resumeAmbienceFromGesture = ambience.resumeFromGesture;
 
   const setPlayerOutputVolume = useCallback((player: YTPlayer, value: number) => {
@@ -426,7 +426,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     return () => window.clearInterval(timer);
   }, []);
   useEffect(() => {
-    if (!room || needsGate || !apiReady) return;
+    if (!room || !apiReady) return;
     const player = playerRef.current;
     if (!player) {
       buildPlayer(true);
@@ -434,28 +434,39 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
     if (!readyRef.current) return;
     cueCurrent(player, intendPlayRef.current);
-  }, [apiReady, buildPlayer, cueCurrent, needsGate, room]);
+  }, [apiReady, buildPlayer, cueCurrent, room]);
 
   const openRoom = useCallback(
     (nextRoom: RoomPayload) => {
       if (room?.scene.slug === nextRoom.scene.slug) return;
-      const switchingRooms = room !== null;
       ambienceSuppressedRef.current = false;
-      intendPlayRef.current = switchingRooms;
-      setNeedsGate(!switchingRooms);
+      intendPlayRef.current = true;
       setIsPlaying(false);
       setMusicReady(false);
       setMusicBlocked(false);
-      setAmbienceEnabled(switchingRooms);
-      if (switchingRooms) void resumeAmbienceFromGesture();
-      const eligible = snapshotQueue(nextRoom.queue, currentDaypart());
+      setAmbienceEnabled(true);
+      void resumeAmbienceFromGesture();
       if (!sessionSeedRef.current && typeof window !== "undefined") {
-        sessionSeedRef.current = getOrCreateQueueSessionSeed(window.sessionStorage);
+        sessionSeedRef.current = createQueueSessionSeed();
       }
-      const snapshot =
-        nextRoom.curatedSet.shuffle_start && sessionSeedRef.current
-          ? shuffleQueueForSession(eligible, sessionSeedRef.current, nextRoom.scene.slug)
-          : eligible;
+      let snapshot = shuffledQueuesRef.current.get(nextRoom.scene.slug);
+      if (!snapshot) {
+        const eligible = snapshotQueue(nextRoom.queue, currentDaypart());
+        snapshot =
+          nextRoom.curatedSet.shuffle_start && sessionSeedRef.current
+            ? shuffleQueueForSession(eligible, sessionSeedRef.current, nextRoom.scene.slug)
+            : eligible;
+        if (typeof window !== "undefined" && snapshot.length) {
+          const firstTrackKey = `sd.queue-first.v1:${nextRoom.scene.slug}`;
+          snapshot = avoidRepeatedFirst(
+            snapshot,
+            window.sessionStorage.getItem(firstTrackKey),
+            (item) => item.id,
+          );
+          window.sessionStorage.setItem(firstTrackKey, snapshot[0]?.id ?? "");
+        }
+        shuffledQueuesRef.current.set(nextRoom.scene.slug, snapshot);
+      }
       queueRef.current = snapshot;
       failedSourcesRef.current.clear();
       failedItemsRef.current.clear();
@@ -469,11 +480,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     void resumeAmbienceFromGesture();
     if (!ambienceSuppressedRef.current) setAmbienceEnabled(true);
     intendPlayRef.current = true;
-    setNeedsGate(false);
     if (readyRef.current) playerRef.current?.playVideo();
   }, [resumeAmbienceFromGesture]);
   const toggle = useCallback(() => {
-    if (needsGate) return start();
     if (!isPlaying) void resumeAmbienceFromGesture();
     if (!isPlaying && !ambienceSuppressedRef.current) setAmbienceEnabled(true);
     intendPlayRef.current = !isPlaying;
@@ -481,7 +490,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       if (isPlaying) playerRef.current?.pauseVideo();
       else playerRef.current?.playVideo();
     }
-  }, [isPlaying, needsGate, resumeAmbienceFromGesture, start]);
+  }, [isPlaying, resumeAmbienceFromGesture]);
   const next = useCallback(() => advance(1), [advance]);
   const previous = useCallback(() => advance(-1), [advance]);
   const seek = useCallback((seconds: number) => {
@@ -537,8 +546,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setRoom(null);
     setPlaylist([]);
     queueRef.current = [];
+    shuffledQueuesRef.current.clear();
     expectedVideoIdRef.current = null;
-    setNeedsGate(false);
     setIsPlaying(false);
   }, []);
 
@@ -548,7 +557,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     playlist,
     track,
     isPlaying,
-    needsGate,
     musicReady,
     musicBlocked,
     isCuratedPlaylist: Boolean(room),
