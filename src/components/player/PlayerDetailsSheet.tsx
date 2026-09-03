@@ -85,13 +85,9 @@ export function PlayerDetailsSheet({
                     {player.ambienceEnabled ? player.ambienceStatus : "off"}
                   </span>
                 </div>
-                <p className="mt-2 text-xs leading-relaxed text-cream/50">
-                  Location atmosphere · {player.ambienceLevel}%
-                </p>
+                <p className="mt-2 text-xs leading-relaxed text-cream/50">Location atmosphere</p>
                 <div className="mt-4 flex justify-start">
                   <AmbienceControl
-                    level={player.ambienceLevel}
-                    onLevelChange={player.setAmbienceLevel}
                     enabled={player.ambienceEnabled}
                     active={player.ambienceActive}
                     status={player.ambienceStatus}

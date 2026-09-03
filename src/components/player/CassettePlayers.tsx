@@ -256,8 +256,6 @@ export function FullCassettePlayer() {
         {/* Right: Ambience Control */}
         <div className="flex items-center justify-end">
           <AmbienceControl
-            level={player.ambienceLevel}
-            onLevelChange={player.setAmbienceLevel}
             enabled={player.ambienceEnabled}
             active={player.ambienceActive}
             status={player.ambienceStatus}
@@ -340,9 +338,6 @@ export function CompactCassettePlayer({ className = "" }: { className?: string }
           </TransportButton>
           <div className="hidden sm:block">
             <AmbienceControl
-              compact
-              level={player.ambienceLevel}
-              onLevelChange={player.setAmbienceLevel}
               enabled={player.ambienceEnabled}
               active={player.ambienceActive}
               status={player.ambienceStatus}
@@ -360,9 +355,6 @@ export function CompactCassettePlayer({ className = "" }: { className?: string }
                 : display.subtitle}
           </p>
           <AmbienceControl
-            compact
-            level={player.ambienceLevel}
-            onLevelChange={player.setAmbienceLevel}
             enabled={player.ambienceEnabled}
             active={player.ambienceActive}
             status={player.ambienceStatus}

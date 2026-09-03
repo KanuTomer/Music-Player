@@ -1,14 +1,8 @@
-import { Check, ChevronDown, Loader2 } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 import type { RefObject } from "react";
 import type { Scene } from "@/lib/rooms.functions";
 import { artFor } from "@/lib/scene-art";
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 
 type JagahExplorerProps = {
   scenes: Scene[];
@@ -31,33 +25,25 @@ export function JagahExplorer({
   triggerRef,
 }: JagahExplorerProps) {
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
         id="jagah-explorer-sheet"
-        side="bottom"
-        showCloseButton={false}
         onCloseAutoFocus={(event) => {
           if (!triggerRef?.current) return;
           event.preventDefault();
           triggerRef.current.focus();
         }}
-        className="mx-auto flex max-h-[85dvh] sm:h-[calc(100dvh-2rem)] w-[calc(100%-1rem)] max-w-[54rem] flex-col overflow-hidden rounded-t-2xl border-cream/15 bg-charcoal p-0 text-cream shadow-2xl motion-reduce:transition-none motion-reduce:data-[state=closed]:animate-none motion-reduce:data-[state=open]:animate-none"
+        className="flex max-h-[88dvh] w-[min(94vw,54rem)] max-w-none flex-col gap-0 overflow-hidden rounded-2xl border-cream/15 bg-charcoal p-0 text-cream shadow-2xl"
       >
         <div className="border-b border-cream/10 px-4 pt-4 pb-3 sm:px-7 sm:pt-6 sm:pb-4">
           <div className="pr-10">
-            <SheetTitle className="font-signage text-xl sm:text-3xl text-cream">
+            <DialogTitle className="font-signage text-xl sm:text-3xl text-cream">
               Jagah Explorer
-            </SheetTitle>
-            <SheetDescription className="mt-0.5 text-xs sm:text-sm text-cream/60">
+            </DialogTitle>
+            <DialogDescription className="mt-0.5 text-xs sm:text-sm text-cream/60">
               Pick a familiar corner. Your music keeps playing while you look around.
-            </SheetDescription>
+            </DialogDescription>
           </div>
-          <SheetClose
-            aria-label="Close Jagah Explorer"
-            className="absolute top-2 right-2 flex size-10 sm:size-10 items-center justify-center rounded-full border border-cream/15 bg-cream/5 text-cream/70 outline-none transition-colors hover:bg-cream/10 hover:text-cream focus-visible:ring-2 focus-visible:ring-ember sm:top-3 sm:right-3"
-          >
-            <ChevronDown className="size-5" aria-hidden />
-          </SheetClose>
         </div>
 
         <div className="flex-1 overflow-y-auto overscroll-contain px-3 py-3 sm:px-7 sm:py-6">
@@ -152,7 +138,7 @@ export function JagahExplorer({
             })}
           </div>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }
