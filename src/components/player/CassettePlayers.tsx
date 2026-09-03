@@ -29,8 +29,8 @@ function Cover({
 }) {
   return (
     <span
-      className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/15 bg-black/40 shadow-sm ring-1 ring-white/10 ${
-        compact ? "size-9" : "size-10 sm:size-11"
+      className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-md sm:rounded-lg border border-white/15 bg-black/40 shadow-xs ring-1 ring-white/10 ${
+        compact ? "size-8" : "size-8.5 sm:size-9.5"
       }`}
     >
       {coverId ? (
@@ -42,8 +42,8 @@ function Cover({
         />
       ) : (
         <span className="flex size-full flex-col items-center justify-center bg-gradient-to-br from-ember to-terracotta text-charcoal shadow-inner">
-          <Music2 className={compact ? "size-3.5" : "size-4"} aria-hidden />
-          {!compact ? <span className="mt-0.5 font-vintage-deva text-[8px] font-bold">संगीत</span> : null}
+          <Music2 className={compact ? "size-3" : "size-3.5"} aria-hidden />
+          {!compact ? <span className="mt-0.5 font-vintage-deva text-[7.5px] font-bold">संगीत</span> : null}
         </span>
       )}
     </span>
@@ -52,23 +52,23 @@ function Cover({
 
 function LiveEqualizer({ isPlaying, status }: { isPlaying: boolean; status: string }) {
   return (
-    <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-ember/30 bg-ember/15 px-2.5 py-0.5 font-vintage-deva text-[9.5px] text-ember-300 shadow-xs backdrop-blur-xs">
+    <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-amber-500/50 bg-black/60 px-2.5 py-0.5 text-[10.5px] font-semibold text-amber-300 shadow-xs backdrop-blur-md">
       {isPlaying ? (
-        <div className="flex h-3 items-end gap-0.5" aria-hidden>
-          <span className="w-0.5 rounded-full bg-ember animate-wave-1" />
-          <span className="w-0.5 rounded-full bg-ember animate-wave-2" />
-          <span className="w-0.5 rounded-full bg-ember animate-wave-3" />
-          <span className="w-0.5 rounded-full bg-ember animate-wave-4" />
+        <div className="flex h-2.5 items-end gap-0.5" aria-hidden>
+          <span className="w-0.5 rounded-full bg-amber-400 animate-wave-1" />
+          <span className="w-0.5 rounded-full bg-amber-400 animate-wave-2" />
+          <span className="w-0.5 rounded-full bg-amber-400 animate-wave-3" />
+          <span className="w-0.5 rounded-full bg-amber-400 animate-wave-4" />
         </div>
       ) : (
         <span
-          className={`inline-block size-1.5 rounded-full bg-ember ${
-            status === "loading" ? "animate-ping" : "opacity-60"
+          className={`inline-block size-1.5 rounded-full bg-amber-400 ${
+            status === "loading" ? "animate-ping" : "opacity-90"
           }`}
           aria-hidden
         />
       )}
-      <span className="font-semibold tracking-wide">
+      <span className="font-sans text-[11px] font-bold tracking-normal leading-none text-amber-200">
         {status === "loading" ? "ट्यून" : isPlaying ? "बज रहा है" : "रोक दिया"}
       </span>
     </span>
@@ -81,9 +81,9 @@ function SeekBar({ compact = false }: { compact?: boolean }) {
   const progress = duration > 0 ? Math.min(100, (player.nowPlaying.position / duration) * 100) : 0;
 
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-2">
+    <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
       {!compact ? (
-        <span className="w-8 shrink-0 text-right font-mono text-[10px] font-semibold tabular-nums text-cream/60">
+        <span className="w-8 shrink-0 text-right font-mono text-[11px] font-bold tabular-nums text-white/90">
           {clock(player.nowPlaying.position)}
         </span>
       ) : null}
@@ -95,21 +95,21 @@ function SeekBar({ compact = false }: { compact?: boolean }) {
           const rect = event.currentTarget.getBoundingClientRect();
           player.seek(((event.clientX - rect.left) / rect.width) * duration);
         }}
-        className="group relative flex h-5 min-w-10 flex-1 cursor-pointer items-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ember"
+        className="group relative flex h-4 min-w-8 flex-1 cursor-pointer items-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ember"
       >
-        <span className="absolute inset-x-0 h-1 rounded-full bg-white/15" />
+        <span className="absolute inset-x-0 h-1 rounded-full bg-white/20" />
         <span
-          className="absolute left-0 h-1 rounded-full bg-gradient-to-r from-ember via-mustard to-ember shadow-[0_0_8px_rgba(240,126,70,0.6)] transition-[width] motion-reduce:transition-none"
+          className="absolute left-0 h-1 rounded-full bg-gradient-to-r from-ember via-amber-400 to-ember shadow-[0_0_8px_rgba(240,126,70,0.6)] transition-[width] motion-reduce:transition-none"
           style={{ width: `${progress}%` }}
         />
         <span
-          className="absolute size-3 -translate-x-1/2 rounded-full border border-white/80 bg-gradient-to-b from-white via-amber-200 to-ember shadow-[0_0_6px_rgba(240,126,70,0.8)] transition-transform group-hover:scale-125 group-focus-visible:scale-125"
+          className="absolute size-2.5 -translate-x-1/2 rounded-full border border-white bg-gradient-to-b from-white via-amber-200 to-amber-500 shadow-[0_0_6px_rgba(240,126,70,0.8)] transition-transform group-hover:scale-125 group-focus-visible:scale-125"
           style={{ left: `${progress}%` }}
           aria-hidden
         />
       </button>
       {!compact ? (
-        <span className="w-8 shrink-0 font-mono text-[10px] font-semibold tabular-nums text-cream/60">
+        <span className="w-8 shrink-0 font-mono text-[11px] font-bold tabular-nums text-white/90">
           {clock(duration)}
         </span>
       ) : null}
@@ -136,8 +136,8 @@ function TransportButton({
       onClick={action}
       aria-label={label}
       className={`${
-        compact ? "size-8" : "size-8.5 sm:size-9"
-      } shrink-0 rounded-full border border-white/15 bg-white/5 text-cream/80 shadow-xs transition-all hover:scale-105 hover:border-white/35 hover:bg-white/15 hover:text-cream active:scale-95`}
+        compact ? "size-7.5" : "size-7.5 sm:size-8"
+      } shrink-0 rounded-full border border-white/20 bg-white/10 text-white shadow-xs transition-all hover:scale-105 hover:border-white/40 hover:bg-white/20 hover:text-white active:scale-95`}
     >
       {children}
     </Button>
@@ -153,13 +153,13 @@ function PlayButton({ compact = false }: { compact?: boolean }) {
       aria-label={player.isPlaying ? "Pause" : "Play"}
       size="icon"
       className={`${
-        compact ? "size-9" : "size-10 sm:size-11"
-      } shrink-0 rounded-full border-0 bg-gradient-to-br from-[#f27a42] via-[#e2612a] to-[#c74c1a] text-charcoal shadow-[0_3px_14px_rgba(240,126,70,0.45),inset_0_1px_1px_rgba(255,255,255,0.45)] ring-1 ring-ember/40 transition-all hover:scale-105 hover:shadow-[0_4px_20px_rgba(240,126,70,0.65)] hover:brightness-110 active:scale-95`}
+        compact ? "size-8.5" : "size-9 sm:size-10"
+      } shrink-0 rounded-full border-0 bg-gradient-to-br from-[#f27a42] via-[#e2612a] to-[#c74c1a] text-charcoal shadow-[0_2px_10px_rgba(240,126,70,0.45),inset_0_1px_1px_rgba(255,255,255,0.45)] ring-1 ring-ember/40 transition-all hover:scale-105 hover:shadow-[0_3px_16px_rgba(240,126,70,0.65)] hover:brightness-110 active:scale-95`}
     >
       {player.isPlaying ? (
-        <Pause className={compact ? "size-4" : "size-4.5 sm:size-5"} aria-hidden fill="currentColor" />
+        <Pause className={compact ? "size-3.5" : "size-4 sm:size-4.5"} aria-hidden fill="currentColor" />
       ) : (
-        <Play className={`${compact ? "size-4" : "size-4.5 sm:size-5"} translate-x-0.5`} aria-hidden fill="currentColor" />
+        <Play className={`${compact ? "size-3.5" : "size-4 sm:size-4.5"} translate-x-0.5`} aria-hidden fill="currentColor" />
       )}
     </Button>
   );
@@ -177,23 +177,23 @@ export function FullCassettePlayer() {
   if (!player.room) return null;
 
   return (
-    <div className="pointer-events-auto isolate relative w-full max-w-[min(94vw,34rem)] overflow-hidden rounded-2xl border border-white/15 bg-black/35 p-2.5 sm:p-3.5 text-cream shadow-[0_16px_40px_rgba(0,0,0,0.5),0_0_24px_rgba(240,126,70,0.06)] ring-1 ring-white/10 backdrop-blur-xl">
+    <div className="pointer-events-auto isolate relative w-full max-w-[min(92vw,27.5rem)] overflow-hidden rounded-xl sm:rounded-2xl border border-white/20 bg-black/25 p-2 sm:p-2.5 text-cream shadow-[0_16px_40px_rgba(0,0,0,0.5),0_0_24px_rgba(240,126,70,0.06)] ring-1 ring-white/15 backdrop-blur-xl">
       {/* Specular top border sheen */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" aria-hidden />
 
       {/* Top row: Track info + Live indicator */}
-      <div className="flex items-center gap-2.5 border-b border-white/10 pb-2">
+      <div className="flex items-center gap-2.5 border-b border-white/10 pb-1.5">
         <Cover coverId={display.coverId} title={display.title} />
         <div key={display.coverId ?? "idle"} className="min-w-0 flex-1 animate-fade-in">
-          <p className="truncate font-cinema-display text-sm font-bold tracking-tight text-cream drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] sm:text-base">
+          <p className="truncate text-sm sm:text-[14.5px] font-bold text-white tracking-tight leading-snug drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
             {display.title}
           </p>
-          <p className="mt-0.5 truncate text-[10.5px] font-medium text-cream/70 sm:text-xs">
+          <p className="mt-0.5 truncate text-[11px] sm:text-xs text-white/85 font-medium">
             {display.status === "unavailable" ? (
               <span className="text-red-300">Track unavailable</span>
             ) : (
               <>
-                <span className="font-semibold text-ember">कलाकार</span> · {display.subtitle}
+                <span className="font-bold text-amber-400">कलाकार</span> · <span className="text-white/80">{display.subtitle}</span>
               </>
             )}
           </p>
@@ -202,7 +202,7 @@ export function FullCassettePlayer() {
       </div>
 
       {/* Cassette Deck Body */}
-      <div className="mt-2">
+      <div className="mt-1.5">
         <CassetteBody
           variant="full"
           isPlaying={player.isPlaying}
@@ -211,12 +211,12 @@ export function FullCassettePlayer() {
       </div>
 
       {/* Seekbar */}
-      <div className="mt-2">
+      <div className="mt-1.5">
         <SeekBar />
       </div>
 
       {/* Bottom Controls Deck - Symmetrical & High-end */}
-      <div className="mt-2 flex items-center justify-between gap-1.5 border-t border-white/10 pt-2">
+      <div className="mt-1.5 flex items-center justify-between gap-1 border-t border-white/10 pt-1.5">
         {/* Left: Volume toggle */}
         <div className="flex items-center">
           <Button
@@ -226,9 +226,9 @@ export function FullCassettePlayer() {
             onClick={() => setShowVolume((current) => !current)}
             aria-expanded={showVolume}
             aria-label="Music volume"
-            className={`size-8.5 sm:size-9 rounded-full border border-white/15 bg-white/5 text-cream/80 transition-all hover:bg-white/15 hover:text-cream hover:border-white/30 active:scale-95 ${
+            className={`size-7.5 sm:size-8 rounded-full border border-white/15 bg-white/5 text-cream/80 transition-all hover:bg-white/15 hover:text-cream hover:border-white/30 active:scale-95 ${
               showVolume
-                ? "bg-ember text-charcoal shadow-[0_0_10px_rgba(240,126,70,0.5)] border-ember/60 font-semibold"
+                ? "bg-ember text-charcoal shadow-[0_0_8px_rgba(240,126,70,0.5)] border-ember/60 font-semibold"
                 : ""
             }`}
           >
@@ -243,13 +243,13 @@ export function FullCassettePlayer() {
         </div>
 
         {/* Center: Master Transport Deck */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <TransportButton action={player.previous} label="Previous track">
-            <SkipBack className="size-3.5 sm:size-4" aria-hidden />
+            <SkipBack className="size-3 sm:size-3.5" aria-hidden />
           </TransportButton>
           <PlayButton />
           <TransportButton action={player.next} label="Next track">
-            <SkipForward className="size-3.5 sm:size-4" aria-hidden />
+            <SkipForward className="size-3 sm:size-3.5" aria-hidden />
           </TransportButton>
         </div>
 
@@ -300,7 +300,7 @@ export function CompactCassettePlayer({ className = "" }: { className?: string }
 
   return (
     <div
-      className={`paper relative overflow-hidden border border-white/15 bg-black/40 text-cream shadow-[0_12px_40px_-8px_rgba(0,0,0,0.65)] backdrop-blur-xl ring-1 ring-white/5 ${className}`}
+      className={`paper relative overflow-hidden border border-white/20 bg-black/25 text-cream shadow-[0_12px_40px_-8px_rgba(0,0,0,0.5)] backdrop-blur-xl ring-1 ring-white/10 ${className}`}
     >
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" aria-hidden />
       <div className="mx-auto grid w-full max-w-5xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 px-3 py-2 sm:grid-cols-[auto_auto_minmax(8rem,1fr)_auto] sm:gap-3 sm:px-4">
@@ -314,18 +314,18 @@ export function CompactCassettePlayer({ className = "" }: { className?: string }
           <p className="truncate text-[9.5px] font-bold tracking-[0.16em] text-ember uppercase">
             {player.room.scene.title_en}
           </p>
-          <p className="truncate font-cinema-display text-sm font-bold leading-tight text-cream drop-shadow-sm">
+          <p className="truncate text-sm font-bold leading-tight text-cream">
             {display.title}
           </p>
-          <p className="truncate text-[10.5px] text-cream/60 font-medium">{display.subtitle}</p>
+          <p className="truncate text-[11px] text-cream/70 font-medium">{display.subtitle}</p>
         </div>
 
         <div className="min-w-0">
           <div className="mb-1 flex items-center justify-between gap-2 min-w-0 sm:hidden">
-            <p className="truncate font-cinema-display text-[12px] font-bold leading-tight text-cream">
+            <p className="truncate text-xs font-bold leading-tight text-cream">
               {display.title}
             </p>
-            <span className="truncate text-[8.5px] text-cream/50 font-medium">{player.room.scene.title_en}</span>
+            <span className="truncate text-[9.5px] text-cream/60 font-medium">{player.room.scene.title_en}</span>
           </div>
           <SeekBar compact />
         </div>

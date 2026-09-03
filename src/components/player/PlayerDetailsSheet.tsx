@@ -63,10 +63,10 @@ export function PlayerDetailsSheet({
                     )}
                   </span>
                   <div className="min-w-0">
-                    <p className="truncate font-cinema-display text-lg text-cream">
+                    <p className="truncate text-base sm:text-lg font-bold text-cream">
                       {display.title}
                     </p>
-                    <p className="truncate text-xs text-cream/55">{display.subtitle}</p>
+                    <p className="truncate text-xs text-cream/70 mt-0.5">{display.subtitle}</p>
                     <p className="mt-1 text-[10px] font-medium text-ember" aria-live="polite">
                       {display.status === "unavailable"
                         ? "Track unavailable — advancing automatically"
