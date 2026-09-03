@@ -47,11 +47,11 @@ export function AmbienceControl({
   return (
     <div
       ref={rootRef}
-      className={`ambience-control-shell flex h-10 sm:h-11 shrink-0 items-center overflow-hidden rounded-full border shadow-sm transition-[background-color,border-color,max-width] motion-reduce:transition-none ${
+      className={`ambience-control-shell flex h-8 sm:h-8.5 shrink-0 items-center overflow-hidden rounded-full border shadow-xs transition-[background-color,border-color,max-width] motion-reduce:transition-none ${
         open
           ? compact
             ? "max-w-[min(15rem,72vw)] border-teal-deep/80 bg-teal-deep/30 ring-1 ring-teal-500/20"
-            : "max-w-60 border-teal-deep/80 bg-teal-deep/30 ring-1 ring-teal-500/20"
+            : "max-w-56 border-teal-deep/80 bg-teal-deep/30 ring-1 ring-teal-500/20"
           : enabled
             ? "max-w-28 border-teal-500/40 bg-teal-950/40 hover:border-teal-500/60"
             : "max-w-28 border-cream/20 bg-cream/5 hover:border-cream/35 hover:bg-cream/10"
@@ -68,13 +68,13 @@ export function AmbienceControl({
         aria-pressed={enabled}
         aria-expanded={open}
         aria-label={enabled ? "Turn Ambience off" : "Turn Ambience on"}
-        className={`flex h-10 sm:h-11 shrink-0 items-center rounded-full px-3 text-[11px] font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ember ${
+        className={`flex h-8 sm:h-8.5 shrink-0 items-center rounded-full px-2.5 text-[10.5px] font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ember ${
           enabled ? "text-emerald-300" : "text-cream/80 hover:text-cream"
         }`}
       >
         Ambience
         <span
-          className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[8px] font-bold tracking-[0.08em] uppercase ${
+          className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[7.5px] font-bold tracking-[0.08em] uppercase ${
             enabled
               ? active
                 ? "bg-emerald-400/25 text-emerald-300 ring-1 ring-emerald-400/30"

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronUp, Compass, Share2, Sparkles } from "lucide-react";
+import { ChevronDown, Compass, Share2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import type { RoomPayload, Scene } from "@/lib/rooms.functions";
 import { artFor } from "@/lib/scene-art";
@@ -126,46 +126,78 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
           sceneSlug={scene.slug}
         />
 
-        {/* top row: listener pill · support and share */}
-        <div className="absolute inset-x-0 top-0 z-50 flex items-center justify-between gap-2 p-2 sm:gap-3 sm:p-3">
-          <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-cream/12 bg-charcoal/60 px-2.5 py-1.5 backdrop-blur-md sm:gap-2 sm:px-3">
+        {/* Contrast Scrims for text legibility on light/bright artwork */}
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 h-48 sm:h-56 bg-gradient-to-b from-black/75 via-black/35 to-transparent z-10"
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-44 sm:h-52 bg-gradient-to-t from-black/80 via-black/35 to-transparent z-10"
+          aria-hidden
+        />
+
+        {/* top header: listener pill · top center jagah explorer · support & share */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-50 flex items-center justify-between p-2 sm:p-3">
+          {/* Left: listener pill */}
+          <div className="pointer-events-auto flex shrink-0 items-center gap-1.5 rounded-full border border-cream/12 bg-charcoal/60 px-2.5 sm:px-3 py-1.5 backdrop-blur-md shadow-md">
             <span
               className="animate-bulb inline-block size-1.5 rounded-full bg-ember"
               aria-hidden
             />
-            <span className="text-[12px] font-semibold text-cream tabular-nums">
+            <span className="text-[11px] sm:text-[12px] font-semibold text-cream tabular-nums">
               {social.listeners}
             </span>
-            <span className="text-[11px] text-cream/55">sun rahe hain</span>
+            <span className="hidden text-[11px] text-cream/55 sm:inline">sun rahe hain</span>
           </div>
 
-          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          {/* Center: Jagah Explorer (Responsive centered on mobile, absolute dead-center on sm+) */}
+          <div className="pointer-events-none flex shrink-0 sm:absolute sm:left-1/2 sm:-translate-x-1/2 sm:top-3">
+            <button
+              ref={explorerTriggerRef}
+              type="button"
+              aria-expanded={explorerOpen}
+              aria-controls="jagah-explorer-sheet"
+              onClick={() => setExplorerOpen(true)}
+              className="pointer-events-auto flex min-h-8.5 sm:min-h-10 items-center justify-center gap-1 sm:gap-2 rounded-xl border border-white/15 bg-black/45 px-2.5 sm:px-4 text-[11px] sm:text-sm font-semibold text-cream shadow-md outline-none backdrop-blur-xl transition-[background-color,transform] hover:-translate-y-0.5 hover:bg-black/65 focus-visible:ring-2 focus-visible:ring-ember motion-reduce:transition-none motion-reduce:hover:translate-y-0 cursor-pointer"
+            >
+              <Compass className="size-3.5 sm:size-4 shrink-0" aria-hidden />
+              <span className="hidden sm:inline">Jagah Explorer</span>
+              <span className="sm:hidden">Explore</span>
+              <ChevronDown className="size-3.5 sm:size-4 shrink-0" aria-hidden />
+            </button>
+          </div>
+
+          {/* Right: live chat · support & share */}
+          <div className="pointer-events-auto flex shrink-0 items-center gap-1 sm:gap-2 ml-3.5 sm:ml-0">
+            <LiveChat roomKey="global-chat" roomName={scene.title_en} inlineLauncher />
+
             <button
               type="button"
               onClick={() => setDialog("support")}
-              className="flex h-9 items-center justify-center rounded-full bg-ember border border-cream/15 px-3.5 text-xs font-bold text-charcoal transition-colors hover:bg-ember/90 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream cursor-pointer"
+              className="flex h-8.5 sm:h-9 items-center justify-center rounded-full bg-ember border border-cream/15 px-2.5 sm:px-3.5 text-[11px] sm:text-xs font-bold text-charcoal transition-colors hover:bg-ember/90 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream cursor-pointer shadow-md"
             >
-              Support Us
+              <span className="hidden sm:inline">Support Us</span>
+              <span className="sm:hidden">Support</span>
             </button>
 
             <button
               type="button"
               onClick={share}
               aria-label="Share this room"
-              className="flex size-9 items-center justify-center rounded-full border border-cream/12 bg-charcoal/60 text-cream/80 backdrop-blur-md transition-colors hover:bg-charcoal/85 hover:text-cream"
+              className="flex size-8.5 sm:size-9 items-center justify-center rounded-full border border-cream/12 bg-charcoal/60 text-cream/80 backdrop-blur-md transition-colors hover:bg-charcoal/85 hover:text-cream cursor-pointer shadow-md"
             >
-              <Share2 className="size-4" aria-hidden />
+              <Share2 className="size-3.5 sm:size-4" aria-hidden />
             </button>
           </div>
         </div>
 
-        {/* room title, signage-style, centred */}
-        <div className="pointer-events-none absolute inset-x-0 top-[clamp(4.75rem,10dvh,6.5rem)] z-20 flex flex-col items-center px-6 text-center">
-          <h1 className="signage-text font-deva text-4xl leading-[1.05] text-cream sm:text-6xl">
+        {/* room title, signage-style, centred with high-contrast legibility */}
+        <div className="pointer-events-none absolute inset-x-0 top-[clamp(4.5rem,9dvh,6.5rem)] z-20 flex flex-col items-center px-4 text-center">
+          <h1 className="font-deva text-[3.4rem] sm:text-7xl md:text-8xl leading-[1.02] font-extrabold text-cream drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)] drop-shadow-[0_4px_30px_rgba(0,0,0,0.9)]">
             {scene.title_hi}
           </h1>
-          <span className="mt-3 h-[2px] w-16 rounded-full bg-ember/80" aria-hidden />
-          <p className="mt-3 text-[11px] font-semibold tracking-[0.3em] text-cream/55 uppercase sm:text-[13px]">
+          <span className="mt-2.5 h-[3.5px] w-24 rounded-full bg-ember shadow-[0_0_14px_rgba(240,126,70,1)]" aria-hidden />
+          <p className="mt-2 text-base sm:text-lg md:text-xl font-extrabold tracking-[0.3em] text-cream drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)] drop-shadow-[0_4px_20px_rgba(0,0,0,0.9)] uppercase">
             {scene.title_en}
           </p>
         </div>
@@ -176,21 +208,8 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
           trackKey={player.nowPlaying?.title ?? player.track?.title ?? null}
         />
 
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex flex-col items-center gap-2 px-2 pb-[env(safe-area-inset-bottom)] sm:gap-3 sm:px-4">
-          <LiveChat roomKey="global-chat" roomName={scene.title_en} inlineLauncher />
+        <div className="pointer-events-none absolute inset-x-0 bottom-1.5 sm:bottom-2.5 z-30 flex flex-col items-center gap-2 px-2 pb-[env(safe-area-inset-bottom)] sm:gap-3 sm:px-4">
           <FullCassettePlayer />
-          <button
-            ref={explorerTriggerRef}
-            type="button"
-            aria-expanded={explorerOpen}
-            aria-controls="jagah-explorer-sheet"
-            onClick={() => setExplorerOpen(true)}
-            className="pointer-events-auto flex min-h-10 w-full max-w-[min(94vw,34rem)] items-center justify-center gap-2 rounded-xl border border-white/15 bg-black/35 px-4 text-xs font-semibold text-cream shadow-md outline-none backdrop-blur-xl transition-[background-color,transform] hover:-translate-y-0.5 hover:bg-black/55 focus-visible:ring-2 focus-visible:ring-ember motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:text-sm"
-          >
-            <Compass className="size-4" aria-hidden />
-            <span>Jagah Explorer</span>
-            <ChevronUp className="size-4" aria-hidden />
-          </button>
         </div>
 
         {player.needsGate && (
