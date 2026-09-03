@@ -398,7 +398,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     (nextRoom: RoomPayload) => {
       if (room?.scene.slug === nextRoom.scene.slug) return;
       ambienceSuppressedRef.current = false;
-      if (intendPlayRef.current) setAmbienceEnabled(true);
+      intendPlayRef.current = true;
+      setNeedsGate(false);
+      setIsPlaying(true);
+      setAmbienceEnabled(true);
+      void resumeAmbienceFromGesture();
       const snapshot = snapshotQueue(nextRoom.queue, currentDaypart());
       const previous = previousStartsRef.current.get(nextRoom.scene.slug) ?? -1;
       const startIndex = nextRoom.curatedSet.shuffle_start
@@ -412,7 +416,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       setIndex(startIndex);
       setRoom(nextRoom);
     },
-    [room?.scene.slug, setIndex],
+    [resumeAmbienceFromGesture, room?.scene.slug, setIndex],
   );
   const start = useCallback(() => {
     void resumeAmbienceFromGesture();
