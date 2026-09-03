@@ -121,7 +121,10 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
           <div className="scanlines pointer-events-none absolute inset-0 opacity-20" aria-hidden />
         )}
         {scene.slug === "sainik-dhaba" ? (
-          <div className="sainik-night-veil pointer-events-none absolute inset-0 z-[9]" aria-hidden />
+          <div
+            className="sainik-night-veil pointer-events-none absolute inset-0 z-[9]"
+            aria-hidden
+          />
         ) : null}
         <AmbienceBackdrop
           active={player.ambienceActive}
@@ -143,16 +146,19 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
 
         {/* top header: listener pill · top center jagah explorer · support & share */}
         <div className="pointer-events-none absolute inset-x-0 top-0 z-50 flex items-center justify-between p-2 sm:p-3">
-          {/* Left: listener pill */}
-          <div className="pointer-events-auto flex shrink-0 items-center gap-1.5 rounded-full border border-cream/12 bg-charcoal/60 px-2.5 sm:px-3 py-1.5 backdrop-blur-md shadow-md">
-            <span
-              className="animate-bulb inline-block size-1.5 rounded-full bg-ember"
-              aria-hidden
-            />
-            <span className="text-[11px] sm:text-[12px] font-semibold text-cream tabular-nums">
-              {social.listeners}
-            </span>
-            <span className="hidden text-[11px] text-cream/55 sm:inline">sun rahe hain</span>
+          {/* Left: listener pill and live chat */}
+          <div className="pointer-events-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <div className="flex items-center gap-1.5 rounded-full border border-cream/12 bg-charcoal/60 px-2.5 py-1.5 shadow-md backdrop-blur-md sm:px-3">
+              <span
+                className="animate-bulb inline-block size-1.5 rounded-full bg-ember"
+                aria-hidden
+              />
+              <span className="text-[11px] font-semibold text-cream tabular-nums sm:text-[12px]">
+                {social.listeners}
+              </span>
+              <span className="hidden text-[11px] text-cream/55 sm:inline">sun rahe hain</span>
+            </div>
+            <LiveChat roomKey="global-chat" roomName={scene.title_en} inlineLauncher />
           </div>
 
           {/* Center: Jagah Explorer (Responsive centered on mobile, absolute dead-center on sm+) */}
@@ -195,11 +201,14 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
 
         {/* room title, signage-style, centred with high-contrast legibility */}
         <div className="pointer-events-none absolute inset-x-0 top-[clamp(4.5rem,9dvh,6.5rem)] z-20 flex flex-col items-center px-4 text-center">
-          <h1 className="font-deva text-[3.4rem] sm:text-7xl md:text-8xl leading-[1.02] font-extrabold text-cream drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)] drop-shadow-[0_4px_30px_rgba(0,0,0,0.9)]">
+          <h1 className="font-deva text-[clamp(2.45rem,8dvh,6rem)] leading-[1.02] font-extrabold text-cream drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)] drop-shadow-[0_4px_30px_rgba(0,0,0,0.9)]">
             {scene.title_hi}
           </h1>
-          <span className="mt-2.5 h-[3.5px] w-24 rounded-full bg-ember shadow-[0_0_14px_rgba(240,126,70,1)]" aria-hidden />
-          <p className="mt-2 text-base sm:text-lg md:text-xl font-extrabold tracking-[0.3em] text-cream drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)] drop-shadow-[0_4px_20px_rgba(0,0,0,0.9)] uppercase">
+          <span
+            className="mt-[clamp(0.3rem,1dvh,0.625rem)] h-[3.5px] w-24 rounded-full bg-ember shadow-[0_0_14px_rgba(240,126,70,1)]"
+            aria-hidden
+          />
+          <p className="mt-[clamp(0.25rem,0.8dvh,0.5rem)] text-[clamp(0.7rem,2dvh,1.25rem)] font-extrabold tracking-[0.3em] text-cream drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)] drop-shadow-[0_4px_20px_rgba(0,0,0,0.9)] uppercase">
             {scene.title_en}
           </p>
         </div>
@@ -212,7 +221,6 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
 
         <div className="pointer-events-none absolute inset-x-0 bottom-1.5 sm:bottom-2.5 z-30 flex flex-col items-center gap-2 px-2 pb-[env(safe-area-inset-bottom)] sm:gap-3 sm:px-4">
           <div className="pointer-events-auto flex w-full max-w-[min(92vw,27.5rem)] flex-wrap items-center justify-center gap-2">
-            <LiveChat roomKey="global-chat" roomName={scene.title_en} inlineLauncher />
             <AmbienceEventButton sceneSlug={scene.slug} />
           </div>
           <FullCassettePlayer />
