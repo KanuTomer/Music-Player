@@ -146,7 +146,7 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
 
         {/* top header: listener pill · top center jagah explorer · support & share */}
         <div className="pointer-events-none absolute inset-x-0 top-0 z-50 flex items-center justify-between p-2 sm:p-3">
-          {/* Left: listener pill and live chat */}
+          {/* Left: listener pill */}
           <div className="pointer-events-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
             <div className="flex items-center gap-1.5 rounded-full border border-cream/12 bg-charcoal/60 px-2.5 py-1.5 shadow-md backdrop-blur-md sm:px-3">
               <span
@@ -158,7 +158,6 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
               </span>
               <span className="hidden text-[11px] text-cream/55 sm:inline">sun rahe hain</span>
             </div>
-            <LiveChat roomKey="global-chat" roomName={scene.title_en} inlineLauncher />
           </div>
 
           {/* Center: Jagah Explorer (Responsive centered on mobile, absolute dead-center on sm+) */}
@@ -177,8 +176,10 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
             </button>
           </div>
 
-          {/* Right: support and share */}
+          {/* Right: live chat, support and share */}
           <div className="pointer-events-auto flex shrink-0 items-center gap-1 sm:gap-2 ml-3.5 sm:ml-0">
+            <LiveChat roomKey="global-chat" roomName={scene.title_en} inlineLauncher />
+
             <button
               type="button"
               onClick={() => setDialog("support")}
