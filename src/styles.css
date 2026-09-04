@@ -49,12 +49,12 @@
   --color-charcoal-soft: var(--charcoal-soft);
   --color-charcoal-line: var(--charcoal-line);
   --color-ember: var(--ember);
-  --font-display: "Abril Fatface", "Georgia", serif;
+  --font-display: "Cabin", system-ui, sans-serif;
   --font-signage: "Cabin", system-ui, sans-serif;
   --font-sans: "Cabin", system-ui, sans-serif;
   --font-deva: "Baloo 2", "Noto Sans Devanagari", sans-serif;
-  --font-vintage-deva: "Tiro Devanagari Hindi", "Noto Serif Devanagari", serif;
-  --font-cinema-display: "Abril Fatface", Georgia, serif;
+  --font-vintage-deva: "Baloo 2", "Noto Sans Devanagari", sans-serif;
+  --font-cinema-display: "Cabin", system-ui, sans-serif;
   --font-cinema-body: "Cabin", system-ui, sans-serif;
   --shadow-tile: 0 10px 24px -12px oklch(0.28 0.06 60 / 0.45);
   --shadow-lift: 0 18px 40px -18px oklch(0.28 0.06 60 / 0.55);
@@ -125,6 +125,15 @@
   --accent-foreground: oklch(0.221 0.024 55);
   --border: oklch(0.945 0.028 86 / 14%);
   --input: oklch(0.945 0.028 86 / 18%);
+}
+
+[data-scene="sainik-dhaba"] .scene-media {
+  filter: brightness(0.62) saturate(0.72) contrast(1.06);
+}
+
+.sainik-night-veil {
+  background: linear-gradient(180deg, rgb(1 5 12 / 36%), rgb(0 0 0 / 18%) 46%, rgb(0 2 8 / 42%));
+  mix-blend-mode: multiply;
 }
 
 @layer base {
@@ -337,6 +346,36 @@
   }
 }
 
+@keyframes audio-wave-1 {
+  0%, 100% { height: 4px; }
+  50% { height: 16px; }
+}
+@keyframes audio-wave-2 {
+  0%, 100% { height: 14px; }
+  50% { height: 6px; }
+}
+@keyframes audio-wave-3 {
+  0%, 100% { height: 8px; }
+  50% { height: 18px; }
+}
+@keyframes audio-wave-4 {
+  0%, 100% { height: 16px; }
+  50% { height: 4px; }
+}
+
+.animate-wave-1 {
+  animation: audio-wave-1 0.85s ease-in-out infinite;
+}
+.animate-wave-2 {
+  animation: audio-wave-2 0.75s ease-in-out infinite 0.15s;
+}
+.animate-wave-3 {
+  animation: audio-wave-3 0.95s ease-in-out infinite 0.3s;
+}
+.animate-wave-4 {
+  animation: audio-wave-4 0.8s ease-in-out infinite 0.45s;
+}
+
 @keyframes cassette-spin {
   to {
     transform: rotate(360deg);
@@ -345,7 +384,7 @@
 
 @keyframes cassette-tape-travel {
   to {
-    background-position: 10px 0;
+    background-position: 12px 0;
   }
 }
 
@@ -358,13 +397,13 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 0.42rem;
-  height: 0.68rem;
-  margin-left: -0.21rem;
-  margin-top: -0.34rem;
+  width: 0.44rem;
+  height: 0.72rem;
+  margin-left: -0.22rem;
+  margin-top: -0.36rem;
   border-radius: 999px;
   background: var(--color-cinema-gold);
-  transform-origin: 50% 0.34rem;
+  transform-origin: 50% 0.36rem;
 }
 
 .cassette-reel-hole-a {
@@ -380,30 +419,46 @@
 }
 
 .cassette-spool-left {
-  box-shadow: inset 0 0 0 0.28rem var(--color-ink);
+  box-shadow: inset 0 0 0 0.24rem var(--color-ink), 0 0 4px rgba(0, 0, 0, 0.5);
 }
 
 .cassette-spool-right {
-  box-shadow: inset 0 0 0 0.14rem var(--color-ink);
+  box-shadow: inset 0 0 0 0.14rem var(--color-ink), 0 0 4px rgba(0, 0, 0, 0.5);
 }
 
 .cassette-shell {
-  background-image: linear-gradient(
+  background: linear-gradient(
     180deg,
-    oklch(0.26 0.02 60) 0%,
-    oklch(0.2 0.02 55) 55%,
-    oklch(0.17 0.02 55) 100%
+    rgba(255, 255, 255, 0.08) 0%,
+    rgba(18, 16, 14, 0.45) 50%,
+    rgba(10, 8, 7, 0.65) 100%
   );
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.15),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.6),
+    0 4px 16px -4px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
 }
 
 .cassette-screw {
   position: absolute;
-  width: 0.4rem;
-  height: 0.4rem;
+  width: 0.38rem;
+  height: 0.38rem;
   border-radius: 999px;
-  background: var(--color-cinema-gold);
-  box-shadow: inset 0 0 0 1px oklch(0 0 0 / 0.55);
-  opacity: 0.75;
+  background: radial-gradient(circle at 35% 35%, #f4d084, #9a7b42 65%, #46361a 100%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.5);
+  opacity: 0.85;
+}
+
+.cassette-screw::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 18%;
+  right: 18%;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.75);
+  transform: translateY(-50%) rotate(45deg);
 }
 
 .cassette-tape {
@@ -414,8 +469,8 @@
     var(--color-cinema-gold) 5px,
     var(--color-cinema-gold) 7px
   );
-  background-size: 10px 100%;
-  opacity: 0.75;
+  background-size: 12px 100%;
+  opacity: 0.85;
 }
 
 .cassette-running .cassette-tape {
@@ -591,12 +646,12 @@
     radial-gradient(
       circle at 22% 76%,
       color-mix(in srgb, var(--ambience-accent) 64%, transparent),
-      transparent 34%
+      transparent 10%
     ),
     radial-gradient(
       circle at 78% 18%,
       color-mix(in srgb, var(--ambience-haze) 72%, transparent),
-      transparent 42%
+      transparent 10%
     );
   filter: blur(34px) saturate(1.18);
   mix-blend-mode: screen;
@@ -623,7 +678,7 @@
 }
 .ambience-backdrop[data-effect="dhaba-heat"] .ambience-motion {
   background: repeating-linear-gradient(
-    174deg,
+    17deg,
     transparent 0 34px,
     color-mix(in srgb, var(--ambience-accent) 24%, transparent) 40px,
     transparent 48px
@@ -634,7 +689,7 @@
 .ambience-backdrop[data-effect="dhaba-heat"] .ambience-particles,
 .ambience-backdrop[data-effect="construction-dust"] .ambience-particles {
   background-image:
-    radial-gradient(circle at 12% 84%, #efc889 0 1.5px, transparent 2px),
+    radial-gradient(circle at 12% 84%, #001257 0 1.5px, transparent 2px),
     radial-gradient(circle at 34% 72%, #c8844d 0 1px, transparent 1.8px),
     radial-gradient(circle at 58% 90%, #efc889 0 1.3px, transparent 2px),
     radial-gradient(circle at 78% 76%, #b96b35 0 1.2px, transparent 2px),
@@ -647,7 +702,7 @@
     112deg,
     transparent 18%,
     rgb(178 255 244 / 10%) 38%,
-    rgb(255 245 210 / 42%) 49%,
+    rgba(0, 23, 60, 0.267) 49%,
     transparent 66%
   );
   background-size: 220% 100%;
@@ -700,12 +755,12 @@
   background:
     radial-gradient(
       ellipse at 48% 88%,
-      color-mix(in srgb, #b96b35 48%, transparent),
+      color-mix(in srgb, #0c015e8f 48%, transparent),
       transparent 48%
     ),
     radial-gradient(
       ellipse at 82% 72%,
-      color-mix(in srgb, #d9a25f 28%, transparent),
+      color-mix(in srgb, #000d4595 28%, transparent),
       transparent 38%
     );
   filter: blur(42px) saturate(0.78);

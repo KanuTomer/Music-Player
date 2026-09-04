@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { AmbienceProfile } from "@/lib/rooms.functions";
+import { ambienceVisualsEnabled } from "@/lib/ambience";
 
 type AmbienceBackdropProps = {
   active: boolean;
@@ -31,12 +32,12 @@ export function AmbienceBackdrop({
   const [reducedMotion, setReducedMotion] = useState(false);
   const effect = sceneEffects[sceneSlug] ?? "room-depth";
   const normalizedLevel = Math.min(100, Math.max(0, level)) / 100;
-  const opacityFloor = theme?.opacity_floor ?? 0.34;
+  const opacityFloor = theme?.opacity_floor ?? 0.6;
   const opacityCeiling = theme?.opacity_ceiling ?? 0.66;
   const style = {
-    "--ambience-accent": theme?.accent ?? "#e59f32",
-    "--ambience-haze": theme?.haze ?? "#4f3828",
-    "--ambience-strength": String(0.58 + normalizedLevel * 0.32),
+    "--ambience-accent": theme?.accent ?? "#030d3e",
+    "--ambience-haze": theme?.haze ?? "#171411",
+    "--ambience-strength": String(0.1 + normalizedLevel * 0.32),
     "--ambience-overlay-opacity": String(
       opacityFloor + (opacityCeiling - opacityFloor) * normalizedLevel,
     ),
@@ -61,6 +62,8 @@ export function AmbienceBackdrop({
       video.pause();
     }
   }, [active, reducedMotion, theme?.playback_rate, theme?.overlay_url]);
+
+  if (!ambienceVisualsEnabled) return null;
 
   return (
     <div

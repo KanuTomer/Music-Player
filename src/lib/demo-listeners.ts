@@ -1,7 +1,7 @@
 export const DEMO_LISTENER_MIN = 800;
-export const DEMO_LISTENER_MAX = 1200;
-export const DEMO_LISTENER_FALLBACK = 1000;
-export const DEMO_LISTENER_STORAGE_KEY = "sd.demo.listener-baseline.v1";
+export const DEMO_LISTENER_MAX = 1300;
+export const DEMO_LISTENER_FALLBACK = 1050;
+export const DEMO_LISTENER_STORAGE_KEY = "sd.demo.listener-baseline.v2";
 
 type DemoListenerStorage = Pick<Storage, "getItem" | "setItem">;
 
@@ -18,11 +18,16 @@ export function createDemoListenerBaseline(random: () => number = Math.random) {
 }
 
 export function getOrCreateDemoListenerBaseline(
-  storage: DemoListenerStorage,
+  storage?: DemoListenerStorage | null,
+  roomKey?: string | null,
   random: () => number = Math.random,
 ) {
+  const key = roomKey ? `${DEMO_LISTENER_STORAGE_KEY}:${roomKey}` : DEMO_LISTENER_STORAGE_KEY;
+  if (!storage) {
+    return createDemoListenerBaseline(random);
+  }
   try {
-    const stored = Number(storage.getItem(DEMO_LISTENER_STORAGE_KEY));
+    const stored = Number(storage.getItem(key));
     if (isValidBaseline(stored)) return stored;
   } catch {
     return createDemoListenerBaseline(random);
@@ -30,7 +35,7 @@ export function getOrCreateDemoListenerBaseline(
 
   const baseline = createDemoListenerBaseline(random);
   try {
-    storage.setItem(DEMO_LISTENER_STORAGE_KEY, String(baseline));
+    storage.setItem(key, String(baseline));
   } catch {
     // A usable in-memory value is enough when session storage is unavailable.
   }
@@ -38,5 +43,8 @@ export function getOrCreateDemoListenerBaseline(
 }
 
 export function combinedDemoListenerCount(baseline: number, presenceCount: number) {
-  return baseline + Math.max(0, Math.floor(presenceCount));
+  return Math.min(
+    DEMO_LISTENER_MAX,
+    Math.max(DEMO_LISTENER_MIN, baseline + Math.max(0, Math.floor(presenceCount) - 1))
+  );
 }
