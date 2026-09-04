@@ -55,12 +55,12 @@ export function OneLinerCaption({
   return (
     <div
       aria-live="polite"
-      className="pointer-events-none w-full px-2 text-center"
+      className="pointer-events-none w-full px-2 text-center flex justify-center"
     >
-      <div className="animate-in fade-in zoom-in-95 duration-700">
+      <div className="animate-in fade-in zoom-in-95 duration-700 max-w-[21ch] sm:max-w-none">
         <p
           lang="hi"
-          className={`font-vintage-deva text-lg sm:text-2xl md:text-[clamp(1.5rem,4.5dvh,3rem)] leading-[1.25] font-black text-cream ${noShadow ? "" : "text-glow-dark"}`}
+          className={`font-vintage-deva text-[clamp(2rem,7.6vw,3.6rem)] sm:text-5xl md:text-[clamp(2.5rem,6dvh,4rem)] leading-[1.18] font-black text-cream ${noShadow ? "" : "text-glow-dark"}`}
         >
           {current.text_hi}
         </p>

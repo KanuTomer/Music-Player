@@ -205,20 +205,20 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
         </div>
 
         {/* room title, signage-style, centred with high-contrast legibility */}
-        <div className="pointer-events-none absolute inset-x-0 top-[clamp(3.5rem,7.5dvh,5.8rem)] z-20 flex flex-col items-center px-4 text-center">
-          <h1 className={`font-deva text-3xl sm:text-5xl md:text-[clamp(3.2rem,8.5dvh,6.5rem)] leading-[1.05] font-black text-cream ${isCorporate ? "" : "text-glow-dark"}`}>
+        <div className="pointer-events-none absolute inset-x-0 top-[clamp(4.5rem,9.5dvh,7rem)] z-20 flex flex-col items-center px-3 text-center pt-[env(safe-area-inset-top)]">
+          <h1 className={`font-deva text-5xl sm:text-7xl md:text-[clamp(4rem,9.5dvh,7rem)] leading-[1.02] font-black text-cream ${isCorporate ? "" : "text-glow-dark"}`}>
             {scene.title_hi}
           </h1>
           <span
-            className="mt-1.5 sm:mt-2.5 h-[3px] sm:h-[4px] w-20 sm:w-28 rounded-full bg-ember shadow-[0_0_14px_rgba(240,126,70,1)]"
+            className="mt-2.5 sm:mt-3 h-[3.5px] sm:h-[4.5px] w-20 sm:w-32 rounded-full bg-ember shadow-[0_0_16px_rgba(240,126,70,1)]"
             aria-hidden
           />
-          <p className={`mt-1 sm:mt-2 text-xs sm:text-base md:text-[clamp(1rem,2.2dvh,1.65rem)] font-black tracking-[0.2em] sm:tracking-[0.25em] text-cream uppercase ${isCorporate ? "" : "text-glow-dark"}`}>
+          <p className={`mt-1.5 sm:mt-2 text-sm sm:text-lg md:text-[clamp(1.1rem,2.5dvh,1.8rem)] font-black tracking-[0.3em] sm:tracking-[0.32em] text-cream uppercase ${isCorporate ? "" : "text-glow-dark"}`}>
             {scene.title_en}
           </p>
 
           {/* One-Liner Caption cleanly positioned below title without overlap */}
-          <div className="mt-2.5 sm:mt-5 w-full max-w-[min(92vw,44rem)]">
+          <div className="mt-8 sm:mt-12 md:mt-16 w-full max-w-[min(94vw,46rem)]">
             <OneLinerCaption
               lines={lines}
               active={active}
