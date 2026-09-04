@@ -12,6 +12,7 @@ import { type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { PlayerProvider } from "../lib/player";
 import { Toaster } from "../components/ui/sonner";
+import { buildSeoMeta } from "@/lib/seo";
 
 function NotFoundComponent() {
   return (
@@ -78,15 +79,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         name: "viewport",
         content: "width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover",
       },
-      { title: "Sainik Dhaba — ambient rooms from everyday India" },
-      {
-        name: "description",
-        content:
-          "An always-on radio for the places India grew up in — barbershops, night buses, railway platforms. Press play and sit there a while.",
-      },
-      { name: "author", content: "Sainik Dhaba" },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
+      ...buildSeoMeta(),
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -96,7 +89,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Cabin:wght@400;500;600;700&display=swap",
       },
+      { rel: "icon", href: "/favicon.ico", sizes: "any" },
       { rel: "icon", href: "/favicon.png", type: "image/png" },
+      { rel: "icon", href: "/favicon-32x32.png", type: "image/png", sizes: "32x32" },
+      { rel: "icon", href: "/favicon-16x16.png", type: "image/png", sizes: "16x16" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png", sizes: "180x180" },
     ],
   }),
   shellComponent: RootShell,
