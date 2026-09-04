@@ -42,6 +42,7 @@ type Analytics = {
 };
 
 const seconds = (value: number) => `${Math.floor(value / 60)}m ${value % 60}s`;
+const ADMIN_SIGN_IN_NOTICE_KEY = "sainik-dhaba.admin.sign-in-notice";
 
 export const Route = createFileRoute("/admin/")({ component: AdminPage });
 
@@ -107,8 +108,19 @@ function AdminPage() {
       setMessage("");
     } catch (error) {
       const text = error instanceof Error ? error.message : "Unable to load admin data";
+      if (/sign in|administrator|session/i.test(text)) {
+        window.sessionStorage.setItem(
+          ADMIN_SIGN_IN_NOTICE_KEY,
+          "Your sign-in session expired. Please sign in again.",
+        );
+        try {
+          await supabase.auth.signOut();
+        } finally {
+          await navigate({ to: "/admin/login" });
+        }
+        return;
+      }
       setMessage(text);
-      if (/sign in|administrator/i.test(text)) void navigate({ to: "/admin/login" });
     } finally {
       setBusy(false);
     }

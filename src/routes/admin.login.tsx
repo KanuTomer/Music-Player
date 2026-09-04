@@ -3,12 +3,21 @@ import { FormEvent, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/admin/login")({ component: AdminLogin });
+const ADMIN_SIGN_IN_NOTICE_KEY = "sainik-dhaba.admin.sign-in-notice";
+
+function consumeSignInNotice(): string {
+  if (typeof window === "undefined") return "";
+  const notice = window.sessionStorage.getItem(ADMIN_SIGN_IN_NOTICE_KEY) ?? "";
+  window.sessionStorage.removeItem(ADMIN_SIGN_IN_NOTICE_KEY);
+  return notice;
+}
 
 function AdminLogin() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [notice] = useState(consumeSignInNotice);
   const [busy, setBusy] = useState(false);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -41,6 +50,11 @@ function AdminLogin() {
           <p className="text-sm font-semibold">Sainik Dhaba admin</p>
           <p className="mt-1 text-xs text-amber-300">Catalogue and analytics</p>
         </div>
+        {notice ? (
+          <p className="text-sm text-amber-200" role="status">
+            {notice}
+          </p>
+        ) : null}
         <label className="block text-sm">
           Email
           <input
