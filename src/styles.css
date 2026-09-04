@@ -128,12 +128,17 @@
 }
 
 [data-scene="sainik-dhaba"] .scene-media {
-  filter: brightness(0.62) saturate(0.72) contrast(1.06);
+  object-position: center 42%;
+}
+
+@media (max-width: 640px) {
+  [data-scene="sainik-dhaba"] .scene-media {
+    object-position: 42% 40%;
+  }
 }
 
 .sainik-night-veil {
-  background: linear-gradient(180deg, rgb(1 5 12 / 36%), rgb(0 0 0 / 18%) 46%, rgb(0 2 8 / 42%));
-  mix-blend-mode: multiply;
+  display: none;
 }
 
 @layer base {
@@ -169,6 +174,7 @@
   body:has([data-reading-context]) {
     overflow: auto;
   }
+
   body:has([data-reading-context]),
   html:has([data-reading-context]) {
     height: auto;
@@ -180,6 +186,7 @@
 @utility paper {
   position: relative;
   isolation: isolate;
+
   &::after {
     content: "";
     position: absolute;
@@ -206,13 +213,11 @@
 }
 
 @utility scanlines {
-  background-image: repeating-linear-gradient(
-    to bottom,
-    oklch(0 0 0 / 0.16) 0px,
-    oklch(0 0 0 / 0.16) 1px,
-    transparent 1px,
-    transparent 3px
-  );
+  background-image: repeating-linear-gradient(to bottom,
+      oklch(0 0 0 / 0.16) 0px,
+      oklch(0 0 0 / 0.16) 1px,
+      transparent 1px,
+      transparent 3px);
 }
 
 @utility signboard {
@@ -225,13 +230,11 @@
 
 /* painted dhaba awning stripes */
 @utility awning {
-  background-image: repeating-linear-gradient(
-    115deg,
-    var(--terracotta) 0px,
-    var(--terracotta) 10px,
-    var(--mustard) 10px,
-    var(--mustard) 20px
-  );
+  background-image: repeating-linear-gradient(115deg,
+      var(--terracotta) 0px,
+      var(--terracotta) 10px,
+      var(--mustard) 10px,
+      var(--mustard) 20px);
 }
 
 /* corner-notched ticket / bus-stub silhouette */
@@ -253,27 +256,28 @@
 }
 
 @utility vignette {
-  background: radial-gradient(
-    120% 90% at 50% 45%,
-    transparent 38%,
-    oklch(0.18 0.02 55 / 0.55) 100%
-  );
+  background: radial-gradient(120% 90% at 50% 45%,
+      transparent 38%,
+      oklch(0.18 0.02 55 / 0.55) 100%);
 }
 
 @utility no-scrollbar {
   scrollbar-width: none;
   -ms-overflow-style: none;
+
   &::-webkit-scrollbar {
     display: none;
   }
 }
 
 @keyframes bulb-glow {
+
   0%,
   100% {
     opacity: 0.75;
     filter: brightness(1);
   }
+
   50% {
     opacity: 1;
     filter: brightness(1.25);
@@ -289,6 +293,7 @@
     transform: scale(1);
     opacity: 0.7;
   }
+
   70%,
   100% {
     transform: scale(2.2);
@@ -304,6 +309,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -313,6 +319,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -337,9 +344,11 @@
     opacity: 0;
     transform: translateY(0) scale(0.8);
   }
+
   15% {
     opacity: 1;
   }
+
   100% {
     opacity: 0;
     transform: translateY(-140px) scale(1.15);
@@ -347,31 +356,65 @@
 }
 
 @keyframes audio-wave-1 {
-  0%, 100% { height: 4px; }
-  50% { height: 16px; }
+
+  0%,
+  100% {
+    height: 4px;
+  }
+
+  50% {
+    height: 16px;
+  }
 }
+
 @keyframes audio-wave-2 {
-  0%, 100% { height: 14px; }
-  50% { height: 6px; }
+
+  0%,
+  100% {
+    height: 14px;
+  }
+
+  50% {
+    height: 6px;
+  }
 }
+
 @keyframes audio-wave-3 {
-  0%, 100% { height: 8px; }
-  50% { height: 18px; }
+
+  0%,
+  100% {
+    height: 8px;
+  }
+
+  50% {
+    height: 18px;
+  }
 }
+
 @keyframes audio-wave-4 {
-  0%, 100% { height: 16px; }
-  50% { height: 4px; }
+
+  0%,
+  100% {
+    height: 16px;
+  }
+
+  50% {
+    height: 4px;
+  }
 }
 
 .animate-wave-1 {
   animation: audio-wave-1 0.85s ease-in-out infinite;
 }
+
 .animate-wave-2 {
   animation: audio-wave-2 0.75s ease-in-out infinite 0.15s;
 }
+
 .animate-wave-3 {
   animation: audio-wave-3 0.95s ease-in-out infinite 0.3s;
 }
+
 .animate-wave-4 {
   animation: audio-wave-4 0.8s ease-in-out infinite 0.45s;
 }
@@ -427,17 +470,32 @@
 }
 
 .cassette-shell {
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.08) 0%,
-    rgba(18, 16, 14, 0.45) 50%,
-    rgba(10, 8, 7, 0.65) 100%
-  );
+  background: linear-gradient(180deg,
+      rgba(255, 255, 255, 0.08) 0%,
+      rgba(18, 16, 14, 0.45) 50%,
+      rgba(10, 8, 7, 0.65) 100%);
   box-shadow:
     inset 0 1px 1px rgba(255, 255, 255, 0.15),
     inset 0 -1px 2px rgba(0, 0, 0, 0.6),
     0 4px 16px -4px rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(8px);
+}
+
+@utility text-glow-dark {
+  text-shadow:
+    -2px -2px 0 rgba(0, 0, 0, 0.95),
+     2px -2px 0 rgba(0, 0, 0, 0.95),
+    -2px  2px 0 rgba(0, 0, 0, 0.95),
+     2px  2px 0 rgba(0, 0, 0, 0.95),
+    -1px -2px 0 rgba(0, 0, 0, 0.95),
+     1px -2px 0 rgba(0, 0, 0, 0.95),
+    -1px  2px 0 rgba(0, 0, 0, 0.95),
+     1px  2px 0 rgba(0, 0, 0, 0.95),
+    -2px -1px 0 rgba(0, 0, 0, 0.95),
+     2px -1px 0 rgba(0, 0, 0, 0.95),
+    -2px  1px 0 rgba(0, 0, 0, 0.95),
+     2px  1px 0 rgba(0, 0, 0, 0.95),
+     0px  4px 12px rgba(0, 0, 0, 0.9);
 }
 
 .cassette-screw {
@@ -462,13 +520,11 @@
 }
 
 .cassette-tape {
-  background-image: repeating-linear-gradient(
-    90deg,
-    var(--color-cinema-clay) 0,
-    var(--color-cinema-clay) 5px,
-    var(--color-cinema-gold) 5px,
-    var(--color-cinema-gold) 7px
-  );
+  background-image: repeating-linear-gradient(90deg,
+      var(--color-cinema-clay) 0,
+      var(--color-cinema-clay) 5px,
+      var(--color-cinema-gold) 5px,
+      var(--color-cinema-gold) 7px);
   background-size: 12px 100%;
   opacity: 0.85;
 }
@@ -482,6 +538,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
@@ -495,15 +552,19 @@
 .scene-media {
   transition: filter 2400ms ease;
 }
+
 .grade-morning .scene-media {
   filter: brightness(1.1) saturate(1.05);
 }
+
 .grade-day .scene-media {
   filter: brightness(1.15) saturate(1.1);
 }
+
 .grade-evening .scene-media {
   filter: brightness(1.1) saturate(1.05);
 }
+
 .grade-night .scene-media {
   filter: brightness(1) saturate(1);
 }
@@ -514,15 +575,19 @@
     background 2400ms ease;
   mix-blend-mode: soft-light;
 }
+
 .grade-morning .scene-light {
   background: linear-gradient(180deg, oklch(0.92 0.09 82 / 0.5), transparent 62%);
 }
+
 .grade-day .scene-light {
   background: radial-gradient(90% 70% at 50% 0%, oklch(0.97 0.05 95 / 0.42), transparent 70%);
 }
+
 .grade-evening .scene-light {
   background: linear-gradient(180deg, oklch(0.72 0.16 55 / 0.45), transparent 70%);
 }
+
 .grade-night .scene-light {
   background: linear-gradient(180deg, oklch(0.32 0.07 265 / 0.6), oklch(0.22 0.05 265 / 0.35));
   mix-blend-mode: multiply;
@@ -533,6 +598,7 @@
     opacity: 0;
     transform: translateY(4px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -548,6 +614,7 @@
     opacity: 0;
     transform: translateY(8px) scale(0.997);
   }
+
   to {
     opacity: 1;
     transform: none;
@@ -569,11 +636,13 @@
     transform var(--motion-standard) var(--motion-ease),
     margin var(--motion-standard) var(--motion-ease);
 }
+
 .smooth-reveal[data-open="true"] {
   grid-template-rows: 1fr;
   opacity: 1;
   transform: none;
 }
+
 .smooth-reveal-inner {
   min-height: 0;
   overflow: hidden;
@@ -590,12 +659,14 @@
     opacity var(--motion-fast) ease,
     transform var(--motion-standard) var(--motion-ease);
 }
+
 .ambience-control-shell {
   transition:
     max-width var(--motion-standard) var(--motion-ease),
     background-color var(--motion-fast) ease,
     border-color var(--motion-fast) ease;
 }
+
 .ambience-control-details[data-open="true"] {
   max-width: 12.75rem;
   padding-right: 0.5rem;
@@ -620,7 +691,8 @@
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(167, 45, 13, 0.7); /* ember hover color */
+  background: rgba(167, 45, 13, 0.7);
+  /* ember hover color */
 }
 
 /* Firefox scrollbar styling */
@@ -638,25 +710,24 @@
   transition: opacity var(--motion-ambience) var(--motion-ease);
   will-change: opacity;
 }
+
 .ambience-backdrop[data-active="true"] {
   opacity: var(--ambience-strength);
 }
+
 .ambience-haze {
   background:
-    radial-gradient(
-      circle at 22% 76%,
+    radial-gradient(circle at 22% 76%,
       color-mix(in srgb, var(--ambience-accent) 64%, transparent),
-      transparent 10%
-    ),
-    radial-gradient(
-      circle at 78% 18%,
+      transparent 10%),
+    radial-gradient(circle at 78% 18%,
       color-mix(in srgb, var(--ambience-haze) 72%, transparent),
-      transparent 10%
-    );
+      transparent 10%);
   filter: blur(34px) saturate(1.18);
   mix-blend-mode: screen;
   animation: ambience-haze-drift 18s ease-in-out infinite alternate;
 }
+
 .ambience-overlay {
   opacity: calc(var(--ambience-overlay-opacity) * 0.42);
   mix-blend-mode: var(--ambience-overlay-blend);
@@ -664,6 +735,7 @@
   transform: scale(1.025);
   transition: opacity var(--motion-ambience) var(--motion-ease);
 }
+
 .ambience-pattern {
   opacity: 0.38;
   mix-blend-mode: soft-light;
@@ -671,21 +743,22 @@
   background-size: 34px 34px;
   animation: ambience-pattern-drift 24s linear infinite;
 }
+
 .ambience-motion,
 .ambience-particles {
   opacity: 0.42;
   mix-blend-mode: screen;
 }
+
 .ambience-backdrop[data-effect="dhaba-heat"] .ambience-motion {
-  background: repeating-linear-gradient(
-    17deg,
-    transparent 0 34px,
-    color-mix(in srgb, var(--ambience-accent) 24%, transparent) 40px,
-    transparent 48px
-  );
+  background: repeating-linear-gradient(17deg,
+      transparent 0 34px,
+      color-mix(in srgb, var(--ambience-accent) 24%, transparent) 40px,
+      transparent 48px);
   filter: blur(12px);
   animation: ambience-heat-rise 8s ease-in-out infinite alternate;
 }
+
 .ambience-backdrop[data-effect="dhaba-heat"] .ambience-particles,
 .ambience-backdrop[data-effect="construction-dust"] .ambience-particles {
   background-image:
@@ -697,23 +770,24 @@
   background-size: 170px 150px, 210px 180px, 260px 220px, 190px 170px, 230px 200px;
   animation: ambience-motes-rise 18s linear infinite;
 }
+
 .ambience-backdrop[data-effect="salon-reflections"] .ambience-motion {
-  background: linear-gradient(
-    112deg,
-    transparent 18%,
-    rgb(178 255 244 / 10%) 38%,
-    rgba(0, 23, 60, 0.267) 49%,
-    transparent 66%
-  );
+  background: linear-gradient(112deg,
+      transparent 18%,
+      rgb(178 255 244 / 10%) 38%,
+      rgba(0, 23, 60, 0.267) 49%,
+      transparent 66%);
   background-size: 220% 100%;
   filter: blur(8px);
   animation: ambience-reflection-sweep 7s ease-in-out infinite;
 }
+
 .ambience-backdrop[data-effect="salon-reflections"] .ambience-particles {
   background-image: radial-gradient(circle, rgb(225 255 248 / 70%) 0 1px, transparent 2px);
   background-size: 46px 46px;
   animation: ambience-pattern-drift 20s linear infinite;
 }
+
 .ambience-backdrop[data-effect="road-motion"] .ambience-pattern {
   opacity: 0.46;
   background-image:
@@ -723,16 +797,16 @@
   filter: blur(16px);
   animation: ambience-road-lights 8s ease-in-out infinite alternate;
 }
+
 .ambience-backdrop[data-effect="road-motion"] .ambience-motion {
-  background: repeating-linear-gradient(
-    0deg,
-    transparent 0 14%,
-    rgb(255 185 74 / 18%) 15%,
-    transparent 16% 31%
-  );
+  background: repeating-linear-gradient(0deg,
+      transparent 0 14%,
+      rgb(255 185 74 / 18%) 15%,
+      transparent 16% 31%);
   transform: perspective(420px) rotateX(64deg) translateY(48%);
   animation: ambience-road-flow 3.8s linear infinite;
 }
+
 .ambience-backdrop[data-effect="kitchen-steam"] .ambience-motion {
   inset: 22% 8% -24%;
   background:
@@ -742,31 +816,28 @@
   filter: blur(20px);
   animation: ambience-steam-rise 8s ease-in-out infinite alternate;
 }
+
 .ambience-backdrop[data-effect="kitchen-steam"] .ambience-pattern {
-  background-image: repeating-radial-gradient(
-    ellipse at 50% 74%,
-    transparent 0 28px,
-    rgb(180 245 235 / 28%) 30px,
-    transparent 34px
-  );
+  background-image: repeating-radial-gradient(ellipse at 50% 74%,
+      transparent 0 28px,
+      rgb(180 245 235 / 28%) 30px,
+      transparent 34px);
   animation: ambience-ripples 7s ease-out infinite;
 }
+
 .ambience-backdrop[data-effect="construction-dust"] .ambience-haze {
   background:
-    radial-gradient(
-      ellipse at 48% 88%,
+    radial-gradient(ellipse at 48% 88%,
       color-mix(in srgb, #0c015e8f 48%, transparent),
-      transparent 48%
-    ),
-    radial-gradient(
-      ellipse at 82% 72%,
+      transparent 48%),
+    radial-gradient(ellipse at 82% 72%,
       color-mix(in srgb, #000d4595 28%, transparent),
-      transparent 38%
-    );
+      transparent 38%);
   filter: blur(42px) saturate(0.78);
   mix-blend-mode: soft-light;
   animation: ambience-construction-haze 16s ease-in-out infinite alternate;
 }
+
 .ambience-backdrop[data-effect="construction-dust"] .ambience-motion {
   opacity: 0.22;
   background:
@@ -776,21 +847,22 @@
   mix-blend-mode: soft-light;
   animation: ambience-construction-shaft 13s ease-in-out infinite alternate;
 }
+
 .ambience-backdrop[data-effect="crt-room"] .ambience-pattern {
   opacity: 0.48;
-  background-image: repeating-linear-gradient(
-    0deg,
-    transparent 0 3px,
-    rgb(255 215 160 / 26%) 4px,
-    transparent 5px
-  );
+  background-image: repeating-linear-gradient(0deg,
+      transparent 0 3px,
+      rgb(255 215 160 / 26%) 4px,
+      transparent 5px);
   background-size: 100% 8px;
   animation: ambience-crt-roll 5s linear infinite;
 }
+
 .ambience-backdrop[data-effect="crt-room"] .ambience-motion {
   background: radial-gradient(circle at 50% 48%, rgb(255 190 112 / 30%), transparent 54%);
   animation: ambience-crt-flicker 1.8s steps(2, end) infinite;
 }
+
 .ambience-backdrop[data-effect="office-glow"] .ambience-pattern {
   opacity: 0.34;
   background-image:
@@ -798,122 +870,206 @@
     linear-gradient(90deg, rgb(155 220 255 / 12%) 1px, transparent 1px);
   background-size: 56px 56px;
 }
+
 .ambience-backdrop[data-effect="office-glow"] .ambience-motion {
-  background: repeating-linear-gradient(
-    90deg,
-    transparent 0 18%,
-    rgb(160 220 255 / 22%) 22%,
-    transparent 27% 44%
-  );
+  background: repeating-linear-gradient(90deg,
+      transparent 0 18%,
+      rgb(160 220 255 / 22%) 22%,
+      transparent 27% 44%);
   filter: blur(10px);
   animation: ambience-office-pulse 6s ease-in-out infinite alternate;
 }
+
 .ambience-grain {
   opacity: 0.18;
   mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
 }
+
 .ambience-event {
   border: 1px solid color-mix(in srgb, var(--ambience-accent) 70%, transparent);
-  background: radial-gradient(
-    circle at center,
-    transparent 20%,
-    color-mix(in srgb, var(--ambience-accent) 24%, transparent) 52%,
-    transparent 76%
-  );
+  background: radial-gradient(circle at center,
+      transparent 20%,
+      color-mix(in srgb, var(--ambience-accent) 24%, transparent) 52%,
+      transparent 76%);
   animation: ambience-event-pulse 1800ms ease-out both;
 }
+
 @keyframes ambience-haze-drift {
   from {
     transform: translate3d(-2%, 1%, 0) scale(1);
   }
+
   to {
     transform: translate3d(3%, -2%, 0) scale(1.08);
   }
 }
+
 @keyframes ambience-pattern-drift {
   from {
     transform: translate3d(0, 0, 0);
   }
+
   to {
     transform: translate3d(34px, -34px, 0);
   }
 }
+
 @keyframes ambience-road-lights {
   from {
     transform: translate3d(-16%, 0, 0) scaleX(1.05);
   }
+
   to {
     transform: translate3d(16%, 0, 0) scaleX(1.12);
   }
 }
+
 @keyframes ambience-heat-rise {
-  from { transform: translate3d(-1%, 5%, 0) scale(1.02); }
-  to { transform: translate3d(2%, -7%, 0) scale(1.08); }
+  from {
+    transform: translate3d(-1%, 5%, 0) scale(1.02);
+  }
+
+  to {
+    transform: translate3d(2%, -7%, 0) scale(1.08);
+  }
 }
+
 @keyframes ambience-motes-rise {
-  from { transform: translate3d(0, 18px, 0); }
-  to { transform: translate3d(16px, -150px, 0); }
+  from {
+    transform: translate3d(0, 18px, 0);
+  }
+
+  to {
+    transform: translate3d(16px, -150px, 0);
+  }
 }
+
 @keyframes ambience-reflection-sweep {
-  0%, 15% { background-position: 120% 0; }
-  70%, 100% { background-position: -120% 0; }
+
+  0%,
+  15% {
+    background-position: 120% 0;
+  }
+
+  70%,
+  100% {
+    background-position: -120% 0;
+  }
 }
+
 @keyframes ambience-road-flow {
-  from { background-position-y: 0; }
-  to { background-position-y: 240px; }
+  from {
+    background-position-y: 0;
+  }
+
+  to {
+    background-position-y: 240px;
+  }
 }
+
 @keyframes ambience-steam-rise {
-  from { transform: translate3d(-1%, 8%, 0) scale(1); opacity: 0.28; }
-  to { transform: translate3d(2%, -12%, 0) scale(1.1); opacity: 0.58; }
+  from {
+    transform: translate3d(-1%, 8%, 0) scale(1);
+    opacity: 0.28;
+  }
+
+  to {
+    transform: translate3d(2%, -12%, 0) scale(1.1);
+    opacity: 0.58;
+  }
 }
+
 @keyframes ambience-ripples {
-  from { transform: scale(0.94); opacity: 0.18; }
-  to { transform: scale(1.08); opacity: 0.5; }
+  from {
+    transform: scale(0.94);
+    opacity: 0.18;
+  }
+
+  to {
+    transform: scale(1.08);
+    opacity: 0.5;
+  }
 }
+
 @keyframes ambience-construction-haze {
   from {
     transform: translate3d(-2%, 2%, 0) scale(1.02);
   }
+
   to {
     transform: translate3d(3%, -1%, 0) scale(1.08);
   }
 }
+
 @keyframes ambience-construction-shaft {
   from {
     transform: translate3d(-3%, 1%, 0) scale(1);
   }
+
   to {
     transform: translate3d(4%, -1%, 0) scale(1.05);
   }
 }
+
 @keyframes ambience-crt-roll {
-  from { background-position-y: 0; }
-  to { background-position-y: 80px; }
+  from {
+    background-position-y: 0;
+  }
+
+  to {
+    background-position-y: 80px;
+  }
 }
+
 @keyframes ambience-crt-flicker {
-  0%, 100% { opacity: 0.32; }
-  48% { opacity: 0.58; }
-  50% { opacity: 0.2; }
-  52% { opacity: 0.62; }
+
+  0%,
+  100% {
+    opacity: 0.32;
+  }
+
+  48% {
+    opacity: 0.58;
+  }
+
+  50% {
+    opacity: 0.2;
+  }
+
+  52% {
+    opacity: 0.62;
+  }
 }
+
 @keyframes ambience-office-pulse {
-  from { transform: translateX(-4%); opacity: 0.24; }
-  to { transform: translateX(4%); opacity: 0.52; }
+  from {
+    transform: translateX(-4%);
+    opacity: 0.24;
+  }
+
+  to {
+    transform: translateX(4%);
+    opacity: 0.52;
+  }
 }
+
 @keyframes ambience-event-pulse {
   0% {
     opacity: 0;
     transform: scale(0.96);
   }
+
   22% {
     opacity: 0.82;
   }
+
   100% {
     opacity: 0;
     transform: scale(1.05);
   }
 }
+
 @media (prefers-reduced-motion: reduce) {
   :root {
     --motion-fast: 75ms;
@@ -921,6 +1077,7 @@
     --motion-slow: 75ms;
     --motion-ambience: 100ms;
   }
+
   .room-scene-enter,
   .ambience-haze,
   .ambience-pattern,
@@ -929,6 +1086,7 @@
   .ambience-event {
     animation: none !important;
   }
+
   .smooth-reveal,
   .ambience-control-shell,
   .ambience-control-details {

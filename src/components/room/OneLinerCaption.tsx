@@ -53,12 +53,12 @@ export function OneLinerCaption({
   return (
     <div
       aria-live="polite"
-      className="pointer-events-none absolute top-[clamp(9rem,38dvh,21rem)] left-1/2 z-20 w-[min(94vw,44rem)] -translate-x-1/2 -translate-y-1/2 px-3 text-center"
+      className="pointer-events-none absolute top-[clamp(9rem,38dvh,21rem)] left-1/2 z-20 w-[min(94vw,48rem)] -translate-x-1/2 -translate-y-1/2 px-3 text-center"
     >
       <div className="animate-in fade-in zoom-in-95 duration-700">
         <p
           lang="hi"
-          className="font-vintage-deva text-[clamp(1.3rem,5.2dvh,3.8rem)] leading-[1.18] text-cream drop-shadow-[0_3px_18px_rgba(0,0,0,0.85)]"
+          className="font-vintage-deva text-[clamp(1.6rem,5.8dvh,4.2rem)] leading-[1.18] font-black text-cream text-glow-dark"
         >
           {current.text_hi}
         </p>
