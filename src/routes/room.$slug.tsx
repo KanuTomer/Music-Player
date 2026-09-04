@@ -3,6 +3,7 @@ import { DoorClosed } from "lucide-react";
 import { getRoom, listScenes } from "@/lib/rooms.functions";
 import { RoomExperience } from "@/components/room/RoomExperience";
 import { isAllowedSlug } from "@/lib/theme-data";
+import { buildSeoMeta } from "@/lib/seo";
 
 export const Route = createFileRoute("/room/$slug")({
   loader: async ({ params }) => {
@@ -38,23 +39,20 @@ export const Route = createFileRoute("/room/$slug")({
   head: ({ loaderData }) => {
     if (!loaderData) {
       return {
-        meta: [
-          { title: "Room unavailable — Sainik Dhaba" },
-          { name: "robots", content: "noindex" },
-        ],
+        meta: buildSeoMeta({
+          title: "Room unavailable — Sainik Dhaba",
+          robots: "noindex",
+        }),
       };
     }
     const { scene } = loaderData.room;
     const title = `Sainik Dhaba · ${scene.title_en} 📻`;
     return {
-      meta: [
-        { title },
-        { name: "description", content: scene.hook },
-        { property: "og:title", content: title },
-        { property: "og:description", content: scene.hook },
-        { property: "og:type", content: "website" },
-        { name: "twitter:card", content: "summary_large_image" },
-      ],
+      meta: buildSeoMeta({
+        title,
+        description: scene.hook,
+        imageAlt: `Sainik Dhaba — ${scene.title_en}`,
+      }),
     };
   },
   component: RoomPage,

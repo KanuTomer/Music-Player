@@ -172,7 +172,7 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
             >
               <Compass className="size-3.5 sm:size-4 shrink-0" aria-hidden />
               <span className="hidden sm:inline">Jagah Explorer</span>
-              <span className="sm:hidden">Explore</span>
+              <span className="sm:hidden">Jagah Explore</span>
             </button>
           </div>
 
