@@ -4,7 +4,7 @@ const fs = require('fs');
 
 async function run() {
   const emblemPath = path.resolve(__dirname, '../public/sanikdhaba favicon.png');
-  const bgPath = path.resolve(__dirname, '../src/assets/newsanik.webp');
+  const bgPath = path.resolve(__dirname, '../src/assets/finallsanikdhaba.png');
   const publicDir = path.resolve(__dirname, '../public');
 
   console.log('Generating favicons from sanikdhaba favicon.png...');
@@ -60,7 +60,7 @@ async function run() {
   // 2. Link Share / Open Graph image featuring the emblem
   console.log('Generating link share OG image with emblem...');
   const bgBlurred = await sharp(bgPath)
-    .extract({ left: 0, top: 80, width: 1448, height: 760 })
+    .extract({ left: 0, top: 80, width: 1445, height: 760 })
     .resize(1200, 630)
     .blur(10)
     .modulate({ brightness: 0.42 })

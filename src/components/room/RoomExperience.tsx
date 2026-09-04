@@ -78,8 +78,9 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
   };
 
   const active = player.isPlaying;
-  // Scenes that are night-bound by nature keep their own light.
-  const gradeless = scene.slug === "raat-ki-bus";
+  const isCorporate = scene.slug === "corporate-majdoor";
+  // Scenes that are night-bound or specifically unshaded by nature keep their own light.
+  const gradeless = scene.slug === "raat-ki-bus" || isCorporate;
   const gradeClass = gradeless ? "" : `grade-${player.daypart}`;
 
   return (
@@ -114,9 +115,6 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
             height={1024}
             fetchPriority="high"
             className="scene-media absolute inset-0 size-full object-cover scale-100 transition-transform duration-700"
-            style={{
-              objectPosition: scene.slug === "sainik-dhaba" ? "center 30%" : "center",
-            }}
           />
         )}
         {(scene.slug === "doordarshan-shaam" || scene.slug === "papa-ke-gaane") && (
@@ -136,15 +134,19 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
           sceneSlug={scene.slug}
         />
 
-        {/* Contrast Scrims for text legibility on light/bright artwork */}
-        <div
-          className="pointer-events-none absolute inset-x-0 top-0 h-48 sm:h-56 bg-gradient-to-b from-black/75 via-black/35 to-transparent z-10"
-          aria-hidden
-        />
-        <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-44 sm:h-52 bg-gradient-to-t from-black/80 via-black/35 to-transparent z-10"
-          aria-hidden
-        />
+        {/* Contrast Scrims for text legibility on light/bright artwork — skipped for corporate-majdoor */}
+        {!isCorporate && (
+          <>
+            <div
+              className="pointer-events-none absolute inset-x-0 top-0 h-48 sm:h-56 bg-gradient-to-b from-black/75 via-black/35 to-transparent z-10"
+              aria-hidden
+            />
+            <div
+              className="pointer-events-none absolute inset-x-0 bottom-0 h-44 sm:h-52 bg-gradient-to-t from-black/80 via-black/35 to-transparent z-10"
+              aria-hidden
+            />
+          </>
+        )}
 
         {/* top header: listener pill · top center jagah explorer · support & share */}
         <div className="pointer-events-none absolute inset-x-0 top-0 z-50 flex items-center justify-between p-2 sm:p-3">
@@ -203,24 +205,28 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
         </div>
 
         {/* room title, signage-style, centred with high-contrast legibility */}
-        <div className="pointer-events-none absolute inset-x-0 top-[clamp(4.5rem,9dvh,6.5rem)] z-20 flex flex-col items-center px-4 text-center">
-          <h1 className="font-deva text-[clamp(2.45rem,8dvh,6rem)] leading-[1.02] font-extrabold text-cream drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)] drop-shadow-[0_4px_30px_rgba(0,0,0,0.9)]">
+        <div className="pointer-events-none absolute inset-x-0 top-[clamp(4.5rem,9.5dvh,7rem)] z-20 flex flex-col items-center px-3 text-center pt-[env(safe-area-inset-top)]">
+          <h1 className={`font-deva text-5xl sm:text-7xl md:text-[clamp(4rem,9.5dvh,7rem)] leading-[1.02] font-black text-cream ${isCorporate ? "" : "text-glow-dark"}`}>
             {scene.title_hi}
           </h1>
           <span
-            className="mt-[clamp(0.3rem,1dvh,0.625rem)] h-[3.5px] w-24 rounded-full bg-ember shadow-[0_0_14px_rgba(240,126,70,1)]"
+            className="mt-2.5 sm:mt-3 h-[3.5px] sm:h-[4.5px] w-20 sm:w-32 rounded-full bg-ember shadow-[0_0_16px_rgba(240,126,70,1)]"
             aria-hidden
           />
-          <p className="mt-[clamp(0.25rem,0.8dvh,0.5rem)] text-[clamp(0.7rem,2dvh,1.25rem)] font-extrabold tracking-[0.3em] text-cream drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)] drop-shadow-[0_4px_20px_rgba(0,0,0,0.9)] uppercase">
+          <p className={`mt-1.5 sm:mt-2 text-sm sm:text-lg md:text-[clamp(1.1rem,2.5dvh,1.8rem)] font-black tracking-[0.3em] sm:tracking-[0.32em] text-cream uppercase ${isCorporate ? "" : "text-glow-dark"}`}>
             {scene.title_en}
           </p>
-        </div>
 
-        <OneLinerCaption
-          lines={lines}
-          active={active}
-          trackKey={player.nowPlaying?.title ?? player.track?.title ?? null}
-        />
+          {/* One-Liner Caption cleanly positioned below title without overlap */}
+          <div className="mt-8 sm:mt-12 md:mt-16 w-full max-w-[min(94vw,46rem)]">
+            <OneLinerCaption
+              lines={lines}
+              active={active}
+              trackKey={player.nowPlaying?.title ?? player.track?.title ?? null}
+              noShadow={isCorporate}
+            />
+          </div>
+        </div>
 
         <div className="pointer-events-none absolute inset-x-0 bottom-1.5 sm:bottom-2.5 z-30 flex flex-col items-center gap-2 px-2 pb-[env(safe-area-inset-bottom)] sm:gap-3 sm:px-4">
           <div className="pointer-events-auto flex w-full max-w-[min(92vw,27.5rem)] flex-wrap items-center justify-center gap-2">
