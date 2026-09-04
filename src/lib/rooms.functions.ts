@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { fetchRoom, fetchScenes, insertChatMessage, recordSourceFailure } from "./rooms.server";
+import { recordListening, registerRoomVisit } from "./admin.server";
 
 export type Scene = {
   id: string;
@@ -153,3 +154,18 @@ export const sendChatMessage = createServerFn({ method: "POST" })
     return { roomKey, displayName, text };
   })
   .handler(async ({ data }) => insertChatMessage(data.roomKey, data.displayName, data.text));
+
+export const recordRoomVisit = createServerFn({ method: "POST" })
+  .validator((data: { visitId: string; sceneSlug: string }) => ({
+    visitId: String(data.visitId),
+    sceneSlug: String(data.sceneSlug),
+  }))
+  .handler(async ({ data }) => registerRoomVisit(data.visitId, data.sceneSlug));
+
+export const recordRoomListening = createServerFn({ method: "POST" })
+  .validator((data: { visitId: string; sceneSlug: string; seconds: number }) => ({
+    visitId: String(data.visitId),
+    sceneSlug: String(data.sceneSlug),
+    seconds: Number(data.seconds),
+  }))
+  .handler(async ({ data }) => recordListening(data.visitId, data.sceneSlug, data.seconds));

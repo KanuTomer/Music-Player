@@ -15,10 +15,12 @@ import { useJagahNavigation } from "@/hooks/useJagahNavigation";
 import { AmbienceBackdrop } from "@/components/room/AmbienceBackdrop";
 import { LiveChat } from "@/components/room/LiveChat";
 import { useSupportAutoPrompt } from "@/hooks/useSupportPrompt";
+import { useRoomAnalytics } from "@/hooks/useRoomAnalytics";
 
 export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Scene[] }) {
   const { scene, oneliners } = room;
   const player = usePlayer();
+  useRoomAnalytics(scene.slug, player.isPlaying);
   const social = useRoomSocial(`scene:${scene.slug}`);
   const sceneVideo = videoForScene(scene.slug);
   const sceneVideoRef = useRef<HTMLVideoElement | null>(null);
