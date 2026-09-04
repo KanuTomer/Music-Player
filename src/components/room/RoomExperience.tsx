@@ -205,25 +205,28 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
         </div>
 
         {/* room title, signage-style, centred with high-contrast legibility */}
-        <div className="pointer-events-none absolute inset-x-0 top-[clamp(3.8rem,8dvh,5.8rem)] z-20 flex flex-col items-center px-4 text-center">
-          <h1 className={`font-deva text-[clamp(3rem,9.5dvh,7rem)] leading-[1.02] font-black text-cream ${isCorporate ? "" : "text-glow-dark"}`}>
+        <div className="pointer-events-none absolute inset-x-0 top-[clamp(3.5rem,7.5dvh,5.8rem)] z-20 flex flex-col items-center px-4 text-center">
+          <h1 className={`font-deva text-3xl sm:text-5xl md:text-[clamp(3.2rem,8.5dvh,6.5rem)] leading-[1.05] font-black text-cream ${isCorporate ? "" : "text-glow-dark"}`}>
             {scene.title_hi}
           </h1>
           <span
-            className="mt-[clamp(0.4rem,1.2dvh,0.75rem)] h-[4px] w-28 rounded-full bg-ember shadow-[0_0_14px_rgba(240,126,70,1)]"
+            className="mt-1.5 sm:mt-2.5 h-[3px] sm:h-[4px] w-20 sm:w-28 rounded-full bg-ember shadow-[0_0_14px_rgba(240,126,70,1)]"
             aria-hidden
           />
-          <p className={`mt-[clamp(0.35rem,1dvh,0.65rem)] text-[clamp(1.05rem,3dvh,1.85rem)] font-black tracking-[0.25em] text-cream uppercase ${isCorporate ? "" : "text-glow-dark"}`}>
+          <p className={`mt-1 sm:mt-2 text-xs sm:text-base md:text-[clamp(1rem,2.2dvh,1.65rem)] font-black tracking-[0.2em] sm:tracking-[0.25em] text-cream uppercase ${isCorporate ? "" : "text-glow-dark"}`}>
             {scene.title_en}
           </p>
-        </div>
 
-        <OneLinerCaption
-          lines={lines}
-          active={active}
-          trackKey={player.nowPlaying?.title ?? player.track?.title ?? null}
-          noShadow={isCorporate}
-        />
+          {/* One-Liner Caption cleanly positioned below title without overlap */}
+          <div className="mt-2.5 sm:mt-5 w-full max-w-[min(92vw,44rem)]">
+            <OneLinerCaption
+              lines={lines}
+              active={active}
+              trackKey={player.nowPlaying?.title ?? player.track?.title ?? null}
+              noShadow={isCorporate}
+            />
+          </div>
+        </div>
 
         <div className="pointer-events-none absolute inset-x-0 bottom-1.5 sm:bottom-2.5 z-30 flex flex-col items-center gap-2 px-2 pb-[env(safe-area-inset-bottom)] sm:gap-3 sm:px-4">
           <div className="pointer-events-auto flex w-full max-w-[min(92vw,27.5rem)] flex-wrap items-center justify-center gap-2">
