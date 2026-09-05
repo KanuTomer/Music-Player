@@ -479,9 +479,27 @@ export async function finalizeAmbienceUpload(input: {
   selectedDurationSeconds: number;
 }) {
   await requireAdmin();
+  let assetId: string | null = null;
+  let removeUploadedObject = false;
   try {
-    if (!input.path.startsWith("rooms/") || !input.path.endsWith(".wav"))
-      throw new Error("Invalid upload path");
+    const pathMatch = input.path.match(
+      /^rooms\/([a-z0-9-]+)\/ambience\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.wav$/i,
+    );
+    if (!pathMatch) throw new Error("Invalid upload path");
+    const { data: scene, error: sceneError } = await admin
+      .from("scenes")
+      .select("slug")
+      .eq("id", input.sceneId)
+      .single();
+    if (sceneError || !scene || scene.slug !== pathMatch[1]) throw new Error("Invalid upload path");
+    const { data: existingAsset, error: existingError } = await admin
+      .from("ambience_assets")
+      .select("id")
+      .eq("storage_path", input.path)
+      .maybeSingle();
+    if (existingError) throw new Error(existingError.message);
+    if (existingAsset) throw new Error("This upload has already been finalized");
+    removeUploadedObject = true;
     const { data: object, error: downloadError } = await admin.storage
       .from("ambience-audio")
       .download(input.path);
@@ -503,6 +521,7 @@ export async function finalizeAmbienceUpload(input: {
       .select("id")
       .single();
     if (assetError || !asset) throw new Error(assetError?.message ?? "Unable to save audio asset");
+    assetId = asset.id;
     const { error: sourceError } = await admin.from("ambience_asset_sources").insert({
       asset_id: asset.id,
       source_order: 1,
@@ -533,7 +552,11 @@ export async function finalizeAmbienceUpload(input: {
       eventMaxSeconds: input.role === "event" ? 110 : null,
     });
   } catch (error) {
-    await admin.storage.from("ambience-audio").remove([input.path]);
+    if (assetId) {
+      await admin.from("sound_stems").delete().eq("asset_id", assetId);
+      await admin.from("ambience_assets").delete().eq("id", assetId);
+    }
+    if (removeUploadedObject) await admin.storage.from("ambience-audio").remove([input.path]);
     throw error;
   }
 }
