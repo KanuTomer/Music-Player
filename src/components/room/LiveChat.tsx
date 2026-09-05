@@ -268,7 +268,7 @@ export function LiveChat({ roomKey, roomName, inlineLauncher = false }: LiveChat
         <button
           type="button"
           onClick={() => setIsOpen(true)}
-          className="group flex h-9 items-center gap-2 rounded-full border border-cream/15 bg-charcoal/65 px-3.5 text-xs font-bold text-cream/90 backdrop-blur-md transition-all hover:bg-charcoal/85 hover:text-amber active:scale-95 cursor-pointer shadow-lg"
+          className="group flex h-9 items-center gap-1.5 sm:gap-2 rounded-full border border-cream/15 bg-charcoal/65 px-2.5 sm:px-3.5 text-xs font-bold text-cream/90 backdrop-blur-md transition-all hover:bg-charcoal/85 hover:text-amber active:scale-95 cursor-pointer shadow-lg"
           aria-label="Open Live Chat"
         >
           <span className="relative flex size-2 shrink-0">
@@ -276,7 +276,9 @@ export function LiveChat({ roomKey, roomName, inlineLauncher = false }: LiveChat
             <span className="relative inline-flex rounded-full size-2 bg-amber-500"></span>
           </span>
           <MessageCircle className="size-4 shrink-0 text-cream/80 group-hover:text-amber" />
-          <span className="font-vintage-deva text-[10px] tracking-wider uppercase">Live Chat</span>
+          <span className="hidden font-vintage-deva text-[10px] tracking-wider uppercase sm:inline">
+            Live Chat
+          </span>
         </button>
       </div>
 

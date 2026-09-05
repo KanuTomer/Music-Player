@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Sparkles } from "lucide-react";
 import { TopBar } from "@/components/TopBar";
+import { buildSeoMeta } from "@/lib/seo";
 
 const TITLE = "Generate your own room — coming soon | Sainik Dhaba";
 const DESC =
@@ -8,13 +9,11 @@ const DESC =
 
 export const Route = createFileRoute("/generate")({
   head: () => ({
-    meta: [
-      { title: TITLE },
-      { name: "description", content: DESC },
-      { property: "og:title", content: TITLE },
-      { property: "og:description", content: DESC },
-      { name: "robots", content: "noindex" },
-    ],
+    meta: buildSeoMeta({
+      title: TITLE,
+      description: DESC,
+      robots: "noindex",
+    }),
   }),
   component: GeneratePage,
 });

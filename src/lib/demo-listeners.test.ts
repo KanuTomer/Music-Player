@@ -17,7 +17,7 @@ function memoryStorage(initial: Record<string, string> = {}) {
 }
 
 describe("demo listener baseline", () => {
-  test("generates inclusive values within 800–1200", () => {
+  test("generates inclusive values within 800–1300", () => {
     expect(createDemoListenerBaseline(() => 0)).toBe(DEMO_LISTENER_MIN);
     expect(createDemoListenerBaseline(() => 1)).toBe(DEMO_LISTENER_MAX);
     expect(createDemoListenerBaseline(() => 0.5)).toBeGreaterThanOrEqual(DEMO_LISTENER_MIN);
@@ -26,23 +26,32 @@ describe("demo listener baseline", () => {
 
   test("reuses a valid baseline for the tab session", () => {
     const storage = memoryStorage({ [DEMO_LISTENER_STORAGE_KEY]: "917" });
-    expect(getOrCreateDemoListenerBaseline(storage, () => 0)).toBe(917);
-    expect(getOrCreateDemoListenerBaseline(storage, () => 1)).toBe(917);
+    expect(getOrCreateDemoListenerBaseline(storage, null, () => 0)).toBe(917);
+    expect(getOrCreateDemoListenerBaseline(storage, null, () => 1)).toBe(917);
+  });
+
+  test("stores separate baselines per room key", () => {
+    const storage = memoryStorage();
+    const room1 = getOrCreateDemoListenerBaseline(storage, "room-a", () => 0.1);
+    const room2 = getOrCreateDemoListenerBaseline(storage, "room-b", () => 0.8);
+    expect(room1).toBeGreaterThanOrEqual(DEMO_LISTENER_MIN);
+    expect(room2).toBeLessThanOrEqual(DEMO_LISTENER_MAX);
+    expect(room1).not.toBe(room2);
   });
 
   test("replaces invalid and outdated stored values", () => {
-    const invalid = memoryStorage({ [DEMO_LISTENER_STORAGE_KEY]: "1500" });
-    expect(getOrCreateDemoListenerBaseline(invalid, () => 0.25)).toBe(900);
+    const invalid = memoryStorage({ [DEMO_LISTENER_STORAGE_KEY]: "1800" });
+    expect(getOrCreateDemoListenerBaseline(invalid, null, () => 0.2)).toBe(900);
     expect(invalid.getItem(DEMO_LISTENER_STORAGE_KEY)).toBe("900");
 
     const outdated = memoryStorage({ "sd.demo.listener-baseline.v0": "850" });
-    expect(getOrCreateDemoListenerBaseline(outdated, () => 0.75)).toBe(1100);
+    expect(getOrCreateDemoListenerBaseline(outdated, null, () => 0.6)).toBe(1100);
     expect(outdated.getItem(DEMO_LISTENER_STORAGE_KEY)).toBe("1100");
   });
 
   test("adds actual Realtime presence without changing the baseline", () => {
-    expect(combinedDemoListenerCount(917, 1)).toBe(918);
-    expect(combinedDemoListenerCount(917, 4)).toBe(921);
+    expect(combinedDemoListenerCount(917, 1)).toBe(917);
+    expect(combinedDemoListenerCount(917, 4)).toBe(920);
     expect(combinedDemoListenerCount(917, 0)).toBe(917);
   });
 });

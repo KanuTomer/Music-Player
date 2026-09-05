@@ -20,64 +20,12 @@ type DialogTheme = {
 };
 
 const defaultTheme: DialogTheme = {
-  accentHex: "#E5A100", // Amber
+  accentHex: "#E5A100", // Amber / Ember
   iconBg: "bg-ember",
   iconText: "text-charcoal",
   accentText: "text-ember",
   badgeBg: "bg-ember/15",
   glowColor: "border-ember/30",
-};
-
-const themeConfigs: Record<string, DialogTheme> = {
-  "sainik-dhaba": defaultTheme,
-  "nai-ki-dukaan": {
-    accentHex: "#0E5E63", // Cool Teal
-    iconBg: "bg-teal-600",
-    iconText: "text-cream",
-    accentText: "text-teal-400",
-    badgeBg: "bg-teal-500/15",
-    glowColor: "border-teal-500/30",
-  },
-  "bus-driver": {
-    accentHex: "#E5A100", // Dark Slate/Yellow
-    iconBg: "bg-amber-600",
-    iconText: "text-charcoal",
-    accentText: "text-amber-400",
-    badgeBg: "bg-amber-500/15",
-    glowColor: "border-amber-500/30",
-  },
-  "bartan-time": {
-    accentHex: "#6B7B53", // Sage Green
-    iconBg: "bg-emerald-700",
-    iconText: "text-cream",
-    accentText: "text-emerald-400",
-    badgeBg: "bg-emerald-500/15",
-    glowColor: "border-emerald-500/30",
-  },
-  "papa-ke-gaane": {
-    accentHex: "#C1440E", // Warm TV Red
-    iconBg: "bg-red-700",
-    iconText: "text-cream",
-    accentText: "text-red-400",
-    badgeBg: "bg-red-500/15",
-    glowColor: "border-red-500/30",
-  },
-  "raj-mistri": {
-    accentHex: "#C1440E", // Terracotta/Brick
-    iconBg: "bg-orange-600",
-    iconText: "text-cream",
-    accentText: "text-orange-400",
-    badgeBg: "bg-orange-500/15",
-    glowColor: "border-orange-500/30",
-  },
-  "corporate-majdoor": {
-    accentHex: "#0E5E63", // Deep Blue/Teal
-    iconBg: "bg-indigo-600",
-    iconText: "text-cream",
-    accentText: "text-indigo-400",
-    badgeBg: "bg-indigo-500/15",
-    glowColor: "border-indigo-500/30",
-  },
 };
 
 const UPI_ID = "8090446627@upi";
@@ -95,16 +43,11 @@ const copy = {
   },
 } as const;
 
-export function InfoPlaceholderDialog({
-  kind,
-  open,
-  onOpenChange,
-  slug,
-}: InfoPlaceholderDialogProps) {
+export function InfoPlaceholderDialog({ kind, open, onOpenChange }: InfoPlaceholderDialogProps) {
   const [copied, setCopied] = useState(false);
   const content = copy[kind];
   const Icon = kind === "support" ? Heart : Lightbulb;
-  const theme = (slug ? themeConfigs[slug] : undefined) ?? defaultTheme;
+  const theme = defaultTheme;
 
   const handleCopy = async () => {
     try {

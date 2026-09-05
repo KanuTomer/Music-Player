@@ -16,7 +16,7 @@ export function useJagahNavigation({
   const [switchingSlug, setSwitchingSlug] = useState<string | null>(null);
 
   const selectScene = async (scene: Scene) => {
-    const hasPlaybackSession = Boolean(player.room && !player.needsGate);
+    const hasPlaybackSession = Boolean(player.room);
     const action = sceneSelectionAction(scene.slug, activeSlug, hasPlaybackSession);
     if (action === "close") {
       closeExplorer();

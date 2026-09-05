@@ -5,11 +5,13 @@ export function OneLinerCaption({
   lines,
   active,
   trackKey,
+  noShadow = false,
 }: {
   lines: OneLiner[];
   active: boolean;
   /** Changes whenever a new song starts — retriggers the line. */
   trackKey?: string | null;
+  noShadow?: boolean;
 }) {
   const [current, setCurrent] = useState<OneLiner | null>(null);
   const lastIndex = useRef(-1);
@@ -53,12 +55,12 @@ export function OneLinerCaption({
   return (
     <div
       aria-live="polite"
-      className="pointer-events-none absolute top-[36dvh] left-1/2 z-20 w-[min(94vw,44rem)] -translate-x-1/2 -translate-y-1/2 px-3 text-center sm:top-[40dvh]"
+      className="pointer-events-none w-full px-2 text-center flex justify-center"
     >
-      <div className="animate-in fade-in zoom-in-95 duration-700">
+      <div className="animate-in fade-in zoom-in-95 duration-700 max-w-[21ch] sm:max-w-none">
         <p
           lang="hi"
-          className="font-vintage-deva text-[clamp(1.8rem,7vw,3.8rem)] leading-[1.25] text-cream drop-shadow-[0_3px_18px_rgba(0,0,0,0.85)]"
+          className={`font-vintage-deva text-[clamp(2rem,7.6vw,3.6rem)] sm:text-5xl md:text-[clamp(2.5rem,6dvh,4rem)] leading-[1.18] font-black text-cream ${noShadow ? "" : "text-glow-dark"}`}
         >
           {current.text_hi}
         </p>

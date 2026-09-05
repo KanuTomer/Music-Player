@@ -9,7 +9,12 @@ export const ambienceTiming = {
   meanderSeconds: [12, 24] as const,
 };
 
-export const musicDuckRatio = 0.5;
+export const musicDuckRatio = 0.4;
+
+// The per-Jagah master gain is managed by the admin panel; this is the fixed
+// listener-level multiplier used when ambience is enabled.
+export const fixedAmbienceLevel = 100;
+export const ambienceVisualsEnabled = false;
 
 export function effectiveMusicVolume(userVolume: number, ambienceActive: boolean) {
   const clamped = Math.min(1, Math.max(0, userVolume));
@@ -34,9 +39,8 @@ export function ambienceLoadStatus(loaded: number, expected: number, playing: bo
 }
 
 export function ambienceGain(level: number, maximum: number) {
-  const normalized = Math.min(100, Math.max(0, level)) / 100;
-  const amplified = Math.min(1, normalized * 2);
-  return amplified * Math.min(1, Math.max(0, maximum));
+  const normalized = Math.max(0, level) / 100;
+  return normalized * Math.min(1, Math.max(0, maximum));
 }
 
 export function randomBetween(minimum: number, maximum: number, random = Math.random) {
@@ -236,7 +240,6 @@ export class AmbienceEngine {
     this.sources.add(source);
     source.onended = () => this.sources.delete(source);
     source.start(now, start, duration);
-    this.onEvent();
   }
 
   private scheduleLoop(buffered: BufferedStem, when: number, generation: number) {
@@ -394,6 +397,7 @@ export class AmbienceEngine {
     this.generation += 1;
     this.playing = false;
     this.stopSources(0);
+    this.onEventReady(false);
     void this.context?.close();
     this.context = null;
     this.cache.clear();

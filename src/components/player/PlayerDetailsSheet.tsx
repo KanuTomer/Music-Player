@@ -63,10 +63,10 @@ export function PlayerDetailsSheet({
                     )}
                   </span>
                   <div className="min-w-0">
-                    <p className="truncate font-cinema-display text-lg text-cream">
+                    <p className="truncate text-base sm:text-lg font-bold text-cream">
                       {display.title}
                     </p>
-                    <p className="truncate text-xs text-cream/55">{display.subtitle}</p>
+                    <p className="truncate text-xs text-cream/70 mt-0.5">{display.subtitle}</p>
                     <p className="mt-1 text-[10px] font-medium text-ember" aria-live="polite">
                       {display.status === "unavailable"
                         ? "Track unavailable — advancing automatically"
@@ -85,13 +85,9 @@ export function PlayerDetailsSheet({
                     {player.ambienceEnabled ? player.ambienceStatus : "off"}
                   </span>
                 </div>
-                <p className="mt-2 text-xs leading-relaxed text-cream/50">
-                  Location atmosphere · {player.ambienceLevel}%
-                </p>
+                <p className="mt-2 text-xs leading-relaxed text-cream/50">Location atmosphere</p>
                 <div className="mt-4 flex justify-start">
                   <AmbienceControl
-                    level={player.ambienceLevel}
-                    onLevelChange={player.setAmbienceLevel}
                     enabled={player.ambienceEnabled}
                     active={player.ambienceActive}
                     status={player.ambienceStatus}

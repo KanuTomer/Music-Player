@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useJagahNavigation } from "@/hooks/useJagahNavigation";
 import { isAllowedSlug } from "@/lib/theme-data";
 import { useSupportAutoPrompt } from "@/hooks/useSupportPrompt";
+import { buildSeoMeta } from "@/lib/seo";
 
 const TITLE = "Sainik Dhaba 📻";
 const DESC =
@@ -34,16 +35,10 @@ export const Route = createFileRoute("/")({
     return { room, scenes };
   },
   head: () => ({
-    meta: [
-      { title: TITLE },
-      { name: "description", content: DESC },
-      { property: "og:title", content: TITLE },
-      { property: "og:description", content: DESC },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: TITLE },
-      { name: "twitter:description", content: DESC },
-    ],
+    meta: buildSeoMeta({
+      title: TITLE,
+      description: DESC,
+    }),
   }),
   component: Home,
   pendingComponent: HomeSkeleton,
@@ -127,7 +122,7 @@ function Home() {
               >
                 <Compass className="size-4" aria-hidden />
                 <span className="hidden sm:inline">Jagah Explorer</span>
-                <span className="sm:hidden">Explore</span>
+                <span className="sm:hidden">Jagah Explore</span>
               </button>
 
               {/* Support Us Button */}
