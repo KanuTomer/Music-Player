@@ -12,26 +12,41 @@ export type Database = {
         Row: {
           asset_id: string;
           id: string;
+          original_byte_size: number | null;
+          original_duration_seconds: number | null;
+          original_filename: string | null;
+          selected_duration_seconds: number | null;
+          selected_start_seconds: number | null;
           source_order: number;
           source_sha256: string;
           source_title: string;
-          source_url: string;
+          source_url: string | null;
         };
         Insert: {
           asset_id: string;
           id?: string;
+          original_byte_size?: number | null;
+          original_duration_seconds?: number | null;
+          original_filename?: string | null;
+          selected_duration_seconds?: number | null;
+          selected_start_seconds?: number | null;
           source_order?: number;
           source_sha256: string;
           source_title: string;
-          source_url: string;
+          source_url?: string | null;
         };
         Update: {
           asset_id?: string;
           id?: string;
+          original_byte_size?: number | null;
+          original_duration_seconds?: number | null;
+          original_filename?: string | null;
+          selected_duration_seconds?: number | null;
+          selected_start_seconds?: number | null;
           source_order?: number;
           source_sha256?: string;
           source_title?: string;
-          source_url?: string;
+          source_url?: string | null;
         };
         Relationships: [
           {
