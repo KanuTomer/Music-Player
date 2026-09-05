@@ -18,9 +18,20 @@ import {
   snapshotQueue,
   sourceFailureAction,
 } from "./queue";
-import { reportPlaybackSourceFailure, type QueueItem, type RoomPayload } from "./rooms.functions";
+import {
+  getRoomAmbience,
+  reportPlaybackSourceFailure,
+  type QueueItem,
+  type RoomPayload,
+} from "./rooms.functions";
 import { useAmbienceEngine } from "@/hooks/useAmbienceEngine";
-import { effectiveMusicVolume, fixedAmbienceLevel, type AmbienceStatus } from "./ambience";
+import {
+  effectiveMusicVolume,
+  fixedAmbienceLevel,
+  shouldEnableAvailableAmbience,
+  type AmbienceStatus,
+} from "./ambience";
+import { supabase } from "@/integrations/supabase/client";
 
 type YTPlayer = {
   loadVideoById: (id: string) => void;
@@ -69,6 +80,7 @@ type PlayerState = {
   nowPlaying: NowPlaying;
   musicVolume: number;
   ambienceLevel: number;
+  ambienceAvailable: boolean;
   ambienceEnabled: boolean;
   ambienceStatus: AmbienceStatus;
   ambienceActive: boolean;
@@ -140,6 +152,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const sessionSeedRef = useRef<string | null>(null);
   const shuffledQueuesRef = useRef<Map<string, QueueItem[]>>(new Map());
   const ambienceSuppressedRef = useRef(false);
+  const musicDuckRatioRef = useRef(1);
   const [room, setRoom] = useState<RoomPayload | null>(null);
   const [daypart, setDaypart] = useState<Daypart>(() => currentDaypart());
   const [playlist, setPlaylist] = useState<QueueItem[]>([]);
@@ -155,6 +168,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const track = playlist[index]?.track ?? null;
   const ambience = useAmbienceEngine(room, ambienceEnabled, ambienceLevel);
   const resumeAmbienceFromGesture = ambience.resumeFromGesture;
+  const ambienceAvailable = Boolean(room?.ambience);
+  const activeMusicDuckRatio = room?.ambience?.music_duck_ratio ?? 1;
+  musicDuckRatioRef.current = activeMusicDuckRatio;
 
   const setPlayerOutputVolume = useCallback((player: YTPlayer, value: number) => {
     const clamped = Math.min(1, Math.max(0, value));
@@ -197,8 +213,48 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     ambienceActiveRef.current = ambience.active;
     if (themeTransitionRef.current) return;
-    rampMusicOutput(effectiveMusicVolume(volumeRef.current, ambience.active), 500);
-  }, [ambience.active, rampMusicOutput]);
+    rampMusicOutput(
+      effectiveMusicVolume(volumeRef.current, ambience.active, activeMusicDuckRatio),
+      500,
+    );
+  }, [activeMusicDuckRatio, ambience.active, rampMusicOutput]);
+
+  useEffect(() => {
+    const sceneId = room?.scene.id;
+    if (!sceneId) return;
+    const channel = supabase
+      .channel(`ambience-profile:${sceneId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "ambience_profiles",
+          filter: `scene_id=eq.${sceneId}`,
+        },
+        () => {
+          void getRoomAmbience({ data: { sceneId } })
+            .then((nextAmbience) => {
+              setRoom((current) =>
+                current?.scene.id === sceneId ? { ...current, ambience: nextAmbience } : current,
+              );
+              const nextEnabled = shouldEnableAvailableAmbience(
+                Boolean(nextAmbience),
+                ambienceSuppressedRef.current,
+              );
+              setAmbienceEnabled(nextEnabled);
+              if (nextEnabled) void resumeAmbienceFromGesture();
+            })
+            .catch(() => {
+              // Keep the last known state; the room loader will retry on navigation.
+            });
+        },
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [room?.scene.id, resumeAmbienceFromGesture]);
 
   const setIndex = useCallback((next: number) => {
     indexRef.current = next;
@@ -235,7 +291,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       setMusicBlocked(false);
       setNowPlaying(emptyNowPlaying(indexRef.current, queueRef.current.length));
       player.loadVideoById(source.provider_item_id);
-      const target = effectiveMusicVolume(volumeRef.current, ambienceActiveRef.current);
+      const target = effectiveMusicVolume(
+        volumeRef.current,
+        ambienceActiveRef.current,
+        musicDuckRatioRef.current,
+      );
       setPlayerOutputVolume(player, themeTransitionRef.current ? 0 : target);
       intendPlayRef.current = autoplay;
       if (autoplay) scheduleExpectedPlayback(player, source.provider_item_id);
@@ -444,8 +504,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       setIsPlaying(false);
       setMusicReady(false);
       setMusicBlocked(false);
-      setAmbienceEnabled(true);
-      void resumeAmbienceFromGesture();
+      setAmbienceEnabled(Boolean(nextRoom.ambience));
+      if (nextRoom.ambience) void resumeAmbienceFromGesture();
       if (!sessionSeedRef.current && typeof window !== "undefined") {
         sessionSeedRef.current = createQueueSessionSeed();
       }
@@ -478,19 +538,19 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   );
   const start = useCallback(() => {
     void resumeAmbienceFromGesture();
-    if (!ambienceSuppressedRef.current) setAmbienceEnabled(true);
+    if (room?.ambience && !ambienceSuppressedRef.current) setAmbienceEnabled(true);
     intendPlayRef.current = true;
     if (readyRef.current) playerRef.current?.playVideo();
-  }, [resumeAmbienceFromGesture]);
+  }, [resumeAmbienceFromGesture, room?.ambience]);
   const toggle = useCallback(() => {
     if (!isPlaying) void resumeAmbienceFromGesture();
-    if (!isPlaying && !ambienceSuppressedRef.current) setAmbienceEnabled(true);
+    if (!isPlaying && room?.ambience && !ambienceSuppressedRef.current) setAmbienceEnabled(true);
     intendPlayRef.current = !isPlaying;
     if (readyRef.current) {
       if (isPlaying) playerRef.current?.pauseVideo();
       else playerRef.current?.playVideo();
     }
-  }, [isPlaying, resumeAmbienceFromGesture]);
+  }, [isPlaying, resumeAmbienceFromGesture, room?.ambience]);
   const next = useCallback(() => advance(1), [advance]);
   const previous = useCallback(() => advance(-1), [advance]);
   const seek = useCallback((seconds: number) => {
@@ -501,17 +561,24 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       const clamped = Math.min(1, Math.max(0, value));
       volumeRef.current = clamped;
       setMusicVol(clamped);
-      rampMusicOutput(effectiveMusicVolume(clamped, ambienceActiveRef.current), 160);
+      rampMusicOutput(
+        effectiveMusicVolume(clamped, ambienceActiveRef.current, musicDuckRatioRef.current),
+        160,
+      );
     },
     [rampMusicOutput],
   );
   const toggleAmbience = useCallback(() => {
+    if (!ambienceAvailable) return;
     const nextEnabled = !ambienceEnabled;
     ambienceSuppressedRef.current = !nextEnabled;
     setAmbienceEnabled(nextEnabled);
     if (nextEnabled) void resumeAmbienceFromGesture();
-  }, [ambienceEnabled, resumeAmbienceFromGesture]);
-  const triggerAmbienceEvent = useCallback(() => ambience.triggerEvent(), [ambience]);
+  }, [ambienceAvailable, ambienceEnabled, resumeAmbienceFromGesture]);
+  const triggerAmbienceEvent = useCallback(
+    () => (ambienceAvailable ? ambience.triggerEvent() : Promise.resolve(false)),
+    [ambience, ambienceAvailable],
+  );
   const fadeForThemeChange = useCallback(() => {
     const player = playerRef.current;
     if (!player || !readyRef.current || !isPlaying) {
@@ -563,8 +630,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     nowPlaying,
     musicVolume,
     ambienceLevel,
+    ambienceAvailable,
     ambienceEnabled,
-    ambienceStatus: ambience.status,
+    ambienceStatus: ambienceAvailable ? ambience.status : "unavailable",
     ambienceActive: ambience.active,
     ambienceEventPulse: ambience.eventPulse,
     ambienceEventReady: ambience.eventReady,

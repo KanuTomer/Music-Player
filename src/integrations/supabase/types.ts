@@ -100,6 +100,7 @@ export type Database = {
           fade_out_ms: number;
           id: string;
           max_master_gain: number;
+          music_duck_ratio: number;
           scene_id: string;
           visual_theme: Json;
         };
@@ -111,6 +112,7 @@ export type Database = {
           fade_out_ms?: number;
           id?: string;
           max_master_gain?: number;
+          music_duck_ratio?: number;
           scene_id: string;
           visual_theme?: Json;
         };
@@ -122,6 +124,7 @@ export type Database = {
           fade_out_ms?: number;
           id?: string;
           max_master_gain?: number;
+          music_duck_ratio?: number;
           scene_id?: string;
           visual_theme?: Json;
         };

@@ -1,9 +1,16 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useBlocker, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronDown, Loader2, UserRound } from "lucide-react";
+import { DiscardChangesDialog } from "@/components/admin/AdminFormFeedback";
 import { AmbienceAudioPanel } from "@/components/admin/AmbienceAudioPanel";
 import { supabase } from "@/integrations/supabase/client";
-import { retainComparedSceneIds, sortComparedAnalytics } from "@/lib/admin-analytics";
+import {
+  retainComparedSceneIds,
+  sortComparedAnalytics,
+  toggleAllIds,
+  toggleSelectedId,
+} from "@/lib/admin-analytics";
+import { hasAdminDraftChanges, sameAdminDraft } from "@/lib/admin-drafts";
 import {
   addAdminSongs,
   getAdminData,
@@ -53,6 +60,7 @@ type Ambience = {
   id: string;
   enabled: boolean;
   maxMasterGain: number;
+  musicDuckRatio: number;
   fadeInMs: number;
   fadeOutMs: number;
   audioTheme: Record<string, Record<string, number>>;
@@ -106,12 +114,18 @@ function AdminPage() {
   const [urls, setUrls] = useState("");
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [edit, setEdit] = useState<Track | null>(null);
+  const [editBaseline, setEditBaseline] = useState<Track | null>(null);
+  const [ambienceDirty, setAmbienceDirty] = useState(false);
+  const [pendingTransition, setPendingTransition] = useState<(() => void | Promise<void>) | null>(
+    null,
+  );
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [busyAction, setBusyAction] = useState("");
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [songPage, setSongPage] = useState(0);
   const selectedSlugRef = useRef(selectedSlug);
+  const allowNextNavigationRef = useRef(false);
 
   const current = scenes.find((scene) => scene.slug === selectedSlug) ?? scenes[0];
   const totalTracks = current?.tracks.length ?? 0;
@@ -121,6 +135,49 @@ function AdminPage() {
     current?.tracks.slice(activeSongPage * rowsPerPage, (activeSongPage + 1) * rowsPerPage) ?? [];
   const comparedAnalytics = sortComparedAnalytics(analytics, comparedSceneIds);
   const singleComparedAnalytics = comparedAnalytics.length === 1 ? comparedAnalytics[0] : null;
+  const allScenesCompared =
+    scenes.length > 0 && scenes.every((scene) => comparedSceneIds.includes(scene.id));
+  const songImportDirty = Boolean(urls.trim() || drafts.length);
+  const songEditDirty = Boolean(edit && editBaseline && !sameAdminDraft(edit, editBaseline));
+  const hasUnsavedChanges = hasAdminDraftChanges({
+    songInput: urls,
+    songDraftCount: drafts.length,
+    songEditChanged: songEditDirty,
+    ambienceChanged: ambienceDirty,
+  });
+  const blocker = useBlocker({
+    shouldBlockFn: () => hasUnsavedChanges && !allowNextNavigationRef.current,
+    enableBeforeUnload: hasUnsavedChanges,
+    withResolver: true,
+  });
+
+  const discardLocalDrafts = useCallback(() => {
+    setUrls("");
+    setDrafts([]);
+    setEdit(null);
+    setEditBaseline(null);
+    setAmbienceDirty(false);
+  }, []);
+
+  function requestTransition(action: () => void | Promise<void>) {
+    if (!hasUnsavedChanges) {
+      void action();
+      return;
+    }
+    setPendingTransition(() => action);
+  }
+
+  function continueAfterDiscard() {
+    const action = pendingTransition;
+    setPendingTransition(null);
+    discardLocalDrafts();
+    allowNextNavigationRef.current = true;
+    if (blocker.status === "blocked") blocker.proceed?.();
+    else if (action) void action();
+    window.setTimeout(() => {
+      allowNextNavigationRef.current = false;
+    }, 1000);
+  }
 
   function selectJagah(slug: string) {
     if (slug === current?.slug) {
@@ -136,6 +193,8 @@ function AdminPage() {
     setUrls("");
     setDrafts([]);
     setEdit(null);
+    setEditBaseline(null);
+    setAmbienceDirty(false);
     setSongPage(0);
     setMessage("");
   }
@@ -193,9 +252,7 @@ function AdminPage() {
   }, [navigate, range]);
 
   function toggleComparedScene(sceneId: string) {
-    setComparedSceneIds((ids) =>
-      ids.includes(sceneId) ? ids.filter((id) => id !== sceneId) : [...ids, sceneId],
-    );
+    setComparedSceneIds((ids) => toggleSelectedId(ids, sceneId));
   }
 
   useEffect(() => {
@@ -263,7 +320,6 @@ function AdminPage() {
   async function saveEdit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!edit) return;
-    const form = new FormData(event.currentTarget);
     const scope =
       edit.sharedActiveUses > 1 &&
       !window.confirm(
@@ -277,14 +333,15 @@ function AdminPage() {
       await updateAdminSong({
         data: {
           membershipId: edit.membershipId,
-          title: String(form.get("title")),
-          artist: String(form.get("artist")),
-          year: form.get("year") ? Number(form.get("year")) : null,
-          source: String(form.get("source")),
+          title: edit.title,
+          artist: edit.artist ?? "",
+          year: edit.year,
+          source: edit.sourceUrl,
           scope,
         },
       });
       setEdit(null);
+      setEditBaseline(null);
       await load();
       setMessage(
         scope === "shared"
@@ -332,7 +389,10 @@ function AdminPage() {
             <button
               className="mt-3 w-full rounded border border-zinc-600 px-3 py-2 text-sm"
               onClick={() =>
-                void supabase.auth.signOut().then(() => navigate({ to: "/admin/login" }))
+                requestTransition(async () => {
+                  await supabase.auth.signOut();
+                  await navigate({ to: "/admin/login" });
+                })
               }
             >
               Log out
@@ -352,7 +412,10 @@ function AdminPage() {
                   aria-expanded={expandedSlug === scene.slug}
                   aria-controls={`jagah-menu-${scene.id}`}
                   disabled={busy}
-                  onClick={() => selectJagah(scene.slug)}
+                  onClick={() => {
+                    if (scene.slug === current?.slug) selectJagah(scene.slug);
+                    else requestTransition(() => selectJagah(scene.slug));
+                  }}
                 >
                   <span>{scene.title}</span>
                   <span aria-hidden className="text-zinc-400">
@@ -376,7 +439,11 @@ function AdminPage() {
                           type="button"
                           className={`min-h-10 w-full rounded px-3 py-2 text-left text-sm ${section === item.id ? "bg-zinc-800 font-semibold text-amber-300" : "text-zinc-300 hover:bg-zinc-900"}`}
                           aria-current={section === item.id ? "page" : undefined}
-                          onClick={() => setSection(item.id)}
+                          onClick={() =>
+                            item.id === section
+                              ? undefined
+                              : requestTransition(() => setSection(item.id))
+                          }
                         >
                           {item.label}
                           {item.id === "songs" ? ` (${scene.tracks.length})` : ""}
@@ -416,7 +483,12 @@ function AdminPage() {
                 : "Ambience audio"}
           </p>
           {section === "ambience" && current ? (
-            <AmbienceAudioPanel scene={current} assets={assets} onChanged={load} />
+            <AmbienceAudioPanel
+              scene={current}
+              assets={assets}
+              onChanged={load}
+              onDirtyChange={setAmbienceDirty}
+            />
           ) : section === "analytics" ? (
             <section aria-labelledby="jagah-analytics-title">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -440,22 +512,24 @@ function AdminPage() {
               <fieldset className="mb-5 rounded border border-zinc-700 p-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <legend className="px-1 text-sm font-medium">Compare Jagahs</legend>
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-zinc-400">
+                      {comparedSceneIds.length} selected
+                    </span>
                     <button
                       type="button"
                       className="rounded border border-zinc-600 px-2 py-1 text-xs"
-                      disabled={busy}
-                      onClick={() => setComparedSceneIds(scenes.map((scene) => scene.id))}
+                      disabled={busy || !scenes.length}
+                      onClick={() =>
+                        setComparedSceneIds((ids) =>
+                          toggleAllIds(
+                            ids,
+                            scenes.map((scene) => scene.id),
+                          ),
+                        )
+                      }
                     >
-                      Select all
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded border border-zinc-600 px-2 py-1 text-xs"
-                      disabled={busy || !comparedSceneIds.length}
-                      onClick={() => setComparedSceneIds([])}
-                    >
-                      Clear
+                      {allScenesCompared ? "Deselect all" : "Select all"}
                     </button>
                   </div>
                 </div>
@@ -463,7 +537,7 @@ function AdminPage() {
                   {scenes.map((scene) => (
                     <label
                       key={scene.id}
-                      className="flex min-h-10 items-center gap-2 rounded border border-zinc-700 px-3 py-2 text-sm"
+                      className="flex min-h-10 cursor-pointer items-center gap-2 rounded border border-zinc-700 px-3 py-2 text-sm hover:border-zinc-500 hover:bg-zinc-900"
                     >
                       <input
                         type="checkbox"
@@ -547,13 +621,29 @@ function AdminPage() {
                   onChange={(event) => setUrls(event.target.value)}
                   placeholder="One URL per line"
                 />
-                <button
-                  className="mt-2 rounded bg-amber-600 px-3 py-2 text-sm font-semibold text-zinc-950 disabled:opacity-60"
-                  disabled={busy}
-                  onClick={() => void preview()}
-                >
-                  {busyAction === "Previewing import" ? "Previewing…" : "Preview import"}
-                </button>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <button
+                    className="rounded bg-amber-600 px-3 py-2 text-sm font-semibold text-zinc-950 disabled:opacity-60"
+                    disabled={busy || !urls.trim()}
+                    onClick={() => void preview()}
+                  >
+                    {busyAction === "Previewing import" ? "Previewing…" : "Preview import"}
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded border border-zinc-600 px-3 py-2 text-sm disabled:opacity-50"
+                    disabled={busy || !songImportDirty}
+                    onClick={() => {
+                      setUrls("");
+                      setDrafts([]);
+                    }}
+                  >
+                    Discard draft
+                  </button>
+                  {songImportDirty ? (
+                    <span className="text-xs font-medium text-amber-300">Unsaved song draft</span>
+                  ) : null}
+                </div>
                 {drafts.length ? (
                   <div className="mt-4 space-y-2">
                     {drafts.map((draft, index) => (
@@ -627,10 +717,11 @@ function AdminPage() {
                     className="rounded border border-zinc-600 px-3 py-2 text-sm"
                     disabled={busy || !totalTracks}
                     onClick={() =>
-                      setSelected(
-                        selected.length === totalTracks
-                          ? []
-                          : (current?.tracks.map((track) => track.membershipId) ?? []),
+                      setSelected((items) =>
+                        toggleAllIds(
+                          items,
+                          current?.tracks.map((track) => track.membershipId) ?? [],
+                        ),
                       )
                     }
                   >
@@ -666,12 +757,8 @@ function AdminPage() {
                           <input
                             type="checkbox"
                             checked={selected.includes(track.membershipId)}
-                            onChange={(event) =>
-                              setSelected((items) =>
-                                event.target.checked
-                                  ? [...items, track.membershipId]
-                                  : items.filter((id) => id !== track.membershipId),
-                              )
+                            onChange={() =>
+                              setSelected((items) => toggleSelectedId(items, track.membershipId))
                             }
                           />
                         </td>
@@ -699,7 +786,10 @@ function AdminPage() {
                         <td className="p-2">
                           <button
                             className="rounded border border-zinc-600 px-2 py-1"
-                            onClick={() => setEdit(track)}
+                            onClick={() => {
+                              setEdit({ ...track });
+                              setEditBaseline({ ...track });
+                            }}
                           >
                             Edit
                           </button>
@@ -757,8 +847,22 @@ function AdminPage() {
           <form className="w-full max-w-lg space-y-3 rounded bg-zinc-900 p-5" onSubmit={saveEdit}>
             <div className="flex items-center justify-between">
               <h2 className="font-semibold">Edit song</h2>
-              <button type="button" className="text-zinc-400" onClick={() => setEdit(null)}>
-                Close
+              <button
+                type="button"
+                className="rounded border border-zinc-600 px-3 py-1.5 text-sm text-zinc-300"
+                onClick={() => {
+                  if (songEditDirty) {
+                    setPendingTransition(() => () => {
+                      setEdit(null);
+                      setEditBaseline(null);
+                    });
+                  } else {
+                    setEdit(null);
+                    setEditBaseline(null);
+                  }
+                }}
+              >
+                Cancel
               </button>
             </div>
             <label className="block text-sm">
@@ -766,7 +870,8 @@ function AdminPage() {
               <input
                 className="mt-1 w-full rounded border border-zinc-600 bg-zinc-950 p-2"
                 name="title"
-                defaultValue={edit.title}
+                value={edit.title}
+                onChange={(event) => setEdit({ ...edit, title: event.target.value })}
                 required
               />
             </label>
@@ -775,16 +880,19 @@ function AdminPage() {
               <input
                 className="mt-1 w-full rounded border border-zinc-600 bg-zinc-950 p-2"
                 name="artist"
-                defaultValue={edit.artist ?? ""}
+                value={edit.artist ?? ""}
+                onChange={(event) => setEdit({ ...edit, artist: event.target.value })}
               />
             </label>
             <label className="block text-sm">
               Year
               <input
                 className="mt-1 w-full rounded border border-zinc-600 bg-zinc-950 p-2"
-                name="year"
                 type="number"
-                defaultValue={edit.year ?? ""}
+                value={edit.year ?? ""}
+                onChange={(event) =>
+                  setEdit({ ...edit, year: event.target.value ? Number(event.target.value) : null })
+                }
               />
             </label>
             <label className="block text-sm">
@@ -792,7 +900,8 @@ function AdminPage() {
               <input
                 className="mt-1 w-full rounded border border-zinc-600 bg-zinc-950 p-2"
                 name="source"
-                defaultValue={edit.sourceUrl}
+                value={edit.sourceUrl}
+                onChange={(event) => setEdit({ ...edit, sourceUrl: event.target.value })}
                 required
               />
             </label>
@@ -802,23 +911,36 @@ function AdminPage() {
                 local copy.
               </p>
             ) : null}
-            <button
-              className="rounded bg-amber-600 px-3 py-2 text-sm font-semibold text-zinc-950"
-              disabled={busy}
-              type="submit"
-            >
-              {busyAction === "Saving song" ? (
-                <>
-                  <Loader2 className="mr-1 inline size-4 animate-spin" />
-                  Saving…
-                </>
-              ) : (
-                "Save changes"
-              )}
-            </button>
+            <div className="flex items-center justify-between gap-3 border-t border-zinc-700 pt-3">
+              <span className={`text-xs ${songEditDirty ? "text-amber-300" : "text-zinc-500"}`}>
+                {songEditDirty ? "Unsaved changes" : "No changes yet"}
+              </span>
+              <button
+                className="rounded bg-amber-600 px-3 py-2 text-sm font-semibold text-zinc-950 disabled:opacity-50"
+                disabled={busy || !songEditDirty}
+                type="submit"
+              >
+                {busyAction === "Saving song" ? (
+                  <>
+                    <Loader2 className="mr-1 inline size-4 animate-spin" />
+                    Saving…
+                  </>
+                ) : (
+                  "Save changes"
+                )}
+              </button>
+            </div>
           </form>
         </div>
       ) : null}
+      <DiscardChangesDialog
+        open={Boolean(pendingTransition) || blocker.status === "blocked"}
+        onStay={() => {
+          setPendingTransition(null);
+          if (blocker.status === "blocked") blocker.reset?.();
+        }}
+        onDiscard={continueAfterDiscard}
+      />
       {message ? (
         <p
           className="fixed bottom-4 right-4 max-w-md rounded bg-zinc-800 p-3 text-sm shadow-lg"

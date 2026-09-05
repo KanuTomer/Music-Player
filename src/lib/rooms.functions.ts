@@ -1,5 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
-import { fetchRoom, fetchScenes, insertChatMessage, recordSourceFailure } from "./rooms.server";
+import {
+  fetchRoom,
+  fetchRoomAmbience,
+  fetchScenes,
+  insertChatMessage,
+  recordSourceFailure,
+} from "./rooms.server";
 import { recordListening, registerRoomVisit } from "./admin.server";
 
 export type Scene = {
@@ -101,6 +107,7 @@ export type AmbienceVisualTheme = {
 export type AmbienceProfile = {
   id: string;
   max_master_gain: number;
+  music_duck_ratio: number;
   fade_out_ms: number;
   fade_in_ms: number;
   audio_theme: Partial<Record<AmbienceStem["role"], AmbienceFilter>>;
@@ -138,6 +145,12 @@ export const getRoom = createServerFn({ method: "GET" })
   .validator((data: { slug: string }) => ({ slug: String(data.slug) }))
   .handler(async ({ data }): Promise<RoomPayload | null> => {
     return fetchRoom(data.slug);
+  });
+
+export const getRoomAmbience = createServerFn({ method: "GET" })
+  .validator((data: { sceneId: string }) => ({ sceneId: String(data.sceneId) }))
+  .handler(async ({ data }): Promise<AmbienceProfile | null> => {
+    return fetchRoomAmbience(data.sceneId);
   });
 
 export const sendChatMessage = createServerFn({ method: "POST" })

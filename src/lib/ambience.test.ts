@@ -7,6 +7,7 @@ import {
   equalPowerFadeCurve,
   normalizeAmbienceFilter,
   randomEventDelayMs,
+  shouldEnableAvailableAmbience,
 } from "./ambience";
 
 describe("ambience engine decisions", () => {
@@ -23,6 +24,15 @@ describe("ambience engine decisions", () => {
     expect(effectiveMusicVolume(0.7, true)).toBeCloseTo(0.28);
     expect(effectiveMusicVolume(2, true)).toBeCloseTo(0.4);
     expect(effectiveMusicVolume(-1, true)).toBe(0);
+    expect(effectiveMusicVolume(0.7, true, 0.25)).toBeCloseTo(0.175);
+    expect(effectiveMusicVolume(0.7, true, 2)).toBeCloseTo(0.7);
+    expect(effectiveMusicVolume(0.7, true, -1)).toBe(0);
+  });
+
+  test("respects listener opt-out when ambience becomes available again", () => {
+    expect(shouldEnableAvailableAmbience(false, false)).toBe(false);
+    expect(shouldEnableAvailableAmbience(true, false)).toBe(true);
+    expect(shouldEnableAvailableAmbience(true, true)).toBe(false);
   });
 
   test("normalizes room filter settings to safe Web Audio ranges", () => {

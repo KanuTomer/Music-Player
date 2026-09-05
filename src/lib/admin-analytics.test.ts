@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { analyticsSince, retainComparedSceneIds, sortComparedAnalytics } from "./admin-analytics";
+import {
+  analyticsSince,
+  retainComparedSceneIds,
+  sortComparedAnalytics,
+  toggleAllIds,
+  toggleSelectedId,
+} from "./admin-analytics";
 
 describe("admin analytics helpers", () => {
   test("calculates a stable period boundary", () => {
@@ -22,5 +28,13 @@ describe("admin analytics helpers", () => {
       { sceneId: "c", title: "Ignored", listeningSeconds: 60 },
     ];
     expect(sortComparedAnalytics(rows, ["a", "b"]).map((row) => row.sceneId)).toEqual(["b", "a"]);
+  });
+
+  test("selects, deselects, and toggles every available item", () => {
+    expect(toggleSelectedId(["a", "b"], "a")).toEqual(["b"]);
+    expect(toggleSelectedId(["b"], "a")).toEqual(["b", "a"]);
+    expect(toggleAllIds([], ["a", "b"])).toEqual(["a", "b"]);
+    expect(toggleAllIds(["a", "b"], ["a", "b"])).toEqual([]);
+    expect(toggleAllIds(["a"], ["a", "b"])).toEqual(["a", "b"]);
   });
 });

@@ -38,3 +38,12 @@ export function sortComparedAnalytics<T extends ComparableAnalytics>(
         right.listeningSeconds - left.listeningSeconds || left.title.localeCompare(right.title),
     );
 }
+
+export function toggleSelectedId(selected: string[], id: string): string[] {
+  return selected.includes(id) ? selected.filter((item) => item !== id) : [...selected, id];
+}
+
+export function toggleAllIds(selected: string[], available: string[]): string[] {
+  const allSelected = available.length > 0 && available.every((id) => selected.includes(id));
+  return allSelected ? [] : [...available];
+}

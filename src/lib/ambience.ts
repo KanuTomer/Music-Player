@@ -9,16 +9,25 @@ export const ambienceTiming = {
   meanderSeconds: [12, 24] as const,
 };
 
-export const musicDuckRatio = 0.4;
+export const defaultMusicDuckRatio = 0.4;
 
 // The per-Jagah master gain is managed by the admin panel; this is the fixed
 // listener-level multiplier used when ambience is enabled.
 export const fixedAmbienceLevel = 100;
 export const ambienceVisualsEnabled = false;
 
-export function effectiveMusicVolume(userVolume: number, ambienceActive: boolean) {
+export function effectiveMusicVolume(
+  userVolume: number,
+  ambienceActive: boolean,
+  musicDuckRatio = defaultMusicDuckRatio,
+) {
   const clamped = Math.min(1, Math.max(0, userVolume));
-  return clamped * (ambienceActive ? musicDuckRatio : 1);
+  const duckRatio = Math.min(1, Math.max(0, musicDuckRatio));
+  return clamped * (ambienceActive ? duckRatio : 1);
+}
+
+export function shouldEnableAvailableAmbience(available: boolean, listenerSuppressed: boolean) {
+  return available && !listenerSuppressed;
 }
 
 export function normalizeAmbienceFilter(filter: AmbienceFilter | undefined) {

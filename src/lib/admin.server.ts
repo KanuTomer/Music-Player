@@ -69,6 +69,7 @@ export type AdminAmbience = {
   id: string;
   enabled: boolean;
   maxMasterGain: number;
+  musicDuckRatio: number;
   fadeInMs: number;
   fadeOutMs: number;
   audioTheme: Record<string, Record<string, number>>;
@@ -189,7 +190,9 @@ async function activeScenes(): Promise<AdminScene[]> {
     );
     const { data: profile, error: profileError } = await admin
       .from("ambience_profiles")
-      .select("id, enabled, max_master_gain, fade_in_ms, fade_out_ms, audio_theme")
+      .select(
+        "id, enabled, max_master_gain, music_duck_ratio, fade_in_ms, fade_out_ms, audio_theme",
+      )
       .eq("scene_id", scene.id)
       .maybeSingle();
     if (profileError) throw new Error(profileError.message);
@@ -207,6 +210,7 @@ async function activeScenes(): Promise<AdminScene[]> {
           id: profile.id,
           enabled: profile.enabled,
           maxMasterGain: Number(profile.max_master_gain),
+          musicDuckRatio: Number(profile.music_duck_ratio),
           fadeInMs: profile.fade_in_ms,
           fadeOutMs: profile.fade_out_ms,
           audioTheme: (profile.audio_theme ?? {}) as Record<string, Record<string, number>>,
@@ -340,6 +344,7 @@ export async function saveAmbienceProfile(input: {
   sceneId: string;
   enabled: boolean;
   maxMasterGain: number;
+  musicDuckRatio: number;
   fadeInMs: number;
   fadeOutMs: number;
   audioTheme: unknown;
@@ -349,6 +354,7 @@ export async function saveAmbienceProfile(input: {
     scene_id: String(input.sceneId),
     enabled: Boolean(input.enabled),
     max_master_gain: numberInRange(input.maxMasterGain, 0, 1, "master volume"),
+    music_duck_ratio: numberInRange(input.musicDuckRatio, 0, 1, "music volume"),
     fade_in_ms: Math.round(numberInRange(input.fadeInMs, 0, 10000, "fade in")),
     fade_out_ms: Math.round(numberInRange(input.fadeOutMs, 0, 10000, "fade out")),
     audio_theme: normalizeTheme(input.audioTheme),
