@@ -6,8 +6,6 @@ export const ambienceTiming = {
   pauseFadeMs: 300,
   resumeFadeMs: 250,
   defaultSwitchOutMs: 700,
-  firstEventSeconds: [20, 50] as const,
-  laterEventSeconds: [35, 110] as const,
   meanderSeconds: [12, 24] as const,
 };
 
@@ -76,11 +74,14 @@ export class AmbienceEngine {
   private sources = new Set<AudioBufferSourceNode>();
   private loopTimers = new Set<number>();
   private eventTimer: number | null = null;
+  private manualEventSource: AudioBufferSourceNode | null = null;
   private cache = new Map<string, BufferedStem[]>();
   private currentKey: string | null = null;
   private previousKey: string | null = null;
   private onStatus: (status: AmbienceStatus) => void = () => undefined;
   private onEvent: () => void = () => undefined;
+  private onEventPlaying: (playing: boolean) => void = () => undefined;
+  private onEventReady: (ready: boolean) => void = () => undefined;
 
   private ensureContext() {
     if (this.context) return this.context;
@@ -102,9 +103,16 @@ export class AmbienceEngine {
     if (context.state === "suspended") await context.resume();
   }
 
-  setCallbacks(onStatus: (status: AmbienceStatus) => void, onEvent: () => void) {
+  setCallbacks(
+    onStatus: (status: AmbienceStatus) => void,
+    onEvent: () => void,
+    onEventPlaying: (playing: boolean) => void,
+    onEventReady: (ready: boolean) => void,
+  ) {
     this.onStatus = onStatus;
     this.onEvent = onEvent;
+    this.onEventPlaying = onEventPlaying;
+    this.onEventReady = onEventReady;
   }
 
   async setProfile(key: string, profile: AmbienceProfile | null) {
@@ -114,6 +122,7 @@ export class AmbienceEngine {
     this.previousKey = this.currentKey;
     this.currentKey = key;
     this.buffers = [];
+    this.onEventReady(false);
     if (!profile) {
       this.onStatus("unavailable");
       return;
@@ -143,6 +152,7 @@ export class AmbienceEngine {
     }
     if (generation !== this.generation) return;
     const status = ambienceLoadStatus(this.buffers.length, profile.stems.length, false);
+    this.onEventReady(this.buffers.some(({ stem }) => stem.role === "event"));
     this.onStatus(status);
     if (status === "unavailable") return;
     if (this.playing) this.startSources(profile.fade_in_ms);
@@ -180,9 +190,53 @@ export class AmbienceEngine {
     for (const buffered of this.buffers.filter(({ stem }) => stem.role !== "event")) {
       this.scheduleLoop(buffered, this.context.currentTime + 0.05, generation);
     }
-    const event = this.buffers.find(({ stem }) => stem.role === "event");
-    if (event) this.scheduleEvent(event, generation, true);
+    for (const buffered of this.buffers.filter(({ stem }) => stem.role === "event"))
+      this.scheduleAutomaticEvent(buffered, generation);
     this.onStatus(ambienceLoadStatus(this.buffers.length, this.profile.stems.length, true));
+  }
+
+  private scheduleAutomaticEvent(buffered: BufferedStem, generation: number) {
+    const stem = buffered.stem;
+    const minimum = stem.event_min_seconds ?? 35;
+    const maximum = stem.event_max_seconds ?? Math.max(minimum, 110);
+    const schedule = () => {
+      if (generation !== this.generation || !this.playing) return;
+      const timer = window.setTimeout(
+        () => {
+          this.loopTimers.delete(timer);
+          if (generation !== this.generation || !this.playing) return;
+          this.playAutomaticEvent(buffered, generation);
+          schedule();
+        },
+        randomEventDelayMs(minimum, maximum),
+      );
+      this.loopTimers.add(timer);
+    };
+    schedule();
+  }
+
+  private playAutomaticEvent(buffered: BufferedStem, generation: number) {
+    const context = this.context;
+    const destination = this.compressor;
+    if (!context || !destination || generation !== this.generation || !this.playing) return;
+    const { stem, buffer } = buffered;
+    const source = context.createBufferSource();
+    const gain = context.createGain();
+    const start = Math.min(stem.loop_start_seconds, Math.max(0, buffer.duration - 0.1));
+    const end = Math.min(stem.loop_end_seconds ?? buffer.duration, buffer.duration);
+    const duration = Math.max(0.1, end - start);
+    source.buffer = buffer;
+    source.connect(gain);
+    this.connectStem(gain, stem.role, destination);
+    const now = context.currentTime;
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(stem.default_gain, now + Math.min(0.3, duration / 3));
+    gain.gain.setValueAtTime(stem.default_gain, Math.max(now + 0.3, now + duration - 0.8));
+    gain.gain.linearRampToValueAtTime(0, now + duration);
+    this.sources.add(source);
+    source.onended = () => this.sources.delete(source);
+    source.start(now, start, duration);
+    this.onEvent();
   }
 
   private scheduleLoop(buffered: BufferedStem, when: number, generation: number) {
@@ -196,7 +250,7 @@ export class AmbienceEngine {
     const crossfade = Math.min(loopDuration / 3, stem.crossfade_ms / 1000);
     const source = context.createBufferSource();
     const gain = context.createGain();
-    let target = randomBetween(stem.min_gain, stem.max_gain);
+    let target = Math.min(stem.max_gain, Math.max(stem.min_gain, stem.default_gain));
     source.buffer = buffer;
     source.connect(gain);
     this.connectStem(gain, stem.role, destination);
@@ -224,47 +278,66 @@ export class AmbienceEngine {
     this.loopTimers.add(timer);
   }
 
-  private scheduleEvent(buffered: BufferedStem, generation: number, first: boolean) {
-    const minimum = first
-      ? ambienceTiming.firstEventSeconds[0]
-      : (buffered.stem.event_min_seconds ?? ambienceTiming.laterEventSeconds[0]);
-    const maximum = first
-      ? ambienceTiming.firstEventSeconds[1]
-      : (buffered.stem.event_max_seconds ?? ambienceTiming.laterEventSeconds[1]);
-    this.eventTimer = window.setTimeout(
-      () => {
-        if (!this.context || !this.compressor || !this.playing || generation !== this.generation)
-          return;
-        const source = this.context.createBufferSource();
-        const gain = this.context.createGain();
-        const now = this.context.currentTime;
-        const eventStart = Math.min(
-          buffered.stem.loop_start_seconds,
-          Math.max(0, buffered.buffer.duration - 0.1),
-        );
-        const eventEnd = Math.min(
-          buffered.stem.loop_end_seconds ?? buffered.buffer.duration,
-          buffered.buffer.duration,
-        );
-        const eventDuration = Math.max(0.1, eventEnd - eventStart);
-        source.buffer = buffered.buffer;
-        source.connect(gain);
-        this.connectStem(gain, buffered.stem.role, this.compressor);
-        gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(buffered.stem.default_gain, now + 0.3);
-        gain.gain.setValueAtTime(
-          buffered.stem.default_gain,
-          Math.max(now + 0.3, now + eventDuration - 0.8),
-        );
-        gain.gain.linearRampToValueAtTime(0, now + eventDuration);
-        source.start(now, eventStart, eventDuration);
-        this.sources.add(source);
-        source.onended = () => this.sources.delete(source);
-        this.onEvent();
-        this.scheduleEvent(buffered, generation, false);
-      },
-      randomEventDelayMs(minimum, maximum),
+  async triggerEvent() {
+    const buffered = this.buffers.find(({ stem }) => stem.role === "event");
+    if (!buffered || !this.context || !this.compressor || !this.profile) return false;
+    await this.resumeFromGesture();
+    if (this.manualEventSource) {
+      const outgoing = this.manualEventSource;
+      this.manualEventSource = null;
+      this.sources.delete(outgoing);
+      outgoing.onended = null;
+      try {
+        outgoing.stop();
+      } catch {
+        // The previous one-shot may have ended between the click and restart.
+      }
+      outgoing.disconnect();
+    }
+    const generation = this.generation;
+    const source = this.context.createBufferSource();
+    const gain = this.context.createGain();
+    const now = this.context.currentTime;
+    const eventStart = Math.min(
+      buffered.stem.loop_start_seconds,
+      Math.max(0, buffered.buffer.duration - 0.1),
     );
+    const eventEnd = Math.min(
+      buffered.stem.loop_end_seconds ?? buffered.buffer.duration,
+      buffered.buffer.duration,
+    );
+    const eventDuration = Math.max(0.1, eventEnd - eventStart);
+    source.buffer = buffered.buffer;
+    source.connect(gain);
+    this.connectStem(gain, buffered.stem.role, this.compressor);
+    if (!this.playing && this.master) {
+      this.master.gain.cancelScheduledValues(now);
+      this.master.gain.setValueAtTime(this.master.gain.value, now);
+      this.master.gain.linearRampToValueAtTime(
+        ambienceGain(this.level, this.profile.max_master_gain),
+        now + 0.12,
+      );
+    }
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(buffered.stem.default_gain, now + 0.3);
+    gain.gain.setValueAtTime(
+      buffered.stem.default_gain,
+      Math.max(now + 0.3, now + eventDuration - 0.8),
+    );
+    gain.gain.linearRampToValueAtTime(0, now + eventDuration);
+    this.manualEventSource = source;
+    this.sources.add(source);
+    this.onEventPlaying(true);
+    this.onEvent();
+    source.onended = () => {
+      this.sources.delete(source);
+      if (generation !== this.generation || this.manualEventSource !== source) return;
+      this.manualEventSource = null;
+      this.onEventPlaying(false);
+      if (!this.playing) this.rampMaster(180);
+    };
+    source.start(now, eventStart, eventDuration);
+    return true;
   }
 
   private stopSources(milliseconds: number) {
@@ -272,6 +345,8 @@ export class AmbienceEngine {
     this.loopTimers.clear();
     if (this.eventTimer != null) window.clearTimeout(this.eventTimer);
     this.eventTimer = null;
+    this.manualEventSource = null;
+    this.onEventPlaying(false);
     if (this.context && this.master) {
       const now = this.context.currentTime;
       this.master.gain.cancelScheduledValues(now);
