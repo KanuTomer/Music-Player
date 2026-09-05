@@ -13,6 +13,7 @@ import { JagahExplorer } from "@/components/JagahExplorer";
 import { InfoPlaceholderDialog } from "@/components/InfoPlaceholderDialog";
 import { useJagahNavigation } from "@/hooks/useJagahNavigation";
 import { AmbienceBackdrop } from "@/components/room/AmbienceBackdrop";
+import { AmbienceEventButton } from "@/components/room/AmbienceEventButton";
 import { LiveChat } from "@/components/room/LiveChat";
 import { useSupportAutoPrompt } from "@/hooks/useSupportPrompt";
 import { useRoomAnalytics } from "@/hooks/useRoomAnalytics";
@@ -179,6 +180,7 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
         />
 
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex flex-col items-center gap-2 px-2 pb-[env(safe-area-inset-bottom)] sm:gap-3 sm:px-4">
+          <AmbienceEventButton sceneSlug={scene.slug} />
           <LiveChat roomKey="global-chat" roomName={scene.title_en} inlineLauncher />
           <FullCassettePlayer />
           <button

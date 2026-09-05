@@ -66,6 +66,8 @@ type PlayerState = {
   ambienceStatus: AmbienceStatus;
   ambienceActive: boolean;
   ambienceEventPulse: number;
+  ambienceEventReady: boolean;
+  ambienceEventPlaying: boolean;
   openRoom: (room: RoomPayload) => void;
   toggle: () => void;
   next: () => void;
@@ -74,6 +76,7 @@ type PlayerState = {
   setMusicVolume: (v: number) => void;
   setAmbienceLevel: (level: number) => void;
   toggleAmbience: () => void;
+  triggerAmbienceEvent: () => Promise<boolean>;
   start: () => void;
   fadeForThemeChange: () => Promise<void>;
   leave: () => void;
@@ -142,11 +145,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [ambienceEnabled, setAmbienceEnabled] = useState(false);
   const [nowPlaying, setNowPlaying] = useState<NowPlaying>(emptyNowPlaying);
   const track = playlist[index]?.track ?? null;
-  const ambience = useAmbienceEngine(
-    room,
-    ambienceEnabled && !needsGate,
-    ambienceLevel,
-  );
+  const ambience = useAmbienceEngine(room, ambienceEnabled && !needsGate, ambienceLevel);
   const resumeAmbienceFromGesture = ambience.resumeFromGesture;
 
   const setPlayerOutputVolume = useCallback((player: YTPlayer, value: number) => {
@@ -451,6 +450,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setAmbienceLevelState(next.level);
     if (next.enabled) void resumeAmbienceFromGesture();
   }, [ambienceEnabled, ambienceLevel, resumeAmbienceFromGesture]);
+  const triggerAmbienceEvent = useCallback(() => ambience.triggerEvent(), [ambience]);
   const fadeForThemeChange = useCallback(() => {
     const player = playerRef.current;
     if (!player || !readyRef.current || !isPlaying) {
@@ -507,6 +507,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     ambienceStatus: ambience.status,
     ambienceActive: ambience.active,
     ambienceEventPulse: ambience.eventPulse,
+    ambienceEventReady: ambience.eventReady,
+    ambienceEventPlaying: ambience.eventPlaying,
     openRoom,
     toggle,
     next,
@@ -515,6 +517,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setMusicVolume,
     setAmbienceLevel,
     toggleAmbience,
+    triggerAmbienceEvent,
     start,
     fadeForThemeChange,
     leave,

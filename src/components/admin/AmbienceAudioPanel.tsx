@@ -137,6 +137,8 @@ export function AmbienceAudioPanel({ scene, assets, onChanged }: Props) {
     try {
       const next = decodePcm16Wav(await file.arrayBuffer());
       const window = suggestedWindow(next, uploadRole);
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPreviewUrl("");
       setSourceFile(file);
       setDecoded(next);
       setTrim(window);
@@ -144,6 +146,32 @@ export function AmbienceAudioPanel({ scene, assets, onChanged }: Props) {
       setMessage("Preview and adjust the selected source segment before publishing.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to read WAV file");
+    }
+  }
+
+  function clearPreview() {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl("");
+  }
+
+  async function previewSelection() {
+    if (!decoded) return;
+    setBusy("Preparing preview");
+    setMessage("");
+    try {
+      const prepared = prepareAmbienceWav(
+        decoded,
+        uploadRole,
+        trim.startSeconds,
+        trim.durationSeconds,
+      );
+      clearPreview();
+      setPreviewUrl(URL.createObjectURL(prepared.blob));
+      setMessage("Preview ready. Listen to it below, then adjust the segment or publish it.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to prepare preview");
+    } finally {
+      setBusy(null);
     }
   }
 
@@ -395,6 +423,7 @@ export function AmbienceAudioPanel({ scene, assets, onChanged }: Props) {
                 const role = event.target.value as AmbienceRole;
                 setUploadRole(role);
                 if (decoded) setTrim(suggestedWindow(decoded, role));
+                clearPreview();
               }}
             >
               {roles.map((role) => (
@@ -440,9 +469,10 @@ export function AmbienceAudioPanel({ scene, assets, onChanged }: Props) {
                   max={Math.max(0, decoded.durationSeconds - 0.1)}
                   step={0.1}
                   value={trim.startSeconds}
-                  onChange={(event) =>
-                    setTrim((current) => ({ ...current, startSeconds: value(event) }))
-                  }
+                  onChange={(event) => {
+                    setTrim((current) => ({ ...current, startSeconds: value(event) }));
+                    clearPreview();
+                  }}
                 />
               </label>
               <label className="text-sm">
@@ -454,26 +484,43 @@ export function AmbienceAudioPanel({ scene, assets, onChanged }: Props) {
                   max={ambienceProcessing.maxDurationSeconds[uploadRole]}
                   step={0.1}
                   value={trim.durationSeconds}
-                  onChange={(event) =>
-                    setTrim((current) => ({ ...current, durationSeconds: value(event) }))
-                  }
+                  onChange={(event) => {
+                    setTrim((current) => ({ ...current, durationSeconds: value(event) }));
+                    clearPreview();
+                  }}
                 />
               </label>
             </div>
-            <button
-              className="mt-3 rounded bg-emerald-600 px-3 py-2 text-sm font-semibold text-zinc-950 disabled:opacity-60"
-              disabled={!!busy || !uploadName.trim()}
-              onClick={() => void publishUpload()}
-            >
-              {busy === "Processing and uploading sound" ? (
-                <>
-                  <Loader2 className="mr-1 inline size-4 animate-spin" />
-                  Processing and uploading…
-                </>
-              ) : (
-                "Process and publish sound"
-              )}
-            </button>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                className="rounded border border-emerald-700 px-3 py-2 text-sm font-semibold text-emerald-300 disabled:opacity-60"
+                disabled={!!busy}
+                onClick={() => void previewSelection()}
+              >
+                {busy === "Preparing preview" ? (
+                  <>
+                    <Loader2 className="mr-1 inline size-4 animate-spin" />
+                    Preparing preview…
+                  </>
+                ) : (
+                  "Preview selected segment"
+                )}
+              </button>
+              <button
+                className="rounded bg-emerald-600 px-3 py-2 text-sm font-semibold text-zinc-950 disabled:opacity-60"
+                disabled={!!busy || !uploadName.trim()}
+                onClick={() => void publishUpload()}
+              >
+                {busy === "Processing and uploading sound" ? (
+                  <>
+                    <Loader2 className="mr-1 inline size-4 animate-spin" />
+                    Processing and uploading…
+                  </>
+                ) : (
+                  "Process and publish sound"
+                )}
+              </button>
+            </div>
           </div>
         ) : null}
         {previewUrl ? (
