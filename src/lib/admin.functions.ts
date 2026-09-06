@@ -65,6 +65,7 @@ export const saveAdminAmbienceProfile = createServerFn({ method: "POST" })
       sceneId: string;
       enabled: boolean;
       maxMasterGain: number;
+      musicDuckRatio: number;
       fadeInMs: number;
       fadeOutMs: number;
       audioTheme: unknown;
