@@ -10,14 +10,14 @@ export function clampCassetteProgress(progress: number) {
 export function cassetteTapeRadii(progress: number) {
   const normalized = clampCassetteProgress(progress);
   return {
-    left: 61 + 73 * Math.sqrt(1 - normalized),
-    right: 61 + 73 * Math.sqrt(normalized),
+    left: 82 + 68 * Math.sqrt(1 - normalized),
+    right: 82 + 68 * Math.sqrt(normalized),
   };
 }
 
 export function cassetteReelRotationSeconds(tapeRadius: number) {
-  const radius = Number.isFinite(tapeRadius) ? Math.min(134, Math.max(61, tapeRadius)) : 61;
-  return (radius / 61) * 2.4;
+  const radius = Number.isFinite(tapeRadius) ? Math.min(150, Math.max(82, tapeRadius)) : 82;
+  return (radius / 82) * 3.2;
 }
 
 export function cassettePrinted(value: string | undefined, fallback: string, limit: number) {

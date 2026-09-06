@@ -75,6 +75,7 @@ type PlayerState = {
   track: QueueItem["track"] | null;
   isPlaying: boolean;
   musicReady: boolean;
+  musicTransitioning: boolean;
   musicBlocked: boolean;
   isCuratedPlaylist: boolean;
   nowPlaying: NowPlaying;
@@ -89,8 +90,9 @@ type PlayerState = {
   ambienceEventPlaying: boolean;
   openRoom: (room: RoomPayload) => void;
   toggle: () => void;
-  next: () => void;
-  previous: () => void;
+  next: (options?: TrackChangeOptions) => void;
+  previous: (options?: TrackChangeOptions) => void;
+  cancelPendingTrackChange: () => void;
   seek: (seconds: number) => void;
   setMusicVolume: (v: number) => void;
   toggleAmbience: () => void;
@@ -98,6 +100,11 @@ type PlayerState = {
   start: () => void;
   fadeForThemeChange: () => Promise<void>;
   leave: () => void;
+};
+
+type TrackChangeOptions = {
+  delayMs?: number;
+  forcePlay?: boolean;
 };
 const PlayerContext = createContext<PlayerState | null>(null);
 declare global {
@@ -143,6 +150,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const fadeTimerRef = useRef<number | null>(null);
   const volumeRampTimerRef = useRef<number | null>(null);
   const playRetryTimerRef = useRef<number | null>(null);
+  const delayedAdvanceTimerRef = useRef<number | null>(null);
+  const delayedAdvanceShouldPlayRef = useRef(false);
   const themeTransitionRef = useRef(false);
   const queueRef = useRef<QueueItem[]>([]);
   const indexRef = useRef(0);
@@ -159,6 +168,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [index, setIndexState] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [musicReady, setMusicReady] = useState(false);
+  const [musicTransitioning, setMusicTransitioning] = useState(false);
   const [musicBlocked, setMusicBlocked] = useState(false);
   const [apiReady, setApiReady] = useState(false);
   const [musicVolume, setMusicVol] = useState(0.7);
@@ -325,6 +335,42 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       if (player && readyRef.current) cueCurrent(player, intendPlayRef.current);
     },
     [cueCurrent, setIndex],
+  );
+  const cancelPendingTrackChange = useCallback(() => {
+    if (delayedAdvanceTimerRef.current == null) return;
+    window.clearTimeout(delayedAdvanceTimerRef.current);
+    delayedAdvanceTimerRef.current = null;
+    setMusicTransitioning(false);
+    if (!delayedAdvanceShouldPlayRef.current) return;
+    delayedAdvanceShouldPlayRef.current = false;
+    intendPlayRef.current = true;
+    setIsPlaying(true);
+    if (readyRef.current) playerRef.current?.playVideo();
+  }, []);
+  const requestAdvance = useCallback(
+    (delta: number, options?: TrackChangeOptions) => {
+      const delayMs = Math.max(0, options?.delayMs ?? 0);
+      if (delayMs === 0) {
+        advance(delta);
+        return;
+      }
+      if (delayedAdvanceTimerRef.current != null) return;
+
+      delayedAdvanceShouldPlayRef.current = options?.forcePlay || intendPlayRef.current;
+      intendPlayRef.current = false;
+      playerRef.current?.pauseVideo();
+      setIsPlaying(false);
+      setMusicTransitioning(true);
+      delayedAdvanceTimerRef.current = window.setTimeout(() => {
+        delayedAdvanceTimerRef.current = null;
+        const shouldPlay = delayedAdvanceShouldPlayRef.current;
+        delayedAdvanceShouldPlayRef.current = false;
+        intendPlayRef.current = shouldPlay;
+        setMusicTransitioning(false);
+        advance(delta);
+      }, delayMs);
+    },
+    [advance],
   );
   const reportFailure = useCallback((sourceId: string, errorCode: number) => {
     void reportPlaybackSourceFailure({ data: { sourceId, errorCode } }).catch(() => {
@@ -499,6 +545,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const openRoom = useCallback(
     (nextRoom: RoomPayload) => {
       if (room?.scene.slug === nextRoom.scene.slug) return;
+      if (delayedAdvanceTimerRef.current != null) {
+        window.clearTimeout(delayedAdvanceTimerRef.current);
+        delayedAdvanceTimerRef.current = null;
+        delayedAdvanceShouldPlayRef.current = false;
+        setMusicTransitioning(false);
+      }
       ambienceSuppressedRef.current = false;
       intendPlayRef.current = true;
       setIsPlaying(false);
@@ -551,8 +603,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       else playerRef.current?.playVideo();
     }
   }, [isPlaying, resumeAmbienceFromGesture, room?.ambience]);
-  const next = useCallback(() => advance(1), [advance]);
-  const previous = useCallback(() => advance(-1), [advance]);
+  const next = useCallback(
+    (options?: TrackChangeOptions) => requestAdvance(1, options),
+    [requestAdvance],
+  );
+  const previous = useCallback(
+    (options?: TrackChangeOptions) => requestAdvance(-1, options),
+    [requestAdvance],
+  );
   const seek = useCallback((seconds: number) => {
     if (readyRef.current) playerRef.current?.seekTo(Math.max(0, seconds), true);
   }, []);
@@ -606,6 +664,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     });
   }, [isPlaying, setPlayerOutputVolume]);
   const leave = useCallback(() => {
+    if (delayedAdvanceTimerRef.current != null) {
+      window.clearTimeout(delayedAdvanceTimerRef.current);
+      delayedAdvanceTimerRef.current = null;
+    }
+    delayedAdvanceShouldPlayRef.current = false;
+    setMusicTransitioning(false);
     generationRef.current += 1;
     readyRef.current = false;
     intendPlayRef.current = false;
@@ -625,6 +689,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     track,
     isPlaying,
     musicReady,
+    musicTransitioning,
     musicBlocked,
     isCuratedPlaylist: Boolean(room),
     nowPlaying,
@@ -641,6 +706,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     toggle,
     next,
     previous,
+    cancelPendingTrackChange,
     seek,
     setMusicVolume,
     toggleAmbience,
