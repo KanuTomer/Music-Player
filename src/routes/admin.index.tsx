@@ -1,5 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ChevronDown, Loader2, UserRound } from "lucide-react";
+import { AmbienceAudioPanel } from "@/components/admin/AmbienceAudioPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { retainComparedSceneIds, sortComparedAnalytics } from "@/lib/admin-analytics";
 import {
@@ -11,7 +13,7 @@ import {
 } from "@/lib/admin.functions";
 
 type Range = "7d" | "30d" | "all";
-type Section = "songs" | "analytics";
+type Section = "songs" | "analytics" | "ambience";
 type Draft = {
   input: string;
   title: string;
@@ -31,7 +33,46 @@ type Track = {
   sourceUrl: string;
   sharedActiveUses: number;
 };
-type Scene = { id: string; slug: string; title: string; queueId: string; tracks: Track[] };
+type AmbienceStem = {
+  id: string;
+  name: string;
+  role: "base" | "texture" | "event";
+  assetId: string;
+  isActive: boolean;
+  sortOrder: number;
+  defaultVolume: number;
+  minGain: number;
+  maxGain: number;
+  crossfadeMs: number;
+  loopStartSeconds: number;
+  loopEndSeconds: number | null;
+  eventMinSeconds: number | null;
+  eventMaxSeconds: number | null;
+};
+type Ambience = {
+  id: string;
+  enabled: boolean;
+  maxMasterGain: number;
+  fadeInMs: number;
+  fadeOutMs: number;
+  audioTheme: Record<string, Record<string, number>>;
+  stems: AmbienceStem[];
+};
+type Asset = {
+  id: string;
+  storagePath: string;
+  byteSize: number;
+  durationSeconds: number;
+  publicUrl: string;
+};
+type Scene = {
+  id: string;
+  slug: string;
+  title: string;
+  queueId: string;
+  tracks: Track[];
+  ambience: Ambience | null;
+};
 type Analytics = {
   sceneId: string;
   title: string;
@@ -51,7 +92,14 @@ function AdminPage() {
   const [range, setRange] = useState<Range>("30d");
   const [scenes, setScenes] = useState<Scene[]>([]);
   const [analytics, setAnalytics] = useState<Analytics[]>([]);
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [identity, setIdentity] = useState<{
+    email: string;
+    displayName: string | null;
+    avatarUrl: string | null;
+  } | null>(null);
   const [selectedSlug, setSelectedSlug] = useState("");
+  const [expandedSlug, setExpandedSlug] = useState("");
   const [comparedSceneIds, setComparedSceneIds] = useState<string[]>([]);
   const [section, setSection] = useState<Section>("songs");
   const [selected, setSelected] = useState<string[]>([]);
@@ -60,22 +108,35 @@ function AdminPage() {
   const [edit, setEdit] = useState<Track | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [busyAction, setBusyAction] = useState("");
+  const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [songPage, setSongPage] = useState(0);
   const selectedSlugRef = useRef(selectedSlug);
 
   const current = scenes.find((scene) => scene.slug === selectedSlug) ?? scenes[0];
+  const totalTracks = current?.tracks.length ?? 0;
+  const pageCount = Math.max(1, Math.ceil(totalTracks / rowsPerPage));
+  const activeSongPage = Math.min(songPage, pageCount - 1);
+  const pageTracks =
+    current?.tracks.slice(activeSongPage * rowsPerPage, (activeSongPage + 1) * rowsPerPage) ?? [];
   const comparedAnalytics = sortComparedAnalytics(analytics, comparedSceneIds);
   const singleComparedAnalytics = comparedAnalytics.length === 1 ? comparedAnalytics[0] : null;
 
   function selectJagah(slug: string) {
-    if (slug === current?.slug) return;
+    if (slug === current?.slug) {
+      setExpandedSlug((previous) => (previous === slug ? "" : slug));
+      return;
+    }
     const nextScene = scenes.find((scene) => scene.slug === slug);
     setSelectedSlug(slug);
+    setExpandedSlug(slug);
     setComparedSceneIds(nextScene ? [nextScene.id] : []);
     setSection("songs");
     setSelected([]);
     setUrls("");
     setDrafts([]);
     setEdit(null);
+    setSongPage(0);
     setMessage("");
   }
 
@@ -85,6 +146,7 @@ function AdminPage() {
 
   const load = useCallback(async () => {
     setBusy(true);
+    setBusyAction("Loading admin data");
     try {
       const { data } = await supabase.auth.getSession();
       if (!data.session) {
@@ -94,6 +156,8 @@ function AdminPage() {
       const result = await getAdminData({ data: { range } });
       setScenes(result.scenes as Scene[]);
       setAnalytics(result.analytics as Analytics[]);
+      setAssets(result.assets as Asset[]);
+      setIdentity(result.identity);
       setSelectedSlug((previous) => previous || result.scenes[0]?.slug || "");
       setComparedSceneIds((previous) => {
         const defaultScene =
@@ -105,6 +169,7 @@ function AdminPage() {
         );
       });
       setSelected([]);
+      setExpandedSlug((previous) => previous || result.scenes[0]?.slug || "");
       setMessage("");
     } catch (error) {
       const text = error instanceof Error ? error.message : "Unable to load admin data";
@@ -123,6 +188,7 @@ function AdminPage() {
       setMessage(text);
     } finally {
       setBusy(false);
+      setBusyAction("");
     }
   }, [navigate, range]);
 
@@ -143,6 +209,7 @@ function AdminPage() {
       .filter(Boolean);
     if (!inputs.length) return;
     setBusy(true);
+    setBusyAction("Previewing import");
     try {
       setDrafts(await previewAdminSongs({ data: { inputs } }));
       setMessage("Review the imported metadata before saving.");
@@ -150,12 +217,14 @@ function AdminPage() {
       setMessage(error instanceof Error ? error.message : "Unable to preview songs");
     } finally {
       setBusy(false);
+      setBusyAction("");
     }
   }
 
   async function saveDrafts() {
     if (!current || !drafts.length) return;
     setBusy(true);
+    setBusyAction("Adding songs");
     try {
       await addAdminSongs({ data: { queueId: current.queueId, songs: drafts } });
       setUrls("");
@@ -166,6 +235,7 @@ function AdminPage() {
       setMessage(error instanceof Error ? error.message : "Unable to add songs");
     } finally {
       setBusy(false);
+      setBusyAction("");
     }
   }
 
@@ -177,6 +247,7 @@ function AdminPage() {
     )
       return;
     setBusy(true);
+    setBusyAction("Removing songs");
     try {
       await removeAdminSongs({ data: { queueId: current.queueId, membershipIds: selected } });
       await load();
@@ -185,6 +256,7 @@ function AdminPage() {
       setMessage(error instanceof Error ? error.message : "Unable to remove songs");
     } finally {
       setBusy(false);
+      setBusyAction("");
     }
   }
 
@@ -200,6 +272,7 @@ function AdminPage() {
         ? "local"
         : "shared";
     setBusy(true);
+    setBusyAction("Saving song");
     try {
       await updateAdminSong({
         data: {
@@ -222,22 +295,50 @@ function AdminPage() {
       setMessage(error instanceof Error ? error.message : "Unable to update the song");
     } finally {
       setBusy(false);
+      setBusyAction("");
     }
   }
 
   return (
-    <main className="min-h-dvh bg-zinc-950 p-4 text-zinc-100 md:p-8">
+    <main
+      className="min-h-dvh bg-zinc-950 p-4 text-zinc-100 [&_button]:cursor-pointer [&_button:disabled]:cursor-not-allowed md:p-8"
+      aria-busy={busy}
+    >
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-zinc-700 pb-4">
         <div>
           <h1 className="text-xl font-bold">Sainik Dhaba admin</h1>
           <p className="text-sm text-amber-300">Catalogue and analytics</p>
         </div>
-        <button
-          className="rounded border border-zinc-600 px-3 py-2 text-sm"
-          onClick={() => void supabase.auth.signOut().then(() => navigate({ to: "/admin/login" }))}
-        >
-          Log out
-        </button>
+        <details className="relative">
+          <summary className="flex list-none items-center gap-2 rounded border border-zinc-600 px-3 py-2 text-sm">
+            {identity?.avatarUrl ? (
+              <img className="size-6 rounded-full" src={identity.avatarUrl} alt="" />
+            ) : (
+              <span className="grid size-6 place-items-center rounded-full bg-amber-600 text-xs font-bold text-zinc-950">
+                {(identity?.displayName ?? identity?.email ?? "A").slice(0, 1).toUpperCase()}
+              </span>
+            )}
+            <span className="max-w-44 truncate">
+              {identity?.displayName ?? identity?.email ?? "Administrator"}
+            </span>
+            <ChevronDown className="size-4" />
+          </summary>
+          <div className="absolute right-0 z-20 mt-2 w-64 rounded border border-zinc-700 bg-zinc-900 p-3 shadow-xl">
+            <div className="flex items-center gap-2 text-sm">
+              <UserRound className="size-4 text-amber-300" />
+              <span className="truncate">{identity?.email ?? "Administrator"}</span>
+            </div>
+            <p className="mt-2 text-xs text-zinc-400">Administrator account</p>
+            <button
+              className="mt-3 w-full rounded border border-zinc-600 px-3 py-2 text-sm"
+              onClick={() =>
+                void supabase.auth.signOut().then(() => navigate({ to: "/admin/login" }))
+              }
+            >
+              Log out
+            </button>
+          </div>
+        </details>
       </header>
       <section className="grid gap-6 lg:grid-cols-[15rem_minmax(0,1fr)]">
         <nav aria-label="Jagah administration">
@@ -248,17 +349,17 @@ function AdminPage() {
                 <button
                   type="button"
                   className={`flex min-h-11 w-full items-center justify-between gap-2 rounded border px-3 py-2 text-left text-sm disabled:opacity-60 ${current?.id === scene.id ? "border-amber-500 bg-zinc-800" : "border-zinc-700 hover:bg-zinc-900"}`}
-                  aria-expanded={current?.id === scene.id}
+                  aria-expanded={expandedSlug === scene.slug}
                   aria-controls={`jagah-menu-${scene.id}`}
                   disabled={busy}
                   onClick={() => selectJagah(scene.slug)}
                 >
                   <span>{scene.title}</span>
                   <span aria-hidden className="text-zinc-400">
-                    {current?.id === scene.id ? "▾" : "▸"}
+                    {expandedSlug === scene.slug ? "▾" : "▸"}
                   </span>
                 </button>
-                {current?.id === scene.id ? (
+                {expandedSlug === scene.slug ? (
                   <ul
                     id={`jagah-menu-${scene.id}`}
                     className="mt-1 ml-3 space-y-1 border-l border-zinc-700 pl-2"
@@ -267,6 +368,7 @@ function AdminPage() {
                       [
                         { id: "songs", label: "Songs" },
                         { id: "analytics", label: "Analytics" },
+                        { id: "ambience", label: "Ambience audio" },
                       ] as const
                     ).map((item) => (
                       <li key={item.id}>
@@ -281,7 +383,7 @@ function AdminPage() {
                         </button>
                       </li>
                     ))}
-                    {["Ambience audio", "Background", "Ambience visual"].map((label) => (
+                    {["Background", "Ambience visual"].map((label) => (
                       <li key={label}>
                         <button
                           type="button"
@@ -306,9 +408,16 @@ function AdminPage() {
         </nav>
         <div className="min-w-0">
           <p className="mb-3 text-sm text-zinc-400">
-            Jagahs / {current?.title ?? "…"} / {section === "songs" ? "Songs" : "Analytics"}
+            Jagahs / {current?.title ?? "…"} /{" "}
+            {section === "songs"
+              ? "Songs"
+              : section === "analytics"
+                ? "Analytics"
+                : "Ambience audio"}
           </p>
-          {section === "analytics" ? (
+          {section === "ambience" && current ? (
+            <AmbienceAudioPanel scene={current} assets={assets} onChanged={load} />
+          ) : section === "analytics" ? (
             <section aria-labelledby="jagah-analytics-title">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <h2 id="jagah-analytics-title" className="font-semibold">
@@ -443,7 +552,7 @@ function AdminPage() {
                   disabled={busy}
                   onClick={() => void preview()}
                 >
-                  Preview import
+                  {busyAction === "Previewing import" ? "Previewing…" : "Preview import"}
                 </button>
                 {drafts.length ? (
                   <div className="mt-4 space-y-2">
@@ -504,7 +613,9 @@ function AdminPage() {
                       disabled={busy}
                       onClick={() => void saveDrafts()}
                     >
-                      Add {drafts.length} song(s)
+                      {busyAction === "Adding songs"
+                        ? "Adding songs…"
+                        : `Add ${drafts.length} song(s)`}
                     </button>
                   </div>
                 ) : null}
@@ -514,18 +625,25 @@ function AdminPage() {
                 <div className="flex gap-2">
                   <button
                     className="rounded border border-zinc-600 px-3 py-2 text-sm"
+                    disabled={busy || !totalTracks}
                     onClick={() =>
-                      setSelected(current?.tracks.map((track) => track.membershipId) ?? [])
+                      setSelected(
+                        selected.length === totalTracks
+                          ? []
+                          : (current?.tracks.map((track) => track.membershipId) ?? []),
+                      )
                     }
                   >
-                    Select all
+                    {selected.length === totalTracks && totalTracks
+                      ? "Deselect all"
+                      : `Select all (${totalTracks})`}
                   </button>
                   <button
                     className="rounded bg-red-700 px-3 py-2 text-sm disabled:opacity-60"
                     disabled={!selected.length || busy}
                     onClick={() => void removeSelected()}
                   >
-                    Remove selected
+                    {busyAction === "Removing songs" ? "Removing…" : "Remove selected"}
                   </button>
                 </div>
               </div>
@@ -542,7 +660,7 @@ function AdminPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {current?.tracks.map((track) => (
+                    {pageTracks.map((track) => (
                       <tr key={track.membershipId} className="border-b border-zinc-800">
                         <td className="p-2">
                           <input
@@ -590,6 +708,45 @@ function AdminPage() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm text-zinc-400">
+                <label className="flex items-center gap-2">
+                  Rows
+                  <select
+                    className="rounded border border-zinc-600 bg-zinc-900 p-2 text-zinc-100"
+                    value={rowsPerPage}
+                    disabled={busy}
+                    onChange={(event) => {
+                      setRowsPerPage(Number(event.target.value));
+                      setSongPage(0);
+                    }}
+                  >
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                  </select>
+                </label>
+                <span>
+                  {totalTracks
+                    ? `${activeSongPage * rowsPerPage + 1}–${Math.min(totalTracks, (activeSongPage + 1) * rowsPerPage)} of ${totalTracks}`
+                    : "No songs"}
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    className="rounded border border-zinc-600 px-3 py-2"
+                    disabled={busy || activeSongPage === 0}
+                    onClick={() => setSongPage((page) => Math.max(0, page - 1))}
+                  >
+                    Previous
+                  </button>
+                  <button
+                    className="rounded border border-zinc-600 px-3 py-2"
+                    disabled={busy || activeSongPage >= pageCount - 1}
+                    onClick={() => setSongPage((page) => Math.min(pageCount - 1, page + 1))}
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             </section>
           )}
@@ -650,7 +807,14 @@ function AdminPage() {
               disabled={busy}
               type="submit"
             >
-              Save changes
+              {busyAction === "Saving song" ? (
+                <>
+                  <Loader2 className="mr-1 inline size-4 animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                "Save changes"
+              )}
             </button>
           </form>
         </div>
@@ -661,6 +825,15 @@ function AdminPage() {
           role="status"
         >
           {message}
+        </p>
+      ) : null}
+      {busyAction ? (
+        <p
+          className="fixed bottom-4 left-4 rounded bg-zinc-800 p-3 text-sm shadow-lg"
+          role="status"
+        >
+          <Loader2 className="mr-2 inline size-4 animate-spin" />
+          {busyAction}…
         </p>
       ) : null}
     </main>

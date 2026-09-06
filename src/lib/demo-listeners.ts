@@ -45,6 +45,6 @@ export function getOrCreateDemoListenerBaseline(
 export function combinedDemoListenerCount(baseline: number, presenceCount: number) {
   return Math.min(
     DEMO_LISTENER_MAX,
-    Math.max(DEMO_LISTENER_MIN, baseline + Math.max(0, Math.floor(presenceCount) - 1))
+    Math.max(DEMO_LISTENER_MIN, baseline + Math.max(0, Math.floor(presenceCount) - 1)),
   );
 }

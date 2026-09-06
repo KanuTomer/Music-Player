@@ -148,13 +148,13 @@ export function LiveChat({ roomKey, roomName, inlineLauncher = false }: LiveChat
                 m.session_display_name === newMsg.session_display_name &&
                 m.text === newMsg.text &&
                 Math.abs(new Date(m.created_at).getTime() - new Date(newMsg.created_at).getTime()) <
-                15000,
+                  15000,
             );
             if (isRecentOptimistic) {
               return prev.map((m) =>
                 m.session_display_name === newMsg.session_display_name &&
-                  m.text === newMsg.text &&
-                  Math.abs(new Date(m.created_at).getTime() - new Date(newMsg.created_at).getTime()) <
+                m.text === newMsg.text &&
+                Math.abs(new Date(m.created_at).getTime() - new Date(newMsg.created_at).getTime()) <
                   15000
                   ? newMsg
                   : m,
@@ -276,7 +276,9 @@ export function LiveChat({ roomKey, roomName, inlineLauncher = false }: LiveChat
             <span className="relative inline-flex rounded-full size-2 bg-amber-500"></span>
           </span>
           <MessageCircle className="size-4 shrink-0 text-cream/80 group-hover:text-amber" />
-          <span className="hidden font-vintage-deva text-[10px] tracking-wider uppercase sm:inline">Live Chat</span>
+          <span className="hidden font-vintage-deva text-[10px] tracking-wider uppercase sm:inline">
+            Live Chat
+          </span>
         </button>
       </div>
 

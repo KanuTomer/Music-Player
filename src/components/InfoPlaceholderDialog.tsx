@@ -43,11 +43,7 @@ const copy = {
   },
 } as const;
 
-export function InfoPlaceholderDialog({
-  kind,
-  open,
-  onOpenChange,
-}: InfoPlaceholderDialogProps) {
+export function InfoPlaceholderDialog({ kind, open, onOpenChange }: InfoPlaceholderDialogProps) {
   const [copied, setCopied] = useState(false);
   const content = copy[kind];
   const Icon = kind === "support" ? Heart : Lightbulb;

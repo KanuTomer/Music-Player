@@ -22,4 +22,3 @@ export const sceneArt: Record<string, string> = {
 export function artFor(key: string): string {
   return sceneArt[key] ?? punjabiDhaba;
 }
-

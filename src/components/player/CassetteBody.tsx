@@ -48,7 +48,9 @@ export function CassetteBody({ variant, isPlaying, label }: CassetteBodyProps) {
             >
               <span
                 className={`cassette-reel relative flex items-center justify-center rounded-full border-cinema-gold/70 bg-ink ${
-                  compact ? "size-3 border-[1px]" : "size-3.5 border-[1.5px] sm:size-4.5 border-[2px]"
+                  compact
+                    ? "size-3 border-[1px]"
+                    : "size-3.5 border-[1.5px] sm:size-4.5 border-[2px]"
                 } ${isPlaying ? "cassette-reel-playing" : ""}`}
               >
                 <span className="cassette-reel-hole cassette-reel-hole-a" />

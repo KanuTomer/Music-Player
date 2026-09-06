@@ -6,16 +6,14 @@ export const ambienceTiming = {
   pauseFadeMs: 300,
   resumeFadeMs: 250,
   defaultSwitchOutMs: 700,
-  firstEventSeconds: [20, 50] as const,
-  laterEventSeconds: [35, 110] as const,
   meanderSeconds: [12, 24] as const,
 };
 
 export const musicDuckRatio = 0.4;
 
-// Ambience is intentionally an on/off experience. Adjust this fixed mix level
-// when tuning the overall environmental sound without exposing a user slider.
-export const fixedAmbienceLevel = 150;
+// The per-Jagah master gain is managed by the admin panel; this is the fixed
+// listener-level multiplier used when ambience is enabled.
+export const fixedAmbienceLevel = 100;
 export const ambienceVisualsEnabled = false;
 
 export function effectiveMusicVolume(userVolume: number, ambienceActive: boolean) {
@@ -196,7 +194,52 @@ export class AmbienceEngine {
     for (const buffered of this.buffers.filter(({ stem }) => stem.role !== "event")) {
       this.scheduleLoop(buffered, this.context.currentTime + 0.05, generation);
     }
+    for (const buffered of this.buffers.filter(({ stem }) => stem.role === "event"))
+      this.scheduleAutomaticEvent(buffered, generation);
     this.onStatus(ambienceLoadStatus(this.buffers.length, this.profile.stems.length, true));
+  }
+
+  private scheduleAutomaticEvent(buffered: BufferedStem, generation: number) {
+    const stem = buffered.stem;
+    const minimum = stem.event_min_seconds ?? 35;
+    const maximum = stem.event_max_seconds ?? Math.max(minimum, 110);
+    const schedule = () => {
+      if (generation !== this.generation || !this.playing) return;
+      const timer = window.setTimeout(
+        () => {
+          this.loopTimers.delete(timer);
+          if (generation !== this.generation || !this.playing) return;
+          this.playAutomaticEvent(buffered, generation);
+          schedule();
+        },
+        randomEventDelayMs(minimum, maximum),
+      );
+      this.loopTimers.add(timer);
+    };
+    schedule();
+  }
+
+  private playAutomaticEvent(buffered: BufferedStem, generation: number) {
+    const context = this.context;
+    const destination = this.compressor;
+    if (!context || !destination || generation !== this.generation || !this.playing) return;
+    const { stem, buffer } = buffered;
+    const source = context.createBufferSource();
+    const gain = context.createGain();
+    const start = Math.min(stem.loop_start_seconds, Math.max(0, buffer.duration - 0.1));
+    const end = Math.min(stem.loop_end_seconds ?? buffer.duration, buffer.duration);
+    const duration = Math.max(0.1, end - start);
+    source.buffer = buffer;
+    source.connect(gain);
+    this.connectStem(gain, stem.role, destination);
+    const now = context.currentTime;
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(stem.default_gain, now + Math.min(0.3, duration / 3));
+    gain.gain.setValueAtTime(stem.default_gain, Math.max(now + 0.3, now + duration - 0.8));
+    gain.gain.linearRampToValueAtTime(0, now + duration);
+    this.sources.add(source);
+    source.onended = () => this.sources.delete(source);
+    source.start(now, start, duration);
   }
 
   private scheduleLoop(buffered: BufferedStem, when: number, generation: number) {
@@ -210,7 +253,7 @@ export class AmbienceEngine {
     const crossfade = Math.min(loopDuration / 3, stem.crossfade_ms / 1000);
     const source = context.createBufferSource();
     const gain = context.createGain();
-    let target = randomBetween(stem.min_gain, stem.max_gain);
+    let target = Math.min(stem.max_gain, Math.max(stem.min_gain, stem.default_gain));
     source.buffer = buffer;
     source.connect(gain);
     this.connectStem(gain, stem.role, destination);
