@@ -35,11 +35,15 @@ export function UnsavedChangesBar({
   saving,
   onSave,
   onDiscard,
+  title,
+  description,
 }: {
   dirty: boolean;
   saving: boolean;
   onSave: () => void;
   onDiscard: () => void;
+  title?: string;
+  description?: string;
 }) {
   return (
     <div
@@ -52,10 +56,10 @@ export function UnsavedChangesBar({
     >
       <div>
         <p className={`text-sm font-semibold ${dirty ? "text-amber-300" : "text-zinc-300"}`}>
-          {dirty ? "Unsaved mix changes" : "All mix changes saved"}
+          {dirty ? (title ?? "Unsaved mix changes") : "All changes saved"}
         </p>
         <p className="text-xs text-zinc-400">
-          This save includes playback controls and Base, Texture, and Effect EQ.
+          {description ?? "This save includes playback controls and Base, Texture, and Effect EQ."}
         </p>
       </div>
       <div className="flex gap-2">

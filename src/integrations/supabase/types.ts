@@ -529,10 +529,12 @@ export type Database = {
       scenes: {
         Row: {
           art_key: string;
+          background_storage_path: string | null;
           category: string;
           chat_mode: string;
           created_at: string;
           description: string | null;
+          foreground_text_color: string;
           gag_label: string | null;
           hook: string;
           id: string;
@@ -549,10 +551,12 @@ export type Database = {
         };
         Insert: {
           art_key: string;
+          background_storage_path?: string | null;
           category?: string;
           chat_mode?: string;
           created_at?: string;
           description?: string | null;
+          foreground_text_color?: string;
           gag_label?: string | null;
           hook: string;
           id?: string;
@@ -569,10 +573,12 @@ export type Database = {
         };
         Update: {
           art_key?: string;
+          background_storage_path?: string | null;
           category?: string;
           chat_mode?: string;
           created_at?: string;
           description?: string | null;
+          foreground_text_color?: string;
           gag_label?: string | null;
           hook?: string;
           id?: string;

@@ -1,8 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Compass, Share2 } from "lucide-react";
 import { toast } from "sonner";
-import type { RoomPayload, Scene } from "@/lib/rooms.functions";
-import { artFor } from "@/lib/scene-art";
+import {
+  getRoomPresentation,
+  type RoomPayload,
+  type RoomPresentation,
+  type Scene,
+} from "@/lib/rooms.functions";
+import { backgroundFor } from "@/lib/scene-art";
 import { videoForScene } from "@/lib/scene-media";
 import { usePlayer } from "@/lib/player";
 import { forDaypart } from "@/lib/dayparts";
@@ -17,13 +22,32 @@ import { LiveChat } from "@/components/room/LiveChat";
 import { AmbienceEventButton } from "@/components/room/AmbienceEventButton";
 import { useSupportAutoPrompt } from "@/hooks/useSupportPrompt";
 import { useRoomAnalytics } from "@/hooks/useRoomAnalytics";
+import { supabase } from "@/integrations/supabase/client";
+import { isLightTextColor } from "@/lib/scene-presentation";
+import { useLiveScenes } from "@/hooks/useLiveScenes";
 
 export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Scene[] }) {
   const { scene, oneliners } = room;
+  const [presentation, setPresentation] = useState<RoomPresentation>({
+    scene_id: scene.id,
+    background_storage_path: scene.background_storage_path,
+    background_url: scene.background_url,
+    foreground_text_color: scene.foreground_text_color,
+    gag_label: scene.gag_label,
+    oneliners,
+  });
+  const liveScenes = useLiveScenes(scenes);
+  const liveScene = {
+    ...scene,
+    background_storage_path: presentation.background_storage_path,
+    background_url: presentation.background_url,
+    foreground_text_color: presentation.foreground_text_color,
+    gag_label: presentation.gag_label,
+  };
   const player = usePlayer();
   useRoomAnalytics(scene.slug, player.isPlaying);
   const social = useRoomSocial(`scene:${scene.slug}`);
-  const sceneVideo = videoForScene(scene.slug);
+  const sceneVideo = presentation.background_url ? null : videoForScene(scene.slug);
   const sceneVideoRef = useRef<HTMLVideoElement | null>(null);
   const explorerTriggerRef = useRef<HTMLButtonElement | null>(null);
   const [explorerOpen, setExplorerOpen] = useState(false);
@@ -39,6 +63,39 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
     player.openRoom(room);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room.scene.slug]);
+
+  useEffect(() => {
+    const refresh = () => {
+      void getRoomPresentation({ data: { sceneId: scene.id } })
+        .then((next) => {
+          if (next) setPresentation(next);
+        })
+        .catch(() => undefined);
+    };
+    const channel = supabase
+      .channel(`room-presentation:${scene.id}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "scenes", filter: `id=eq.${scene.id}` },
+        refresh,
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "oneliners",
+        },
+        (payload) => {
+          const record = payload.eventType === "DELETE" ? payload.old : payload.new;
+          if (record["scene_id"] === scene.id) refresh();
+        },
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [scene.id]);
 
   useEffect(() => {
     const video = sceneVideoRef.current;
@@ -60,7 +117,10 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
     };
   }, [scene.slug, sceneVideo]);
 
-  const lines = useMemo(() => forDaypart(oneliners, player.daypart), [oneliners, player.daypart]);
+  const lines = useMemo(
+    () => forDaypart(presentation.oneliners, player.daypart),
+    [player.daypart, presentation.oneliners],
+  );
 
   const share = async () => {
     const url = window.location.href;
@@ -95,7 +155,7 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
             ref={sceneVideoRef}
             key={scene.art_key}
             src={sceneVideo}
-            poster={artFor(scene.art_key)}
+            poster={backgroundFor(liveScene)}
             autoPlay
             preload="auto"
             muted
@@ -109,7 +169,7 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
         ) : (
           <img
             key={scene.art_key}
-            src={artFor(scene.art_key)}
+            src={backgroundFor(liveScene)}
             alt={`${scene.title_en} — ${scene.hook}`}
             width={1536}
             height={1024}
@@ -138,7 +198,11 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
         {!isCorporate && (
           <>
             <div
-              className="pointer-events-none absolute inset-x-0 top-0 h-48 sm:h-56 bg-gradient-to-b from-black/75 via-black/35 to-transparent z-10"
+              className={`pointer-events-none absolute inset-x-0 top-0 z-10 h-48 bg-gradient-to-b sm:h-56 ${
+                isLightTextColor(presentation.foreground_text_color)
+                  ? "from-black/75 via-black/35 to-transparent"
+                  : "from-white/55 via-white/20 to-transparent"
+              }`}
               aria-hidden
             />
             <div
@@ -207,7 +271,8 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
         {/* room title, signage-style, centred with high-contrast legibility */}
         <div className="pointer-events-none absolute inset-x-0 top-[clamp(4.5rem,9.5dvh,7rem)] z-20 flex flex-col items-center px-3 text-center pt-[env(safe-area-inset-top)]">
           <h1
-            className={`font-deva text-5xl sm:text-7xl md:text-[clamp(4rem,9.5dvh,7rem)] leading-[1.02] font-black text-cream ${isCorporate ? "" : "text-glow-dark"}`}
+            className="font-deva text-5xl leading-[1.02] font-black sm:text-7xl md:text-[clamp(4rem,9.5dvh,7rem)]"
+            style={{ color: presentation.foreground_text_color }}
           >
             {scene.title_hi}
           </h1>
@@ -216,7 +281,8 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
             aria-hidden
           />
           <p
-            className={`mt-1.5 sm:mt-2 text-sm sm:text-lg md:text-[clamp(1.1rem,2.5dvh,1.8rem)] font-black tracking-[0.3em] sm:tracking-[0.32em] text-cream uppercase ${isCorporate ? "" : "text-glow-dark"}`}
+            className="mt-1.5 text-sm font-black tracking-[0.3em] uppercase sm:mt-2 sm:text-lg sm:tracking-[0.32em] md:text-[clamp(1.1rem,2.5dvh,1.8rem)]"
+            style={{ color: presentation.foreground_text_color }}
           >
             {scene.title_en}
           </p>
@@ -227,21 +293,21 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
               lines={lines}
               active={active}
               trackKey={player.nowPlaying?.title ?? player.track?.title ?? null}
-              noShadow={isCorporate}
+              textColor={presentation.foreground_text_color}
             />
           </div>
         </div>
 
         <div className="pointer-events-none absolute inset-x-0 bottom-1.5 sm:bottom-2.5 z-30 flex flex-col items-center gap-2 px-2 pb-[env(safe-area-inset-bottom)] sm:gap-3 sm:px-4">
           <div className="pointer-events-auto flex w-full max-w-[min(92vw,27.5rem)] flex-wrap items-center justify-center gap-2">
-            <AmbienceEventButton sceneSlug={scene.slug} />
+            <AmbienceEventButton label={presentation.gag_label} />
           </div>
           <FullCassettePlayer />
         </div>
       </div>
 
       <JagahExplorer
-        scenes={scenes}
+        scenes={liveScenes}
         activeSlug={scene.slug}
         open={explorerOpen}
         onOpenChange={setExplorerOpen}

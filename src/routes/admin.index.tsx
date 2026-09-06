@@ -1,8 +1,10 @@
 import { createFileRoute, useBlocker, useNavigate } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronDown, Loader2, UserRound } from "lucide-react";
 import { DiscardChangesDialog } from "@/components/admin/AdminFormFeedback";
 import { AmbienceAudioPanel } from "@/components/admin/AmbienceAudioPanel";
+import { BackgroundPanel } from "@/components/admin/BackgroundPanel";
 import { supabase } from "@/integrations/supabase/client";
 import {
   retainComparedSceneIds,
@@ -13,14 +15,19 @@ import {
 import { hasAdminDraftChanges, sameAdminDraft } from "@/lib/admin-drafts";
 import {
   addAdminSongs,
-  getAdminData,
+  getAdminAmbienceData,
+  getAdminAnalyticsData,
+  getAdminBackgroundData,
+  getAdminBootstrapData,
+  getAdminSongsData,
   previewAdminSongs,
   removeAdminSongs,
   updateAdminSong,
 } from "@/lib/admin.functions";
+import type { AdminSceneSummary } from "@/lib/admin.server";
 
 type Range = "7d" | "30d" | "all";
-type Section = "songs" | "analytics" | "ambience";
+type Section = "songs" | "analytics" | "ambience" | "background";
 type Draft = {
   input: string;
   title: string;
@@ -73,14 +80,7 @@ type Asset = {
   durationSeconds: number;
   publicUrl: string;
 };
-type Scene = {
-  id: string;
-  slug: string;
-  title: string;
-  queueId: string;
-  tracks: Track[];
-  ambience: Ambience | null;
-};
+type Scene = AdminSceneSummary & { tracks: Track[]; ambience: Ambience | null };
 type Analytics = {
   sceneId: string;
   title: string;
@@ -92,20 +92,15 @@ type Analytics = {
 
 const seconds = (value: number) => `${Math.floor(value / 60)}m ${value % 60}s`;
 const ADMIN_SIGN_IN_NOTICE_KEY = "sainik-dhaba.admin.sign-in-notice";
+const EMPTY_SCENES: AdminSceneSummary[] = [];
 
 export const Route = createFileRoute("/admin/")({ component: AdminPage });
 
 function AdminPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [clientReady, setClientReady] = useState(false);
   const [range, setRange] = useState<Range>("30d");
-  const [scenes, setScenes] = useState<Scene[]>([]);
-  const [analytics, setAnalytics] = useState<Analytics[]>([]);
-  const [assets, setAssets] = useState<Asset[]>([]);
-  const [identity, setIdentity] = useState<{
-    email: string;
-    displayName: string | null;
-    avatarUrl: string | null;
-  } | null>(null);
   const [selectedSlug, setSelectedSlug] = useState("");
   const [expandedSlug, setExpandedSlug] = useState("");
   const [comparedSceneIds, setComparedSceneIds] = useState<string[]>([]);
@@ -116,6 +111,7 @@ function AdminPage() {
   const [edit, setEdit] = useState<Track | null>(null);
   const [editBaseline, setEditBaseline] = useState<Track | null>(null);
   const [ambienceDirty, setAmbienceDirty] = useState(false);
+  const [backgroundDirty, setBackgroundDirty] = useState(false);
   const [pendingTransition, setPendingTransition] = useState<(() => void | Promise<void>) | null>(
     null,
   );
@@ -124,10 +120,58 @@ function AdminPage() {
   const [busyAction, setBusyAction] = useState("");
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [songPage, setSongPage] = useState(0);
-  const selectedSlugRef = useRef(selectedSlug);
   const allowNextNavigationRef = useRef(false);
 
-  const current = scenes.find((scene) => scene.slug === selectedSlug) ?? scenes[0];
+  const bootstrapQuery = useQuery({
+    queryKey: ["admin", "bootstrap"],
+    queryFn: () => getAdminBootstrapData(),
+    staleTime: 60_000,
+    enabled: clientReady,
+  });
+  const scenes = bootstrapQuery.data?.scenes ?? EMPTY_SCENES;
+  const identity = bootstrapQuery.data?.identity ?? null;
+  const currentSummary = scenes.find((scene) => scene.slug === selectedSlug) ?? scenes[0];
+  const songsQuery = useQuery({
+    queryKey: ["admin", "songs", currentSummary?.id],
+    queryFn: () => getAdminSongsData({ data: { sceneId: currentSummary!.id } }),
+    enabled: Boolean(clientReady && currentSummary && section === "songs"),
+    staleTime: 30_000,
+  });
+  const analyticsQuery = useQuery({
+    queryKey: ["admin", "analytics", range],
+    queryFn: () => getAdminAnalyticsData({ data: { range } }),
+    enabled: clientReady && section === "analytics",
+    staleTime: 30_000,
+    placeholderData: (previous) => previous,
+  });
+  const ambienceQuery = useQuery({
+    queryKey: ["admin", "ambience", currentSummary?.id],
+    queryFn: () => getAdminAmbienceData({ data: { sceneId: currentSummary!.id } }),
+    enabled: Boolean(clientReady && currentSummary && section === "ambience"),
+    staleTime: 30_000,
+  });
+  const backgroundQuery = useQuery({
+    queryKey: ["admin", "background", currentSummary?.id],
+    queryFn: () => getAdminBackgroundData({ data: { sceneId: currentSummary!.id } }),
+    enabled: Boolean(clientReady && currentSummary && section === "background"),
+    staleTime: 30_000,
+  });
+  const current: Scene | undefined = currentSummary
+    ? {
+        ...currentSummary,
+        queueId: songsQuery.data?.queueId ?? currentSummary.queueId,
+        tracks: songsQuery.data?.tracks ?? [],
+        ambience: ambienceQuery.data?.ambience ?? null,
+      }
+    : undefined;
+  const analytics = (analyticsQuery.data ?? []) as Analytics[];
+  const assets = (ambienceQuery.data?.assets ?? []) as Asset[];
+  const sectionLoading =
+    bootstrapQuery.isPending ||
+    (section === "songs" && songsQuery.isFetching) ||
+    (section === "analytics" && analyticsQuery.isFetching) ||
+    (section === "ambience" && ambienceQuery.isFetching) ||
+    (section === "background" && backgroundQuery.isFetching);
   const totalTracks = current?.tracks.length ?? 0;
   const pageCount = Math.max(1, Math.ceil(totalTracks / rowsPerPage));
   const activeSongPage = Math.min(songPage, pageCount - 1);
@@ -143,7 +187,7 @@ function AdminPage() {
     songInput: urls,
     songDraftCount: drafts.length,
     songEditChanged: songEditDirty,
-    ambienceChanged: ambienceDirty,
+    ambienceChanged: ambienceDirty || backgroundDirty,
   });
   const blocker = useBlocker({
     shouldBlockFn: () => hasUnsavedChanges && !allowNextNavigationRef.current,
@@ -157,6 +201,7 @@ function AdminPage() {
     setEdit(null);
     setEditBaseline(null);
     setAmbienceDirty(false);
+    setBackgroundDirty(false);
   }, []);
 
   function requestTransition(action: () => void | Promise<void>) {
@@ -195,69 +240,96 @@ function AdminPage() {
     setEdit(null);
     setEditBaseline(null);
     setAmbienceDirty(false);
+    setBackgroundDirty(false);
     setSongPage(0);
     setMessage("");
   }
 
-  useEffect(() => {
-    selectedSlugRef.current = selectedSlug;
-  }, [selectedSlug]);
+  const refreshSongs = useCallback(async () => {
+    if (!currentSummary) return;
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["admin", "songs", currentSummary.id] }),
+      queryClient.invalidateQueries({ queryKey: ["admin", "bootstrap"] }),
+    ]);
+  }, [currentSummary, queryClient]);
 
-  const load = useCallback(async () => {
-    setBusy(true);
-    setBusyAction("Loading admin data");
-    try {
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) {
-        void navigate({ to: "/admin/login" });
-        return;
-      }
-      const result = await getAdminData({ data: { range } });
-      setScenes(result.scenes as Scene[]);
-      setAnalytics(result.analytics as Analytics[]);
-      setAssets(result.assets as Asset[]);
-      setIdentity(result.identity);
-      setSelectedSlug((previous) => previous || result.scenes[0]?.slug || "");
-      setComparedSceneIds((previous) => {
-        const defaultScene =
-          result.scenes.find((scene) => scene.slug === selectedSlugRef.current) ?? result.scenes[0];
-        return retainComparedSceneIds(
-          previous,
-          result.scenes.map((scene) => scene.id),
-          defaultScene?.id,
-        );
-      });
-      setSelected([]);
-      setExpandedSlug((previous) => previous || result.scenes[0]?.slug || "");
-      setMessage("");
-    } catch (error) {
-      const text = error instanceof Error ? error.message : "Unable to load admin data";
-      if (/sign in|administrator|session/i.test(text)) {
-        window.sessionStorage.setItem(
-          ADMIN_SIGN_IN_NOTICE_KEY,
-          "Your sign-in session expired. Please sign in again.",
-        );
-        try {
-          await supabase.auth.signOut();
-        } finally {
-          await navigate({ to: "/admin/login" });
-        }
-        return;
-      }
-      setMessage(text);
-    } finally {
-      setBusy(false);
-      setBusyAction("");
-    }
-  }, [navigate, range]);
+  const refreshAmbience = useCallback(async () => {
+    if (!currentSummary) return;
+    await queryClient.invalidateQueries({ queryKey: ["admin", "ambience", currentSummary.id] });
+  }, [currentSummary, queryClient]);
+
+  const refreshBackground = useCallback(async () => {
+    if (!currentSummary) return;
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["admin", "background", currentSummary.id] }),
+      queryClient.invalidateQueries({ queryKey: ["admin", "bootstrap"] }),
+    ]);
+  }, [currentSummary, queryClient]);
 
   function toggleComparedScene(sceneId: string) {
     setComparedSceneIds((ids) => toggleSelectedId(ids, sceneId));
   }
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    void supabase.auth.getSession().then(({ data }) => {
+      if (!data.session) void navigate({ to: "/admin/login" });
+      else setClientReady(true);
+    });
+  }, [navigate]);
+
+  useEffect(() => {
+    if (!scenes.length) return;
+    setSelectedSlug((previous) => previous || scenes[0]!.slug);
+    setExpandedSlug((previous) => previous || scenes[0]!.slug);
+    setComparedSceneIds((previous) =>
+      retainComparedSceneIds(
+        previous,
+        scenes.map((scene) => scene.id),
+        scenes[0]?.id,
+      ),
+    );
+    const first = scenes[0];
+    if (first) {
+      void queryClient.prefetchQuery({
+        queryKey: ["admin", "songs", first.id],
+        queryFn: () => getAdminSongsData({ data: { sceneId: first.id } }),
+        staleTime: 30_000,
+      });
+    }
+  }, [queryClient, scenes]);
+
+  useEffect(() => {
+    const error = bootstrapQuery.error;
+    if (!error) return;
+    const text = error instanceof Error ? error.message : "Unable to load admin data";
+    if (/sign in|administrator|session/i.test(text)) {
+      window.sessionStorage.setItem(
+        ADMIN_SIGN_IN_NOTICE_KEY,
+        "Your sign-in session expired. Please sign in again.",
+      );
+      void supabase.auth.signOut().finally(() => navigate({ to: "/admin/login" }));
+    } else setMessage(text);
+  }, [bootstrapQuery.error, navigate]);
+
+  useEffect(() => {
+    const error =
+      songsQuery.error ?? analyticsQuery.error ?? ambienceQuery.error ?? backgroundQuery.error;
+    if (!error) return;
+    const text = error instanceof Error ? error.message : "Unable to load this section";
+    if (/sign in|administrator|session/i.test(text)) {
+      window.sessionStorage.setItem(
+        ADMIN_SIGN_IN_NOTICE_KEY,
+        "Your sign-in session expired. Please sign in again.",
+      );
+      void supabase.auth.signOut().finally(() => navigate({ to: "/admin/login" }));
+    } else setMessage(text);
+  }, [
+    songsQuery.error,
+    analyticsQuery.error,
+    ambienceQuery.error,
+    backgroundQuery.error,
+    navigate,
+  ]);
 
   async function preview() {
     const inputs = urls
@@ -286,7 +358,7 @@ function AdminPage() {
       await addAdminSongs({ data: { queueId: current.queueId, songs: drafts } });
       setUrls("");
       setDrafts([]);
-      await load();
+      await refreshSongs();
       setMessage("Songs added to the active Jagah queue.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to add songs");
@@ -307,7 +379,7 @@ function AdminPage() {
     setBusyAction("Removing songs");
     try {
       await removeAdminSongs({ data: { queueId: current.queueId, membershipIds: selected } });
-      await load();
+      await refreshSongs();
       setMessage("Selected songs removed.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to remove songs");
@@ -342,7 +414,7 @@ function AdminPage() {
       });
       setEdit(null);
       setEditBaseline(null);
-      await load();
+      await refreshSongs();
       setMessage(
         scope === "shared"
           ? "Shared song data updated."
@@ -359,7 +431,7 @@ function AdminPage() {
   return (
     <main
       className="min-h-dvh bg-zinc-950 p-4 text-zinc-100 [&_button]:cursor-pointer [&_button:disabled]:cursor-not-allowed md:p-8"
-      aria-busy={busy}
+      aria-busy={busy || sectionLoading}
     >
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-zinc-700 pb-4">
         <div>
@@ -432,6 +504,7 @@ function AdminPage() {
                         { id: "songs", label: "Songs" },
                         { id: "analytics", label: "Analytics" },
                         { id: "ambience", label: "Ambience audio" },
+                        { id: "background", label: "Background" },
                       ] as const
                     ).map((item) => (
                       <li key={item.id}>
@@ -446,11 +519,11 @@ function AdminPage() {
                           }
                         >
                           {item.label}
-                          {item.id === "songs" ? ` (${scene.tracks.length})` : ""}
+                          {item.id === "songs" ? ` (${scene.trackCount})` : ""}
                         </button>
                       </li>
                     ))}
-                    {["Background", "Ambience visual"].map((label) => (
+                    {["Ambience visual"].map((label) => (
                       <li key={label}>
                         <button
                           type="button"
@@ -469,7 +542,7 @@ function AdminPage() {
           </ul>
           {!scenes.length ? (
             <p className="text-sm text-zinc-400">
-              {busy ? "Loading Jagahs…" : "No Jagahs available."}
+              {bootstrapQuery.isPending ? "Loading Jagahs…" : "No Jagahs available."}
             </p>
           ) : null}
         </nav>
@@ -480,136 +553,163 @@ function AdminPage() {
               ? "Songs"
               : section === "analytics"
                 ? "Analytics"
-                : "Ambience audio"}
+                : section === "ambience"
+                  ? "Ambience audio"
+                  : "Background"}
           </p>
           {section === "ambience" && current ? (
-            <AmbienceAudioPanel
-              scene={current}
-              assets={assets}
-              onChanged={load}
-              onDirtyChange={setAmbienceDirty}
-            />
+            ambienceQuery.isPending ? (
+              <SectionLoading label="ambience audio" />
+            ) : (
+              <AmbienceAudioPanel
+                key={current.id}
+                scene={current}
+                assets={assets}
+                onChanged={refreshAmbience}
+                onDirtyChange={setAmbienceDirty}
+              />
+            )
+          ) : section === "background" && current ? (
+            backgroundQuery.isPending || !backgroundQuery.data ? (
+              <SectionLoading label="background editor" />
+            ) : (
+              <BackgroundPanel
+                key={current.id}
+                data={backgroundQuery.data}
+                onChanged={refreshBackground}
+                onDirtyChange={setBackgroundDirty}
+              />
+            )
           ) : section === "analytics" ? (
-            <section aria-labelledby="jagah-analytics-title">
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                <h2 id="jagah-analytics-title" className="font-semibold">
-                  {current?.title} analytics
-                </h2>
-                <label className="flex items-center gap-2 text-sm">
-                  Period
-                  <select
-                    className="rounded border border-zinc-600 bg-zinc-900 p-2"
-                    value={range}
-                    disabled={busy}
-                    onChange={(event) => setRange(event.target.value as Range)}
-                  >
-                    <option value="7d">Last 7 days</option>
-                    <option value="30d">Last 30 days</option>
-                    <option value="all">All time</option>
-                  </select>
-                </label>
-              </div>
-              <fieldset className="mb-5 rounded border border-zinc-700 p-3">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <legend className="px-1 text-sm font-medium">Compare Jagahs</legend>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-zinc-400">
-                      {comparedSceneIds.length} selected
-                    </span>
-                    <button
-                      type="button"
-                      className="rounded border border-zinc-600 px-2 py-1 text-xs"
-                      disabled={busy || !scenes.length}
-                      onClick={() =>
-                        setComparedSceneIds((ids) =>
-                          toggleAllIds(
-                            ids,
-                            scenes.map((scene) => scene.id),
-                          ),
-                        )
-                      }
+            analyticsQuery.isPending ? (
+              <SectionLoading label="analytics" />
+            ) : (
+              <section aria-labelledby="jagah-analytics-title">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                  <h2 id="jagah-analytics-title" className="font-semibold">
+                    {current?.title} analytics
+                  </h2>
+                  <label className="flex items-center gap-2 text-sm">
+                    Period
+                    <select
+                      className="rounded border border-zinc-600 bg-zinc-900 p-2"
+                      value={range}
+                      disabled={busy}
+                      onChange={(event) => setRange(event.target.value as Range)}
                     >
-                      {allScenesCompared ? "Deselect all" : "Select all"}
-                    </button>
+                      <option value="7d">Last 7 days</option>
+                      <option value="30d">Last 30 days</option>
+                      <option value="all">All time</option>
+                    </select>
+                  </label>
+                </div>
+                <fieldset className="mb-5 rounded border border-zinc-700 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <legend className="px-1 text-sm font-medium">Compare Jagahs</legend>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-zinc-400">
+                        {comparedSceneIds.length} selected
+                      </span>
+                      <button
+                        type="button"
+                        className="rounded border border-zinc-600 px-2 py-1 text-xs"
+                        disabled={busy || !scenes.length}
+                        onClick={() =>
+                          setComparedSceneIds((ids) =>
+                            toggleAllIds(
+                              ids,
+                              scenes.map((scene) => scene.id),
+                            ),
+                          )
+                        }
+                      >
+                        {allScenesCompared ? "Deselect all" : "Select all"}
+                      </button>
+                    </div>
                   </div>
-                </div>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                  {scenes.map((scene) => (
-                    <label
-                      key={scene.id}
-                      className="flex min-h-10 cursor-pointer items-center gap-2 rounded border border-zinc-700 px-3 py-2 text-sm hover:border-zinc-500 hover:bg-zinc-900"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={comparedSceneIds.includes(scene.id)}
-                        disabled={busy}
-                        onChange={() => toggleComparedScene(scene.id)}
-                      />
-                      <span>{scene.title}</span>
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-              {comparedAnalytics.length === 1 ? (
-                <>
-                  <dl className="grid gap-3 sm:grid-cols-2">
-                    {[
-                      ["Visits", singleComparedAnalytics?.visits ?? 0],
-                      ["Played visits", singleComparedAnalytics?.playedVisits ?? 0],
-                      ["Total listening", seconds(singleComparedAnalytics?.listeningSeconds ?? 0)],
-                      [
-                        "Average listening time",
-                        seconds(singleComparedAnalytics?.averageListeningSeconds ?? 0),
-                      ],
-                    ].map(([label, value]) => (
-                      <div key={label} className="rounded border border-zinc-700 p-4">
-                        <dt className="text-sm text-zinc-400">{label}</dt>
-                        <dd className="mt-2 text-2xl font-semibold">{busy ? "…" : value}</dd>
-                      </div>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                    {scenes.map((scene) => (
+                      <label
+                        key={scene.id}
+                        className="flex min-h-10 cursor-pointer items-center gap-2 rounded border border-zinc-700 px-3 py-2 text-sm hover:border-zinc-500 hover:bg-zinc-900"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={comparedSceneIds.includes(scene.id)}
+                          disabled={busy}
+                          onChange={() => toggleComparedScene(scene.id)}
+                        />
+                        <span>{scene.title}</span>
+                      </label>
                     ))}
-                  </dl>
-                  {!busy && !singleComparedAnalytics?.visits ? (
-                    <p className="mt-2 text-sm text-zinc-400">
-                      No visits recorded for this Jagah in the selected period.
-                    </p>
-                  ) : null}
-                </>
-              ) : comparedAnalytics.length > 1 ? (
-                <div className="overflow-x-auto rounded border border-zinc-700">
-                  <table className="w-full text-left text-sm">
-                    <thead className="border-b border-zinc-700 text-zinc-400">
-                      <tr>
-                        <th className="p-3">Jagah</th>
-                        <th className="p-3">Visits</th>
-                        <th className="p-3">Played visits</th>
-                        <th className="p-3">Total listening</th>
-                        <th className="p-3">Average listening</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {comparedAnalytics.map((row) => (
-                        <tr key={row.sceneId} className="border-b border-zinc-800 last:border-0">
-                          <td className="p-3 font-medium">{row.title}</td>
-                          <td className="p-3">{busy ? "…" : row.visits}</td>
-                          <td className="p-3">{busy ? "…" : row.playedVisits}</td>
-                          <td className="p-3">{busy ? "…" : seconds(row.listeningSeconds)}</td>
-                          <td className="p-3">
-                            {busy ? "…" : seconds(row.averageListeningSeconds)}
-                          </td>
-                        </tr>
+                  </div>
+                </fieldset>
+                {comparedAnalytics.length === 1 ? (
+                  <>
+                    <dl className="grid gap-3 sm:grid-cols-2">
+                      {[
+                        ["Visits", singleComparedAnalytics?.visits ?? 0],
+                        ["Played visits", singleComparedAnalytics?.playedVisits ?? 0],
+                        [
+                          "Total listening",
+                          seconds(singleComparedAnalytics?.listeningSeconds ?? 0),
+                        ],
+                        [
+                          "Average listening time",
+                          seconds(singleComparedAnalytics?.averageListeningSeconds ?? 0),
+                        ],
+                      ].map(([label, value]) => (
+                        <div key={label} className="rounded border border-zinc-700 p-4">
+                          <dt className="text-sm text-zinc-400">{label}</dt>
+                          <dd className="mt-2 text-2xl font-semibold">{busy ? "…" : value}</dd>
+                        </div>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <p className="rounded border border-dashed border-zinc-700 p-4 text-sm text-zinc-400">
-                  Select at least one Jagah to view analytics.
+                    </dl>
+                    {!busy && !singleComparedAnalytics?.visits ? (
+                      <p className="mt-2 text-sm text-zinc-400">
+                        No visits recorded for this Jagah in the selected period.
+                      </p>
+                    ) : null}
+                  </>
+                ) : comparedAnalytics.length > 1 ? (
+                  <div className="overflow-x-auto rounded border border-zinc-700">
+                    <table className="w-full text-left text-sm">
+                      <thead className="border-b border-zinc-700 text-zinc-400">
+                        <tr>
+                          <th className="p-3">Jagah</th>
+                          <th className="p-3">Visits</th>
+                          <th className="p-3">Played visits</th>
+                          <th className="p-3">Total listening</th>
+                          <th className="p-3">Average listening</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {comparedAnalytics.map((row) => (
+                          <tr key={row.sceneId} className="border-b border-zinc-800 last:border-0">
+                            <td className="p-3 font-medium">{row.title}</td>
+                            <td className="p-3">{busy ? "…" : row.visits}</td>
+                            <td className="p-3">{busy ? "…" : row.playedVisits}</td>
+                            <td className="p-3">{busy ? "…" : seconds(row.listeningSeconds)}</td>
+                            <td className="p-3">
+                              {busy ? "…" : seconds(row.averageListeningSeconds)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="rounded border border-dashed border-zinc-700 p-4 text-sm text-zinc-400">
+                    Select at least one Jagah to view analytics.
+                  </p>
+                )}
+                <p className="mt-4 text-sm text-zinc-400">
+                  Average listening time is calculated across visits that played music.
                 </p>
-              )}
-              <p className="mt-4 text-sm text-zinc-400">
-                Average listening time is calculated across visits that played music.
-              </p>
-            </section>
+              </section>
+            )
+          ) : songsQuery.isPending ? (
+            <SectionLoading label="songs" />
           ) : (
             <section aria-label={`${current?.title ?? "Jagah"} songs`}>
               <h2 className="font-semibold">{current?.title ?? "Loading…"} song library</h2>
@@ -959,5 +1059,15 @@ function AdminPage() {
         </p>
       ) : null}
     </main>
+  );
+}
+
+function SectionLoading({ label }: { label: string }) {
+  return (
+    <div className="space-y-3" role="status" aria-label={`Loading ${label}`}>
+      <div className="h-7 w-56 animate-pulse rounded bg-zinc-800" />
+      <div className="h-40 animate-pulse rounded-lg border border-zinc-800 bg-zinc-900/60" />
+      <div className="h-56 animate-pulse rounded-lg border border-zinc-800 bg-zinc-900/60" />
+    </div>
   );
 }

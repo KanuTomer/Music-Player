@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import {
   fetchRoom,
   fetchRoomAmbience,
+  fetchRoomPresentation,
   fetchScenes,
   insertChatMessage,
   recordSourceFailure,
@@ -19,6 +20,9 @@ export type Scene = {
   category: string;
   palette: Record<string, string>;
   art_key: string;
+  background_storage_path: string | null;
+  background_url: string | null;
+  foreground_text_color: string;
   is_dark: boolean;
   chat_mode: string;
   gag_label: string | null;
@@ -59,7 +63,17 @@ export type OneLiner = {
   id: string;
   text_en: string;
   text_hi: string | null;
+  display_text: string;
   daypart_tag: string;
+};
+
+export type RoomPresentation = {
+  scene_id: string;
+  background_storage_path: string | null;
+  background_url: string | null;
+  foreground_text_color: string;
+  gag_label: string | null;
+  oneliners: OneLiner[];
 };
 
 export type AmbienceSource = {
@@ -151,6 +165,12 @@ export const getRoomAmbience = createServerFn({ method: "GET" })
   .validator((data: { sceneId: string }) => ({ sceneId: String(data.sceneId) }))
   .handler(async ({ data }): Promise<AmbienceProfile | null> => {
     return fetchRoomAmbience(data.sceneId);
+  });
+
+export const getRoomPresentation = createServerFn({ method: "GET" })
+  .validator((data: { sceneId: string }) => ({ sceneId: String(data.sceneId) }))
+  .handler(async ({ data }): Promise<RoomPresentation | null> => {
+    return fetchRoomPresentation(data.sceneId);
   });
 
 export const sendChatMessage = createServerFn({ method: "POST" })
