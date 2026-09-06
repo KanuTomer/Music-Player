@@ -533,6 +533,162 @@
   animation: cassette-tape-travel 0.45s linear infinite;
 }
 
+.cassette-reference-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.cassette-svg-face {
+  stroke: var(--cassette-face-stroke, #725434);
+  stroke-width: 5;
+  stroke-linejoin: round;
+}
+
+.cassette-svg-face-highlight {
+  fill: none;
+  stroke: rgba(255, 247, 214, 0.62);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.cassette-svg-label-rule,
+.cassette-svg-side-stripe {
+  stroke: var(--cassette-accent, #96462d);
+  stroke-width: 5;
+}
+
+.cassette-svg-side-stripe-lower { stroke-width: 9; }
+
+.cassette-svg-jagah,
+.cassette-svg-title,
+.cassette-svg-artist,
+.cassette-svg-side-letter {
+  font-family: var(--font-sans);
+  fill: var(--cassette-ink, #442819);
+}
+
+.cassette-svg-jagah {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 7px;
+}
+
+.cassette-svg-title {
+  font-size: 52px;
+  font-weight: 700;
+}
+
+.cassette-svg-artist {
+  font-size: 34px;
+  font-weight: 600;
+}
+
+.cassette-svg-side-badge { fill: var(--cassette-muted-ink, rgba(69, 47, 28, 0.68)); opacity: 0.82; }
+.cassette-svg-side-letter { fill: var(--cassette-face-stroke, #ead8a8); font-size: 31px; font-weight: 700; }
+
+.cassette-svg-window-frame {
+  fill: #4d3524;
+  stroke: #2a1b12;
+  stroke-width: 6;
+}
+
+.cassette-svg-tape-shadow {
+  fill: #070403;
+  opacity: 0.96;
+}
+
+.cassette-svg-tape-pack {
+  fill: #100906;
+  stroke: #422818;
+  stroke-width: 2.5;
+}
+
+.cassette-svg-tape-winding {
+  fill: none;
+  stroke: rgba(132, 78, 40, 0.2);
+  stroke-width: 1.45;
+}
+
+.cassette-svg-tape-reflection {
+  fill: rgba(210, 181, 143, 0.075);
+  stroke: none;
+}
+
+.cassette-svg-tape-reflection-moving {
+  animation: cassette-svg-reflection-breathe 3.6s ease-in-out infinite alternate;
+}
+
+@keyframes cassette-svg-reflection-breathe {
+  from { opacity: 0.6; }
+  to { opacity: 1; }
+}
+
+.cassette-svg-hub {
+  transform-box: view-box;
+  will-change: transform;
+}
+
+.cassette-svg-hub.cassette-reel-playing {
+  animation-name: cassette-spin-reverse;
+}
+
+@keyframes cassette-spin-reverse {
+  to { transform: rotate(-360deg); }
+}
+
+.cassette-svg-hub-rim {
+  fill: url(#cassette-hub-fill);
+  stroke: #2b1b11;
+  stroke-width: 4;
+}
+
+.cassette-svg-hub-face {
+  fill: url(#cassette-hub-fill);
+  stroke: #9b7542;
+  stroke-width: 3;
+}
+
+.cassette-svg-hub-slot { fill: #3a281b; stroke: rgba(255, 244, 207, 0.38); stroke-width: 1; }
+.cassette-svg-hub-inner { fill: url(#cassette-hub-fill); stroke: #836239; stroke-width: 3; }
+.cassette-svg-hub-tooth { fill: url(#cassette-hub-fill); stroke: #8d6c3d; stroke-width: 1.5; }
+.cassette-svg-spindle-ring { fill: #9a7848; stroke: #ead8ac; stroke-width: 2; }
+.cassette-svg-spindle { fill: #18100b; stroke: #a77d42; stroke-width: 2; }
+.cassette-svg-hub-highlight { fill: none; stroke: rgba(255, 252, 231, 0.62); stroke-width: 3; stroke-linecap: round; }
+
+.cassette-svg-tape-path {
+  fill: none;
+  stroke: #100906;
+  stroke-width: 9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.cassette-svg-tape-path-sheen {
+  fill: none;
+  stroke: rgba(210, 181, 143, 0.12);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-dasharray: 45 440;
+}
+
+.cassette-svg-tape-path-sheen-moving {
+  animation: cassette-svg-tape-travel 0.9s linear infinite;
+}
+
+@keyframes cassette-svg-tape-travel {
+  to { stroke-dashoffset: -485; }
+}
+
+.cassette-svg-head-glass { fill: rgba(205, 180, 137, 0.12); stroke: rgba(245, 222, 183, 0.22); stroke-width: 2; }
+.cassette-svg-head-frame { stroke: #24170f; stroke-width: 5; }
+.cassette-svg-head-hole,
+.cassette-svg-head-slot { fill: #0d0907; stroke: #6a4c31; stroke-width: 2; }
+.cassette-svg-reader > rect:first-child { fill: #695744; stroke: #17100d; stroke-width: 3; }
+.cassette-svg-reader-face { fill: #b7aa8c; stroke: #33271d; stroke-width: 2; }
+.cassette-svg-reader line { stroke: #514538; stroke-width: 3; stroke-linecap: round; }
+
 @utility animate-drift-up {
   animation: drift-up 2.6s ease-out forwards;
 }
