@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
-import { FullCassettePlayer } from "@/components/player/CassettePlayers";
+import { AmbienceControl } from "@/components/player/AmbienceControl";
+import { PhysicalCassettePlayer } from "@/components/player/PhysicalCassettePlayer";
 import { useLiveScenes } from "@/hooks/useLiveScenes";
 import { backgroundFor } from "@/lib/scene-art";
 import { isLightTextColor } from "@/lib/scene-presentation";
@@ -20,7 +21,7 @@ export function SecretCassetteExperience({ room, scenes }: { room: RoomPayload; 
   }, [openRoom, room]);
 
   return (
-    <main className="relative grid min-h-dvh place-items-center overflow-hidden bg-night p-5 text-cream">
+    <main className="relative grid min-h-dvh place-items-center overflow-hidden bg-night p-4 text-cream sm:p-5">
       <img
         src={backgroundFor(scene)}
         alt=""
@@ -40,14 +41,17 @@ export function SecretCassetteExperience({ room, scenes }: { room: RoomPayload; 
       >
         <ArrowLeft className="size-4" aria-hidden /> Back to room
       </Link>
-      <section className="relative z-10 flex w-full max-w-xl flex-col items-center gap-5">
-        <div className="text-center" style={{ color: scene.foreground_text_color }}>
-          <p className="font-deva text-3xl font-bold sm:text-5xl">{scene.title_hi}</p>
-          <p className="mt-1 text-xs font-bold tracking-[.25em] uppercase sm:text-sm">
-            {scene.title_en}
-          </p>
-        </div>
-        <FullCassettePlayer />
+      <div className="absolute top-[max(1rem,env(safe-area-inset-top))] right-4 z-20">
+        <AmbienceControl
+          available={player.ambienceAvailable}
+          enabled={player.ambienceEnabled}
+          active={player.ambienceActive}
+          status={player.ambienceStatus}
+          onToggle={player.toggleAmbience}
+        />
+      </div>
+      <section className="relative z-10 flex w-full items-center justify-center">
+        <PhysicalCassettePlayer />
       </section>
     </main>
   );
