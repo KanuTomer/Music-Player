@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { youtubeVideoId } from "./admin.server";
+import { countTrackUses, youtubeVideoId } from "./admin.server";
 
 describe("admin YouTube source validation", () => {
   test("accepts supported YouTube forms and raw video IDs", () => {
@@ -13,5 +13,17 @@ describe("admin YouTube source validation", () => {
     expect(youtubeVideoId("too-short")).toBeNull();
     expect(youtubeVideoId("https://youtube.example/watch?v=dQw4w9WgXcQ")).toBeNull();
     expect(youtubeVideoId("https://example.com/?v=dQw4w9WgXcQ")).toBeNull();
+  });
+});
+
+describe("admin song usage batching", () => {
+  test("counts all active queue memberships from one result set", () => {
+    const counts = countTrackUses([
+      { track_id: "shared" },
+      { track_id: "shared" },
+      { track_id: "single" },
+    ]);
+    expect(counts.get("shared")).toBe(2);
+    expect(counts.get("single")).toBe(1);
   });
 });

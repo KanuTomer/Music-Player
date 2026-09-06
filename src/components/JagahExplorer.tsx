@@ -1,7 +1,7 @@
 import { Check, Loader2 } from "lucide-react";
 import type { RefObject } from "react";
 import type { Scene } from "@/lib/rooms.functions";
-import { artFor } from "@/lib/scene-art";
+import { backgroundFor } from "@/lib/scene-art";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 
 type JagahExplorerProps = {
@@ -66,7 +66,7 @@ export function JagahExplorer({
                 >
                   {/* Image: hidden on mobile, visible on desktop/tablet */}
                   <img
-                    src={artFor(scene.art_key)}
+                    src={backgroundFor(scene)}
                     alt=""
                     width={720}
                     height={480}

@@ -1,6 +1,13 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
-import type { AmbienceProfile, AmbienceStem, RoomPayload, Scene } from "./rooms.functions";
+import type {
+  AmbienceProfile,
+  AmbienceStem,
+  OneLiner,
+  RoomPayload,
+  RoomPresentation,
+  Scene,
+} from "./rooms.functions";
 
 function publicClient() {
   const url = process.env["SUPABASE_URL"];
@@ -23,16 +30,46 @@ function publicClient() {
 }
 
 const SCENE_COLS =
-  "id, slug, title_en, title_hi, hook, description, region, category, palette, art_key, is_dark, chat_mode, gag_label, sort_order, tags";
+  "id, slug, title_en, title_hi, hook, description, region, category, palette, art_key, background_storage_path, foreground_text_color, is_dark, chat_mode, gag_label, sort_order, tags";
+
+function sceneWithBackground(
+  client: ReturnType<typeof publicClient>,
+  scene: Record<string, unknown>,
+) {
+  const path =
+    typeof scene["background_storage_path"] === "string" ? scene["background_storage_path"] : null;
+  return {
+    ...scene,
+    background_storage_path: path,
+    background_url: path
+      ? client.storage.from("scene-media").getPublicUrl(path).data.publicUrl
+      : null,
+    foreground_text_color:
+      typeof scene["foreground_text_color"] === "string"
+        ? scene["foreground_text_color"]
+        : "#FFF3D6",
+  } as unknown as Scene;
+}
+
+function normalizeOneLiners(rows: Array<Record<string, unknown>>): OneLiner[] {
+  return rows.map((row) => ({
+    id: String(row["id"]),
+    text_en: String(row["text_en"] ?? ""),
+    text_hi: typeof row["text_hi"] === "string" ? row["text_hi"] : null,
+    display_text: String(row["text_hi"] ?? row["text_en"] ?? ""),
+    daypart_tag: String(row["daypart_tag"] ?? "all"),
+  }));
+}
 
 export async function fetchScenes(): Promise<Scene[]> {
-  const { data, error } = await publicClient()
+  const client = publicClient();
+  const { data, error } = await client
     .from("scenes")
     .select(SCENE_COLS)
     .eq("is_live", true)
     .order("sort_order", { ascending: true });
   if (error) throw new Error(error.message);
-  return (data ?? []) as unknown as Scene[];
+  return (data ?? []).map((scene) => sceneWithBackground(client, scene));
 }
 
 export async function fetchRoom(slug: string): Promise<RoomPayload | null> {
@@ -85,7 +122,7 @@ export async function fetchRoom(slug: string): Promise<RoomPayload | null> {
   if (memberships.error) throw new Error(memberships.error.message);
 
   return {
-    scene: scene as unknown as Scene,
+    scene: sceneWithBackground(client, scene),
     curatedSet: curatedSet.data,
     queue: (memberships.data ?? []).map((membership) => {
       const track = membership.tracks;
@@ -99,7 +136,7 @@ export async function fetchRoom(slug: string): Promise<RoomPayload | null> {
           .sort((a, b) => a.priority - b.priority),
       };
     }) as RoomPayload["queue"],
-    oneliners: (oneliners.data ?? []) as RoomPayload["oneliners"],
+    oneliners: normalizeOneLiners(oneliners.data ?? []),
     ambience: ambienceProfile.data
       ? {
           ...ambienceProfile.data,
@@ -143,6 +180,33 @@ export async function fetchRoom(slug: string): Promise<RoomPayload | null> {
           }) as AmbienceStem[],
         }
       : null,
+  };
+}
+
+export async function fetchRoomPresentation(sceneId: string): Promise<RoomPresentation | null> {
+  const client = publicClient();
+  const [sceneResult, lineResult] = await Promise.all([
+    client
+      .from("scenes")
+      .select("id, background_storage_path, foreground_text_color, gag_label")
+      .eq("id", sceneId)
+      .eq("is_live", true)
+      .maybeSingle(),
+    client.from("oneliners").select("id, text_en, text_hi, daypart_tag").eq("scene_id", sceneId),
+  ]);
+  if (sceneResult.error) throw new Error(sceneResult.error.message);
+  if (lineResult.error) throw new Error(lineResult.error.message);
+  if (!sceneResult.data) return null;
+  const path = sceneResult.data.background_storage_path;
+  return {
+    scene_id: sceneResult.data.id,
+    background_storage_path: path,
+    background_url: path
+      ? client.storage.from("scene-media").getPublicUrl(path).data.publicUrl
+      : null,
+    foreground_text_color: sceneResult.data.foreground_text_color,
+    gag_label: sceneResult.data.gag_label,
+    oneliners: normalizeOneLiners(lineResult.data ?? []),
   };
 }
 

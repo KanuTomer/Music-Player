@@ -3,10 +3,8 @@ import type { Scene } from "./rooms.functions";
 import { filterScenes, normalizeSceneSearch, sceneSelectionAction } from "./scene-search";
 
 function scene(overrides: Partial<Scene> & Pick<Scene, "slug" | "title_en">): Scene {
-  return {
+  const defaults: Omit<Scene, "slug" | "title_en"> = {
     id: overrides.slug,
-    slug: overrides.slug,
-    title_en: overrides.title_en,
     title_hi: "जगह",
     hook: "A familiar corner",
     description: null,
@@ -14,13 +12,16 @@ function scene(overrides: Partial<Scene> & Pick<Scene, "slug" | "title_en">): Sc
     category: "everyday",
     palette: {},
     art_key: "rail-yatra",
+    background_storage_path: null,
+    background_url: null,
+    foreground_text_color: "#20160F",
     is_dark: false,
     chat_mode: "off",
     gag_label: null,
     sort_order: 0,
     tags: [],
-    ...overrides,
   };
+  return { ...defaults, ...overrides, slug: overrides.slug, title_en: overrides.title_en };
 }
 
 const scenes = [

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { Compass, Heart, Lightbulb, Play } from "lucide-react";
 import { getRoom, listScenes } from "@/lib/rooms.functions";
-import { artFor } from "@/lib/scene-art";
+import { backgroundFor } from "@/lib/scene-art";
 import { videoForScene } from "@/lib/scene-media";
 import { usePlayer } from "@/lib/player";
 import { JagahExplorer } from "@/components/JagahExplorer";
@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useJagahNavigation } from "@/hooks/useJagahNavigation";
 import { isAllowedSlug } from "@/lib/theme-data";
 import { useSupportAutoPrompt } from "@/hooks/useSupportPrompt";
+import { useLiveScenes } from "@/hooks/useLiveScenes";
 import { buildSeoMeta } from "@/lib/seo";
 
 const TITLE = "Sainik Dhaba 📻";
@@ -49,6 +50,7 @@ function Home() {
   const { room, scenes } = Route.useLoaderData();
   const navigate = useNavigate();
   const player = usePlayer();
+  const liveScenes = useLiveScenes(scenes);
   const [explorerOpen, setExplorerOpen] = useState(false);
   const [dialog, setDialog] = useState<"suggest" | "support" | null>(null);
   const activeSlug = player.room?.scene.slug ?? null;
@@ -60,8 +62,8 @@ function Home() {
   useSupportAutoPrompt(() => setDialog("support"));
 
   if (!room) return <HomeError />;
-  const { scene } = room;
-  const sceneVideo = videoForScene(scene.slug);
+  const scene = liveScenes.find((item) => item.id === room.scene.id) ?? room.scene;
+  const sceneVideo = scene.background_url ? null : videoForScene(scene.slug);
 
   const playFeatured = () => {
     player.openRoom(room);
@@ -76,7 +78,7 @@ function Home() {
           {sceneVideo ? (
             <video
               src={sceneVideo}
-              poster={artFor(scene.art_key)}
+              poster={backgroundFor(scene)}
               autoPlay
               muted
               loop
@@ -86,7 +88,7 @@ function Home() {
             />
           ) : (
             <img
-              src={artFor(scene.art_key)}
+              src={backgroundFor(scene)}
               alt={`${scene.title_en} — ${scene.hook}`}
               width={1536}
               height={1024}
@@ -202,7 +204,7 @@ function Home() {
       ) : null}
 
       <JagahExplorer
-        scenes={scenes}
+        scenes={liveScenes}
         activeSlug={activeSlug}
         open={explorerOpen}
         onOpenChange={setExplorerOpen}

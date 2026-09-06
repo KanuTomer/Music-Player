@@ -22,3 +22,7 @@ export const sceneArt: Record<string, string> = {
 export function artFor(key: string): string {
   return sceneArt[key] ?? punjabiDhaba;
 }
+
+export function backgroundFor(scene: { art_key: string; background_url?: string | null }): string {
+  return scene.background_url || artFor(scene.art_key);
+}
