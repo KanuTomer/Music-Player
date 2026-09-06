@@ -15,14 +15,14 @@ describe("physical cassette progress", () => {
     expect(clampCassetteProgress(-1)).toBe(0);
     expect(clampCassetteProgress(2)).toBe(1);
 
-    expect(cassetteTapeRadii(0)).toEqual({ left: 134, right: 61 });
-    expect(cassetteTapeRadii(1)).toEqual({ left: 61, right: 134 });
+    expect(cassetteTapeRadii(0)).toEqual({ left: 150, right: 82 });
+    expect(cassetteTapeRadii(1)).toEqual({ left: 82, right: 150 });
     const halfway = cassetteTapeRadii(0.5);
     expect(halfway.left).toBeCloseTo(halfway.right);
 
-    expect(cassetteReelRotationSeconds(61)).toBe(2.4);
-    expect(cassetteReelRotationSeconds(134)).toBeCloseTo(5.27, 2);
-    expect(cassetteReelRotationSeconds(Number.NaN)).toBe(2.4);
+    expect(cassetteReelRotationSeconds(82)).toBe(3.2);
+    expect(cassetteReelRotationSeconds(150)).toBeCloseTo(5.85, 2);
+    expect(cassetteReelRotationSeconds(Number.NaN)).toBe(3.2);
   });
 });
 

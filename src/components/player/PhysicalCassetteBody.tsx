@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import type { CSSProperties } from "react";
 import {
   cassetteHexRgb,
@@ -10,6 +11,8 @@ import {
 
 type PhysicalCassetteBodyProps = {
   isPlaying: boolean;
+  isRewinding?: boolean;
+  reduceMotion?: boolean;
   label?: string;
   progress?: number;
   title?: string;
@@ -23,16 +26,71 @@ function SvgSpool({
   cy,
   tapeRadius,
   isPlaying,
+  isRewinding,
+  reduceMotion,
 }: {
   cx: number;
   cy: number;
   tapeRadius: number;
   isPlaying: boolean;
+  isRewinding: boolean;
+  reduceMotion: boolean;
 }) {
   const windingRadii = Array.from({ length: 28 }, (_, index) => tapeRadius - index * 3.2).filter(
     (radius) => radius > 59,
   );
   const textureMask = `cassette-tape-texture-${cx}`;
+  const hubRef = useRef<SVGGElement | null>(null);
+  const speedRafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const hub = hubRef.current;
+    if (!hub) return;
+    const animation = hub.animate(
+      [{ transform: "rotate(0deg)" }, { transform: "rotate(360deg)" }],
+      { duration: 3200, iterations: Number.POSITIVE_INFINITY },
+    );
+    animation.currentTime = 998_400;
+    animation.pause();
+
+    return () => {
+      if (speedRafRef.current != null) cancelAnimationFrame(speedRafRef.current);
+      animation.cancel();
+    };
+  }, []);
+
+  useEffect(() => {
+    const animation = hubRef.current?.getAnimations()[0];
+    if (!animation) return;
+    if (speedRafRef.current != null) {
+      cancelAnimationFrame(speedRafRef.current);
+      speedRafRef.current = null;
+    }
+    if (reduceMotion || (!isPlaying && !isRewinding)) {
+      animation.pause();
+      return;
+    }
+
+    const from = animation.playbackRate;
+    const target = isRewinding
+      ? 3200 / 600
+      : -3200 / (cassetteReelRotationSeconds(tapeRadius) * 1000);
+    const startedAt = performance.now();
+    const easeSpeed = (now: number) => {
+      const progress = Math.min(1, (now - startedAt) / 180);
+      const eased = 1 - (1 - progress) ** 3;
+      animation.updatePlaybackRate(from + (target - from) * eased);
+      if (progress < 1) speedRafRef.current = requestAnimationFrame(easeSpeed);
+      else speedRafRef.current = null;
+    };
+    animation.play();
+    speedRafRef.current = requestAnimationFrame(easeSpeed);
+
+    return () => {
+      if (speedRafRef.current != null) cancelAnimationFrame(speedRafRef.current);
+      speedRafRef.current = null;
+    };
+  }, [isPlaying, isRewinding, reduceMotion, tapeRadius]);
 
   return (
     <g className="cassette-svg-spool">
@@ -79,11 +137,9 @@ function SvgSpool({
         </g>
       </g>
       <g
-        className={isPlaying ? "cassette-svg-hub cassette-reel-playing" : "cassette-svg-hub"}
-        style={{
-          transformOrigin: `${cx}px ${cy}px`,
-          animationDuration: `${cassetteReelRotationSeconds(tapeRadius)}s`,
-        }}
+        ref={hubRef}
+        className="cassette-svg-hub"
+        style={{ transformOrigin: `${cx}px ${cy}px` }}
       >
         <circle className="cassette-svg-hub-rim" cx={cx} cy={cy} r="57" />
         <circle className="cassette-svg-hub-face" cx={cx} cy={cy} r="50" />
@@ -131,6 +187,8 @@ function lowerTapeRoute(leftRadius: number, rightRadius: number) {
 
 export function PhysicalCassetteBody({
   isPlaying,
+  isRewinding = false,
+  reduceMotion = false,
   label,
   progress = 0,
   title,
@@ -247,8 +305,22 @@ export function PhysicalCassetteBody({
           }
           d={tapeRoute}
         />
-        <SvgSpool cx={292} cy={326} tapeRadius={radii.left} isPlaying={isPlaying} />
-        <SvgSpool cx={712} cy={326} tapeRadius={radii.right} isPlaying={isPlaying} />
+        <SvgSpool
+          cx={292}
+          cy={326}
+          tapeRadius={radii.left}
+          isPlaying={isPlaying}
+          isRewinding={isRewinding}
+          reduceMotion={reduceMotion}
+        />
+        <SvgSpool
+          cx={712}
+          cy={326}
+          tapeRadius={radii.right}
+          isPlaying={isPlaying}
+          isRewinding={isRewinding}
+          reduceMotion={reduceMotion}
+        />
       </g>
 
       <text className="cassette-svg-artist" x="502" y="496" textAnchor="middle">
