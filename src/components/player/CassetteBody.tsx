@@ -79,11 +79,23 @@ export function CassetteBody({ variant, isPlaying, label }: CassetteBodyProps) {
         >
           {/* Running Magnetic Tape Ribbon across window */}
           <div
-            className={`cassette-tape absolute inset-x-2 sm:inset-x-4 top-1/2 -translate-y-1/2 rounded-xs opacity-80 ${
+            className={`cassette-tape absolute inset-x-2 sm:inset-x-4 top-1/2 -translate-y-1/2 overflow-hidden rounded-xs opacity-80 ${
               compact ? "h-1.5" : "h-2 sm:h-2.5"
             }`}
             aria-hidden
-          />
+          >
+            <span
+              className={`cassette-tape-highlights ${isPlaying ? "cassette-tape-highlights-playing" : ""}`}
+            >
+              {[8, 21, 58, 71].map((left, index) => (
+                <span
+                  key={left}
+                  className={`cassette-tape-highlight cassette-tape-highlight-${index % 2 === 0 ? "short" : "long"}`}
+                  style={{ left: `${left}%` }}
+                />
+              ))}
+            </span>
+          </div>
 
           {/* Left & Right Spools */}
           {(["left", "right"] as const).map((side) => (

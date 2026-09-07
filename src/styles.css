@@ -521,6 +521,43 @@
   opacity: 0.96;
 }
 
+.cassette-tape-highlights {
+  position: absolute;
+  inset: 1px auto 1px 0;
+  width: 200%;
+  animation: cassette-tape-highlight-travel 2.2s linear infinite;
+  animation-play-state: paused;
+  will-change: transform;
+}
+
+.cassette-tape-highlights-playing {
+  animation-play-state: running;
+}
+
+.cassette-tape-highlight {
+  position: absolute;
+  top: 50%;
+  height: 46%;
+  border-radius: 999px;
+  background: rgba(174, 108, 65, 0.32);
+  transform: translateY(-50%) skewX(-18deg);
+}
+
+.cassette-tape-highlight-short {
+  width: 3%;
+}
+
+.cassette-tape-highlight-long {
+  width: 6.5%;
+  background: rgba(126, 72, 41, 0.38);
+}
+
+@keyframes cassette-tape-highlight-travel {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
 .cassette-reference-svg {
   display: block;
   width: 100%;
@@ -689,6 +726,10 @@
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
+  }
+
+  .cassette-tape-highlights {
+    animation: none !important;
   }
 }
 
