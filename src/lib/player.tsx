@@ -88,7 +88,8 @@ type PlayerState = {
   ambienceEventPulse: number;
   ambienceEventReady: boolean;
   ambienceEventPlaying: boolean;
-  openRoom: (room: RoomPayload) => void;
+  openRoom: (room: RoomPayload, initialTrackId?: string) => void;
+  playTrack: (trackId: string) => void;
   toggle: () => void;
   next: (options?: TrackChangeOptions) => void;
   previous: (options?: TrackChangeOptions) => void;
@@ -543,13 +544,26 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, [apiReady, buildPlayer, cueCurrent, room]);
 
   const openRoom = useCallback(
-    (nextRoom: RoomPayload) => {
-      if (room?.scene.slug === nextRoom.scene.slug) return;
+    (nextRoom: RoomPayload, initialTrackId?: string) => {
       if (delayedAdvanceTimerRef.current != null) {
         window.clearTimeout(delayedAdvanceTimerRef.current);
         delayedAdvanceTimerRef.current = null;
         delayedAdvanceShouldPlayRef.current = false;
         setMusicTransitioning(false);
+      }
+      if (room?.scene.slug === nextRoom.scene.slug) {
+        if (initialTrackId) {
+          const foundIdx = queueRef.current.findIndex(
+            (item) => item.track.id === initialTrackId || item.id === initialTrackId,
+          );
+          if (foundIdx >= 0 && foundIdx !== indexRef.current) {
+            setIndex(foundIdx);
+            intendPlayRef.current = true;
+            const player = playerRef.current;
+            if (player && readyRef.current) cueCurrent(player, true);
+          }
+        }
+        return;
       }
       ambienceSuppressedRef.current = false;
       intendPlayRef.current = true;
@@ -579,14 +593,55 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         }
         shuffledQueuesRef.current.set(nextRoom.scene.slug, snapshot);
       }
+
+      // If a specific song was requested via URL, locate or prepend it so it plays first
+      let targetIndex = 0;
+      if (initialTrackId) {
+        let found = snapshot.findIndex(
+          (item) => item.track.id === initialTrackId || item.id === initialTrackId,
+        );
+        if (found === -1) {
+          const matchingQueueItem = nextRoom.queue.find(
+            (item) => item.track.id === initialTrackId || item.id === initialTrackId,
+          );
+          if (matchingQueueItem) {
+            snapshot = [
+              matchingQueueItem,
+              ...snapshot.filter((i) => i.id !== matchingQueueItem.id),
+            ];
+            shuffledQueuesRef.current.set(nextRoom.scene.slug, snapshot);
+            found = 0;
+          }
+        }
+        if (found >= 0) {
+          targetIndex = found;
+        }
+      }
+
       queueRef.current = snapshot;
       failedSourcesRef.current.clear();
       failedItemsRef.current.clear();
       setPlaylist(snapshot);
-      setIndex(0);
+      setIndex(targetIndex);
       setRoom(nextRoom);
     },
-    [resumeAmbienceFromGesture, room, setIndex],
+    [cueCurrent, resumeAmbienceFromGesture, room, setIndex],
+  );
+  const playTrack = useCallback(
+    (trackId: string) => {
+      const foundIdx = queueRef.current.findIndex(
+        (item) => item.track.id === trackId || item.id === trackId,
+      );
+      if (foundIdx >= 0) {
+        setIndex(foundIdx);
+        intendPlayRef.current = true;
+        const player = playerRef.current;
+        if (player && readyRef.current) {
+          cueCurrent(player, true);
+        }
+      }
+    },
+    [cueCurrent, setIndex],
   );
   const start = useCallback(() => {
     void resumeAmbienceFromGesture();
@@ -762,6 +817,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     ambienceEventReady: ambience.eventReady,
     ambienceEventPlaying: ambience.eventPlaying,
     openRoom,
+    playTrack,
     toggle,
     next,
     previous,

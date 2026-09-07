@@ -26,7 +26,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { isLightTextColor, sceneTextShadow } from "@/lib/scene-presentation";
 import { useLiveScenes } from "@/hooks/useLiveScenes";
 
-export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Scene[] }) {
+export function RoomExperience({
+  room,
+  scenes,
+  initialTrackId,
+}: {
+  room: RoomPayload;
+  scenes: Scene[];
+  initialTrackId?: string | undefined;
+}) {
   const { scene, oneliners } = room;
   const [presentation, setPresentation] = useState<RoomPresentation>({
     scene_id: scene.id,
@@ -60,9 +68,9 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
   useSupportAutoPrompt(() => setDialog("support"));
 
   useEffect(() => {
-    player.openRoom(room);
+    player.openRoom(room, initialTrackId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [room.scene.slug]);
+  }, [room.scene.slug, initialTrackId]);
 
   useEffect(() => {
     const refresh = () => {
@@ -123,18 +131,25 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
   );
 
   const share = async () => {
-    const url = window.location.href;
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const url = `${origin}/room/${scene.slug}`;
+    const title = `Sainik Dhaba · ${scene.title_en} 📻`;
     const text = `Main ${scene.title_en} mein baitha hoon — Sainik Dhaba`;
-    if (navigator.share) {
+
+    if (typeof navigator !== "undefined" && navigator.share) {
       try {
-        await navigator.share({ title: scene.title_en, text, url });
+        await navigator.share({ title, text, url });
         return;
       } catch {
         /* dismissed */
       }
     }
-    await navigator.clipboard.writeText(url);
-    toast.success("Link copied — bhej do kisi ko");
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      await navigator.clipboard.writeText(url);
+      toast.success("Link copy ho gaya — bhej do kisi ko", {
+        description: "Room ka link copy ho gaya hai.",
+      });
+    }
   };
 
   const active = player.isPlaying;
