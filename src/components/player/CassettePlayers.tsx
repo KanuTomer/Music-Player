@@ -64,9 +64,8 @@ function Cover({
 }) {
   return (
     <span
-      className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-md sm:rounded-lg border border-white/15 bg-black/40 shadow-xs ring-1 ring-white/10 ${
-        compact ? "size-8" : "size-8.5 sm:size-9.5"
-      }`}
+      className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-md sm:rounded-lg border border-white/15 bg-black/40 shadow-xs ring-1 ring-white/10 ${compact ? "size-8" : "size-8.5 sm:size-9.5"
+        }`}
     >
       {coverId ? (
         <img
@@ -99,9 +98,8 @@ function LiveEqualizer({ isPlaying, status }: { isPlaying: boolean; status: stri
         </div>
       ) : (
         <span
-          className={`inline-block size-1.5 rounded-full bg-amber-400 ${
-            status === "loading" ? "animate-ping" : "opacity-90"
-          }`}
+          className={`inline-block size-1.5 rounded-full bg-amber-400 ${status === "loading" ? "animate-ping" : "opacity-90"
+            }`}
           aria-hidden
         />
       )}
@@ -172,9 +170,8 @@ function TransportButton({
       size="icon"
       onClick={action}
       aria-label={label}
-      className={`${
-        compact ? "size-7.5" : "size-7.5 sm:size-8"
-      } shrink-0 rounded-full border border-white/20 bg-white/10 text-white shadow-xs transition-all hover:scale-105 hover:border-white/40 hover:bg-white/20 hover:text-white active:scale-95`}
+      className={`${compact ? "size-7.5" : "size-7.5 sm:size-8"
+        } shrink-0 rounded-full border border-white/20 bg-white/10 text-white shadow-xs transition-all hover:scale-105 hover:border-white/40 hover:bg-white/20 hover:text-white active:scale-95`}
     >
       {children}
     </Button>
@@ -189,9 +186,8 @@ function PlayButton({ compact = false }: { compact?: boolean }) {
       onClick={player.toggle}
       aria-label={player.isPlaying ? "Pause" : "Play"}
       size="icon"
-      className={`${
-        compact ? "size-8.5" : "size-9 sm:size-10"
-      } shrink-0 rounded-full border-0 bg-gradient-to-br from-[#f27a42] via-[#e2612a] to-[#c74c1a] text-charcoal shadow-[0_2px_10px_rgba(240,126,70,0.45),inset_0_1px_1px_rgba(255,255,255,0.45)] ring-1 ring-ember/40 transition-all hover:scale-105 hover:shadow-[0_3px_16px_rgba(240,126,70,0.65)] hover:brightness-110 active:scale-95`}
+      className={`${compact ? "size-8.5" : "size-9 sm:size-10"
+        } shrink-0 rounded-full border-0 bg-gradient-to-br from-[#f27a42] via-[#e2612a] to-[#c74c1a] text-charcoal shadow-[0_2px_10px_rgba(240,126,70,0.45),inset_0_1px_1px_rgba(255,255,255,0.45)] ring-1 ring-ember/40 transition-all hover:scale-105 hover:shadow-[0_3px_16px_rgba(240,126,70,0.65)] hover:brightness-110 active:scale-95`}
     >
       {player.isPlaying ? (
         <Pause
@@ -297,11 +293,10 @@ export function FullCassettePlayer() {
             onClick={() => setShowVolume((current) => !current)}
             aria-expanded={showVolume}
             aria-label="Music volume"
-            className={`size-7.5 sm:size-8 rounded-full border border-white/15 bg-white/5 text-cream/80 transition-all hover:bg-white/15 hover:text-cream hover:border-white/30 active:scale-95 ${
-              showVolume
+            className={`size-7.5 sm:size-8 rounded-full border border-white/15 bg-white/5 text-cream/80 transition-all hover:bg-white/15 hover:text-cream hover:border-white/30 active:scale-95 ${showVolume
                 ? "bg-ember text-charcoal shadow-[0_0_8px_rgba(240,126,70,0.5)] border-ember/60 font-semibold"
                 : ""
-            }`}
+              }`}
           >
             {player.musicVolume === 0 ? (
               <VolumeX className="size-3.5" aria-hidden />

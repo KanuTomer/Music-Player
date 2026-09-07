@@ -23,7 +23,7 @@ import { AmbienceEventButton } from "@/components/room/AmbienceEventButton";
 import { useSupportAutoPrompt } from "@/hooks/useSupportPrompt";
 import { useRoomAnalytics } from "@/hooks/useRoomAnalytics";
 import { supabase } from "@/integrations/supabase/client";
-import { isLightTextColor, sceneTextShadow } from "@/lib/scene-presentation";
+import { isLightTextColor, sceneTextShadow, sceneTextStroke } from "@/lib/scene-presentation";
 import { useLiveScenes } from "@/hooks/useLiveScenes";
 
 export function RoomExperience({
@@ -155,6 +155,7 @@ export function RoomExperience({
   const active = player.isPlaying;
   const isCorporate = scene.slug === "corporate-majdoor";
   const foregroundTextShadow = sceneTextShadow(presentation.foreground_text_color);
+  const foregroundTextStroke = sceneTextStroke(presentation.foreground_text_color);
   // Scenes that are night-bound or specifically unshaded by nature keep their own light.
   const gradeless = scene.slug === "raat-ki-bus" || isCorporate;
   const gradeClass = gradeless ? "" : `grade-${player.daypart}`;
@@ -214,11 +215,10 @@ export function RoomExperience({
         {!isCorporate && (
           <>
             <div
-              className={`pointer-events-none absolute inset-x-0 top-0 z-10 h-48 bg-gradient-to-b sm:h-56 ${
-                isLightTextColor(presentation.foreground_text_color)
+              className={`pointer-events-none absolute inset-x-0 top-0 z-10 h-48 bg-gradient-to-b sm:h-56 ${isLightTextColor(presentation.foreground_text_color)
                   ? "from-black/75 via-black/35 to-transparent"
                   : "from-white/55 via-white/20 to-transparent"
-              }`}
+                }`}
               aria-hidden
             />
             <div
@@ -291,6 +291,7 @@ export function RoomExperience({
             style={{
               color: presentation.foreground_text_color,
               textShadow: foregroundTextShadow,
+              ...foregroundTextStroke,
             }}
           >
             {scene.title_hi}
@@ -304,6 +305,7 @@ export function RoomExperience({
             style={{
               color: presentation.foreground_text_color,
               textShadow: foregroundTextShadow,
+              ...foregroundTextStroke,
             }}
           >
             {scene.title_en}

@@ -51,9 +51,29 @@ export function isLightTextColor(color: string) {
 }
 
 export function sceneTextShadow(color: string) {
-  return isLightTextColor(color)
-    ? "0 2px 10px rgba(0,0,0,.52), 0 7px 28px rgba(0,0,0,.34), 0 0 52px rgba(0,0,0,.22)"
-    : "0 2px 10px rgba(255,248,232,.60), 0 7px 28px rgba(255,248,232,.36), 0 0 52px rgba(255,248,232,.22)";
+  // Tight offset shadows that simulate a crisp outline rather than a blurry glow
+  const c = isLightTextColor(color) ? "0,0,0" : "255,248,232";
+  return [
+    `-1px -1px 0 rgba(${c},.9)`,
+    ` 1px -1px 0 rgba(${c},.9)`,
+    `-1px  1px 0 rgba(${c},.9)`,
+    ` 1px  1px 0 rgba(${c},.9)`,
+    ` 0    2px 0 rgba(${c},.7)`,
+    ` 0   -2px 0 rgba(${c},.7)`,
+    ` 2px  0   0 rgba(${c},.7)`,
+    `-2px  0   0 rgba(${c},.7)`,
+  ].join(",");
+}
+
+/** Returns inline-style properties for `-webkit-text-stroke` outline. */
+export function sceneTextStroke(color: string) {
+  const strokeColor = isLightTextColor(color)
+    ? "rgba(0,0,0,0.65)"
+    : "rgba(255,248,232,0.65)";
+  return {
+    WebkitTextStroke: `1.5px ${strokeColor}`,
+    paintOrder: "stroke fill" as const,
+  };
 }
 
 export function chooseReadableTextColor(backgroundLuminances: number[]) {
