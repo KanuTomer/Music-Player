@@ -176,7 +176,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [ambienceEnabled, setAmbienceEnabled] = useState(false);
   const [nowPlaying, setNowPlaying] = useState<NowPlaying>(emptyNowPlaying);
   const track = playlist[index]?.track ?? null;
-  const ambience = useAmbienceEngine(room, ambienceEnabled, ambienceLevel);
+  const ambience = useAmbienceEngine(room, ambienceEnabled && isPlaying, ambienceLevel);
   const resumeAmbienceFromGesture = ambience.resumeFromGesture;
   const ambienceAvailable = Boolean(room?.ambience);
   const activeMusicDuckRatio = room?.ambience?.music_duck_ratio ?? 1;
