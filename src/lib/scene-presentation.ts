@@ -50,6 +50,12 @@ export function isLightTextColor(color: string) {
   return hexLuminance(color) > 0.45;
 }
 
+export function sceneTextShadow(color: string) {
+  return isLightTextColor(color)
+    ? "0 2px 10px rgba(0,0,0,.52), 0 7px 28px rgba(0,0,0,.34), 0 0 52px rgba(0,0,0,.22)"
+    : "0 2px 10px rgba(255,248,232,.60), 0 7px 28px rgba(255,248,232,.36), 0 0 52px rgba(255,248,232,.22)";
+}
+
 export function chooseReadableTextColor(backgroundLuminances: number[]) {
   if (!backgroundLuminances.length) return LIGHT_SCENE_TEXT;
   const contrast = (foreground: number, background: number) =>
