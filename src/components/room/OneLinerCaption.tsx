@@ -77,9 +77,7 @@ export function OneLinerCaption({
     >
       <div
         className={`max-w-[21ch] transition-[opacity,transform] duration-[900ms] ease-in-out motion-reduce:transition-none sm:max-w-none ${
-          visible
-            ? "scale-100 translate-y-0 opacity-100"
-            : "scale-[0.98] translate-y-1 opacity-0"
+          visible ? "scale-100 translate-y-0 opacity-100" : "scale-[0.98] translate-y-1 opacity-0"
         }`}
       >
         <p
