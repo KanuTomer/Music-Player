@@ -162,13 +162,14 @@ function PlayButton({ compact = false }: { compact?: boolean }) {
         <Pause
           className={compact ? "size-3.5" : "size-4 sm:size-4.5"}
           aria-hidden
-          fill="currentColor"
+          strokeWidth={2.2}
         />
       ) : (
         <Play
-          className={`${compact ? "size-3.5" : "size-4 sm:size-4.5"} translate-x-0.5`}
+          className={compact ? "size-3.5" : "size-4 sm:size-4.5"}
           aria-hidden
-          fill="currentColor"
+          strokeWidth={2.2}
+          strokeLinejoin="round"
         />
       )}
     </Button>
@@ -230,9 +231,9 @@ export function FullCassettePlayer() {
       </div>
 
       {/* Bottom Controls Deck - Symmetrical & High-end */}
-      <div className="mt-1.5 flex items-center justify-between gap-1 border-t border-white/10 pt-1.5">
+      <div className="mt-1.5 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1 border-t border-white/10 pt-1.5">
         {/* Left: Volume toggle */}
-        <div className="flex items-center">
+        <div className="flex items-center justify-self-start">
           <Button
             type="button"
             variant="ghost"
@@ -257,7 +258,7 @@ export function FullCassettePlayer() {
         </div>
 
         {/* Center: Master Transport Deck */}
-        <div className="flex items-center gap-1.5 sm:gap-2">
+        <div className="flex items-center gap-1.5 justify-self-center sm:gap-2">
           <TransportButton action={player.previous} label="Previous track">
             <SkipBack className="size-3 sm:size-3.5" aria-hidden />
           </TransportButton>
@@ -268,7 +269,7 @@ export function FullCassettePlayer() {
         </div>
 
         {/* Right: Ambience Control */}
-        <div className="flex items-center justify-end">
+        <div className="flex items-center justify-end justify-self-end">
           <AmbienceControl
             available={player.ambienceAvailable}
             enabled={player.ambienceEnabled}

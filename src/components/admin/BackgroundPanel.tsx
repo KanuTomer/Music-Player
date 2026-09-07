@@ -13,6 +13,7 @@ import { artFor } from "@/lib/scene-art";
 import {
   DARK_SCENE_TEXT,
   isLightTextColor,
+  sceneTextShadow,
   LIGHT_SCENE_TEXT,
   prepareBackgroundImage,
   suggestTextColorFromImageUrl,
@@ -238,6 +239,7 @@ export function BackgroundPanel({
         : "linear-gradient(to bottom, rgba(255,255,255,.30), transparent 46%, rgba(255,255,255,.16))",
     [previewTextColor],
   );
+  const previewTextShadow = sceneTextShadow(previewTextColor);
 
   return (
     <TooltipProvider delayDuration={180}>
@@ -363,7 +365,7 @@ export function BackgroundPanel({
               <div className="absolute inset-0" style={{ background: scrim }} aria-hidden />
               <div
                 className="absolute inset-x-4 top-[11%] text-center"
-                style={{ color: previewTextColor }}
+                style={{ color: previewTextColor, textShadow: previewTextShadow }}
               >
                 <p className="font-deva text-3xl font-bold leading-none sm:text-4xl">
                   {data.scene.titleHi}
@@ -374,8 +376,9 @@ export function BackgroundPanel({
               </div>
               <div className="absolute inset-x-4 bottom-[12%] flex flex-col items-center gap-2 text-center">
                 <span
-                  className="rounded-full bg-black/55 px-3 py-1.5 text-xs backdrop-blur"
-                  style={{ color: previewTextColor }}
+                  lang="hi"
+                  className="max-w-[21ch] font-vintage-deva text-lg font-black leading-tight"
+                  style={{ color: previewTextColor, textShadow: previewTextShadow }}
                 >
                   {representative}
                 </span>

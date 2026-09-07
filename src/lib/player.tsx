@@ -176,7 +176,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [ambienceEnabled, setAmbienceEnabled] = useState(false);
   const [nowPlaying, setNowPlaying] = useState<NowPlaying>(emptyNowPlaying);
   const track = playlist[index]?.track ?? null;
-  const ambience = useAmbienceEngine(room, ambienceEnabled, ambienceLevel);
+  const ambience = useAmbienceEngine(room, ambienceEnabled && isPlaying, ambienceLevel);
   const resumeAmbienceFromGesture = ambience.resumeFromGesture;
   const ambienceAvailable = Boolean(room?.ambience);
   const activeMusicDuckRatio = room?.ambience?.music_duck_ratio ?? 1;
@@ -626,6 +626,65 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     },
     [rampMusicOutput],
   );
+  useEffect(() => {
+    if (!room) return;
+
+    const handlePlayerShortcut = (event: KeyboardEvent) => {
+      const isPublicPlayerView =
+        window.location.pathname === "/" || window.location.pathname.startsWith("/room/");
+      if (
+        !isPublicPlayerView ||
+        event.defaultPrevented ||
+        event.ctrlKey ||
+        event.altKey ||
+        event.metaKey ||
+        event.shiftKey
+      ) {
+        return;
+      }
+
+      const target = event.target;
+      if (
+        target instanceof Element &&
+        target.closest(
+          'input, textarea, select, button, a, [contenteditable]:not([contenteditable="false"]), [role="button"], [role="link"], [role="slider"], [role="textbox"]',
+        )
+      ) {
+        return;
+      }
+
+      const currentTime = playerRef.current?.getCurrentTime() ?? 0;
+      const duration = playerRef.current?.getDuration() ?? 0;
+
+      if (event.code === "Space" || event.key === " ") {
+        event.preventDefault();
+        if (!event.repeat) toggle();
+        return;
+      }
+
+      switch (event.key) {
+        case "ArrowLeft":
+          event.preventDefault();
+          seek(Math.max(0, currentTime - 5));
+          break;
+        case "ArrowRight":
+          event.preventDefault();
+          seek(Math.min(duration > 0 ? duration : currentTime + 5, currentTime + 5));
+          break;
+        case "ArrowUp":
+          event.preventDefault();
+          setMusicVolume(volumeRef.current + 0.05);
+          break;
+        case "ArrowDown":
+          event.preventDefault();
+          setMusicVolume(volumeRef.current - 0.05);
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handlePlayerShortcut);
+    return () => window.removeEventListener("keydown", handlePlayerShortcut);
+  }, [room, seek, setMusicVolume, toggle]);
   const toggleAmbience = useCallback(() => {
     if (!ambienceAvailable) return;
     const nextEnabled = !ambienceEnabled;

@@ -23,7 +23,7 @@ import { AmbienceEventButton } from "@/components/room/AmbienceEventButton";
 import { useSupportAutoPrompt } from "@/hooks/useSupportPrompt";
 import { useRoomAnalytics } from "@/hooks/useRoomAnalytics";
 import { supabase } from "@/integrations/supabase/client";
-import { isLightTextColor } from "@/lib/scene-presentation";
+import { isLightTextColor, sceneTextShadow } from "@/lib/scene-presentation";
 import { useLiveScenes } from "@/hooks/useLiveScenes";
 
 export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Scene[] }) {
@@ -139,6 +139,7 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
 
   const active = player.isPlaying;
   const isCorporate = scene.slug === "corporate-majdoor";
+  const foregroundTextShadow = sceneTextShadow(presentation.foreground_text_color);
   // Scenes that are night-bound or specifically unshaded by nature keep their own light.
   const gradeless = scene.slug === "raat-ki-bus" || isCorporate;
   const gradeClass = gradeless ? "" : `grade-${player.daypart}`;
@@ -272,7 +273,10 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
         <div className="pointer-events-none absolute inset-x-0 top-[clamp(4.5rem,9.5dvh,7rem)] z-20 flex flex-col items-center px-3 text-center pt-[env(safe-area-inset-top)]">
           <h1
             className="font-deva text-5xl leading-[1.02] font-black sm:text-7xl md:text-[clamp(4rem,9.5dvh,7rem)]"
-            style={{ color: presentation.foreground_text_color }}
+            style={{
+              color: presentation.foreground_text_color,
+              textShadow: foregroundTextShadow,
+            }}
           >
             {scene.title_hi}
           </h1>
@@ -282,7 +286,10 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
           />
           <p
             className="mt-1.5 text-sm font-black tracking-[0.3em] uppercase sm:mt-2 sm:text-lg sm:tracking-[0.32em] md:text-[clamp(1.1rem,2.5dvh,1.8rem)]"
-            style={{ color: presentation.foreground_text_color }}
+            style={{
+              color: presentation.foreground_text_color,
+              textShadow: foregroundTextShadow,
+            }}
           >
             {scene.title_en}
           </p>
@@ -294,6 +301,7 @@ export function RoomExperience({ room, scenes }: { room: RoomPayload; scenes: Sc
               active={active}
               trackKey={player.nowPlaying?.title ?? player.track?.title ?? null}
               textColor={presentation.foreground_text_color}
+              textShadow={foregroundTextShadow}
             />
           </div>
         </div>
