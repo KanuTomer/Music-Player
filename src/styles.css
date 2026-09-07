@@ -421,7 +421,7 @@
 
 @keyframes cassette-spin {
   to {
-    transform: rotate(360deg);
+    transform: rotate(-360deg);
   }
 }
 
@@ -553,8 +553,12 @@
 }
 
 @keyframes cassette-tape-highlight-travel {
-  to {
+  from {
     transform: translateX(-50%);
+  }
+
+  to {
+    transform: translateX(0);
   }
 }
 
