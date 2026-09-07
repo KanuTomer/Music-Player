@@ -182,6 +182,7 @@ export function BackgroundPanel({
     setBusy("Saving background");
     setMessage("");
     let uploadedPath: string | null = null;
+    let uploadReservationId: string | null = null;
     try {
       let path = draft.backgroundStoragePath;
       if (prepared) {
@@ -196,11 +197,13 @@ export function BackgroundPanel({
         if (upload.error) throw upload.error;
         path = reservation.path;
         uploadedPath = reservation.path;
+        uploadReservationId = reservation.reservationId;
       }
       const result = await saveAdminScenePresentation({
         data: {
           sceneId: data.scene.id,
           backgroundStoragePath: path,
+          ...(uploadReservationId ? { uploadReservationId } : {}),
           foregroundTextColor: draft.foregroundTextColor,
           gagLabel: draft.gagLabel,
           oneliners: draft.oneliners.map((line) => ({
@@ -211,6 +214,7 @@ export function BackgroundPanel({
         },
       });
       uploadedPath = null;
+      uploadReservationId = null;
       const next = snapshot(result);
       setBaseline(next);
       setDraft(next);
@@ -223,7 +227,11 @@ export function BackgroundPanel({
     } catch (error) {
       if (uploadedPath) {
         await discardAdminBackgroundUpload({
-          data: { sceneId: data.scene.id, path: uploadedPath },
+          data: {
+            sceneId: data.scene.id,
+            path: uploadedPath,
+            reservationId: uploadReservationId ?? "",
+          },
         }).catch(() => undefined);
       }
       setMessage(error instanceof Error ? error.message : "Unable to save background changes");

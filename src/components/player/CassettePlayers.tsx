@@ -88,25 +88,47 @@ function Cover({
 }
 
 function LiveEqualizer({ isPlaying, status }: { isPlaying: boolean; status: string }) {
+  const mode = status === "loading" ? "loading" : isPlaying ? "playing" : "paused";
+  const label = mode === "loading" ? "ट्यून" : mode === "playing" ? "बज रहा है" : "रोक दिया";
+
   return (
-    <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-amber-500/50 bg-black/60 px-2.5 py-0.5 text-[10.5px] font-semibold text-amber-300 shadow-xs backdrop-blur-md">
-      {isPlaying ? (
-        <div className="flex h-2.5 items-end gap-0.5" aria-hidden>
+    <span
+      className="grid min-w-[7.4rem] shrink-0 grid-cols-[1rem_1fr] items-center gap-1.5 rounded-full border border-amber-500/50 bg-black/60 px-2.5 py-0.5 text-[10.5px] font-semibold text-amber-300 shadow-xs backdrop-blur-md"
+      aria-live="polite"
+      aria-label={label}
+    >
+      <span className="relative block h-2.5 w-4" aria-hidden>
+        <span
+          className={`absolute inset-0 flex items-end justify-center gap-0.5 transition-opacity duration-300 ease-in-out motion-reduce:transition-none ${
+            mode === "playing" ? "opacity-100" : "opacity-0"
+          }`}
+        >
           <span className="w-0.5 rounded-full bg-amber-400 animate-wave-1" />
           <span className="w-0.5 rounded-full bg-amber-400 animate-wave-2" />
           <span className="w-0.5 rounded-full bg-amber-400 animate-wave-3" />
           <span className="w-0.5 rounded-full bg-amber-400 animate-wave-4" />
-        </div>
-      ) : (
+        </span>
         <span
-          className={`inline-block size-1.5 rounded-full bg-amber-400 ${
-            status === "loading" ? "animate-ping" : "opacity-90"
+          className={`absolute left-1/2 top-1/2 size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-400 transition-opacity duration-250 ease-in-out motion-reduce:transition-none ${
+            mode === "playing" ? "opacity-0" : "opacity-90"
           }`}
-          aria-hidden
         />
-      )}
-      <span className="font-sans text-[11px] font-bold tracking-normal leading-none text-amber-200">
-        {status === "loading" ? "ट्यून" : isPlaying ? "बज रहा है" : "रोक दिया"}
+        {mode === "loading" ? (
+          <span className="absolute inset-0 rounded-full bg-amber-400/45 animate-ping" />
+        ) : null}
+      </span>
+      <span className="relative block h-4 min-w-0 overflow-hidden font-sans text-[11px] font-bold tracking-normal leading-4 text-amber-200">
+        {(["loading", "playing", "paused"] as const).map((state) => (
+          <span
+            key={state}
+            aria-hidden
+            className={`absolute inset-0 whitespace-nowrap transition-opacity duration-300 ease-in-out motion-reduce:transition-none ${
+              mode === state ? "opacity-100" : "opacity-0"
+            }`}
+          >
+            {state === "loading" ? "ट्यून" : state === "playing" ? "बज रहा है" : "रोक दिया"}
+          </span>
+        ))}
       </span>
     </span>
   );

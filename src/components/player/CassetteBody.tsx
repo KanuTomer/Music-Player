@@ -19,9 +19,9 @@ function CassetteHub({ compact, isPlaying }: { compact: boolean; isPlaying: bool
 
   return (
     <span
-      className={`${compact ? "size-5.5" : "size-6.5 sm:size-7"} relative z-10 block shrink-0 ${
+      className={`${compact ? "size-5.5" : "size-6.5 sm:size-7"} cassette-reel ${
         isPlaying ? "cassette-reel-playing" : ""
-      }`}
+      } relative z-10 block shrink-0`}
       aria-hidden
     >
       <svg className="block size-full" viewBox="0 0 64 64">

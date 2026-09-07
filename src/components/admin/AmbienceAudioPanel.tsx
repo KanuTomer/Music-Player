@@ -251,6 +251,7 @@ export function AmbienceAudioPanel({ scene, assets, onChanged, onDirtyChange }: 
       await finalizeAdminAmbienceUpload({
         data: {
           sceneId: scene.id,
+          reservationId: reserved.reservationId,
           path: reserved.path,
           name: uploadName.trim(),
           role: uploadRole,

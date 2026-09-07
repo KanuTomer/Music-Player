@@ -426,9 +426,14 @@
   }
 }
 
-.cassette-reel-playing {
-  animation: cassette-spin 1.4s linear infinite;
+.cassette-reel {
+  animation: cassette-spin 2.1s linear infinite;
+  animation-play-state: paused;
   will-change: transform;
+}
+
+.cassette-reel-playing {
+  animation-play-state: running;
 }
 
 .cassette-reel-hole {

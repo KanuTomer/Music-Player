@@ -1,25 +1,40 @@
 import { getRequest } from "@tanstack/react-start/server";
 import { createHash, randomUUID } from "node:crypto";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import type { Database } from "@/integrations/supabase/types";
 import { ambienceProcessing, type AmbienceRole } from "./ambience-processing";
 
-type AdminClient = {
-  // These admin-only tables and RPCs are introduced by the migration in this
-  // change and are not present in the checked-in generated Supabase types yet.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  from: (table: string) => any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  rpc: (name: string, args?: Record<string, unknown>) => any;
-  auth: {
-    getUser: (
-      token: string,
-    ) => Promise<{ data: { user: { id: string; email?: string } | null }; error: Error | null }>;
-  };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  storage: any;
-};
+const serviceAdmin = supabaseAdmin;
 
-const admin = supabaseAdmin as unknown as AdminClient;
+function requestAccessToken() {
+  const authorization = getRequest()?.headers.get("authorization");
+  return authorization?.match(/^Bearer\s+(.+)$/i)?.[1] ?? null;
+}
+
+function requestAdminClient(): SupabaseClient<Database> {
+  const token = requestAccessToken();
+  if (!token) throw new Error("Sign in is required");
+  const url = process.env["SUPABASE_URL"];
+  const key = process.env["SUPABASE_PUBLISHABLE_KEY"];
+  if (!url || !key) throw new Error("Admin authentication is unavailable");
+  return createClient<Database>(url, key, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+    auth: { persistSession: false, autoRefreshToken: false, storage: undefined },
+  });
+}
+
+// All database work in an admin request uses the caller's JWT, so grants and RLS
+// remain the final authorization boundary. Storage signing and inspection are the
+// only capabilities that continue to use the server-only secret client.
+const admin = new Proxy({} as SupabaseClient<Database>, {
+  get(_target, property) {
+    if (property === "storage") return serviceAdmin.storage;
+    const client = requestAdminClient() as unknown as Record<PropertyKey, unknown>;
+    const value = client[property];
+    return typeof value === "function" ? value.bind(client) : value;
+  },
+});
 const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
 
 export type AdminTrack = {
@@ -170,20 +185,58 @@ export function countTrackUses(rows: Array<{ track_id: string }>) {
   return usage;
 }
 
+async function consumeAdminRateLimit(bucket: string, limit: number, windowSeconds: number) {
+  const { data, error } = await admin.rpc("admin_consume_rate_limit", {
+    p_bucket: bucket,
+    p_limit: limit,
+    p_window_seconds: windowSeconds,
+  });
+  if (error) throw new Error(error.message);
+  if (Number(data) > limit) throw new Error("Too many requests. Please wait and try again.");
+}
+
+async function recordAdminAudit(input: {
+  action: string;
+  sceneId?: string | null;
+  targetId?: string | null;
+  affectedCount?: number;
+}) {
+  const { error } = await admin.rpc("admin_record_audit", {
+    p_action: input.action,
+    p_scene_id: input.sceneId ?? null,
+    p_target_id: input.targetId ?? null,
+    p_affected_count: input.affectedCount ?? 0,
+    p_request_id: randomUUID(),
+  });
+  if (error) console.error("[admin-audit] unable to record mutation", { action: input.action });
+}
+
 export async function requireAdmin(): Promise<{ id: string; email?: string }> {
-  const request = getRequest();
-  const authorization = request?.headers.get("authorization");
-  const token = authorization?.match(/^Bearer\s+(.+)$/i)?.[1];
+  const token = requestAccessToken();
   if (!token) throw new Error("Sign in is required");
-  const { data, error } = await admin.auth.getUser(token);
-  if (error || !data.user) throw new Error("Your sign-in session is invalid");
-  const { data: role, error: roleError } = await admin
-    .from("app_admins")
-    .select("user_id")
-    .eq("user_id", data.user.id)
-    .maybeSingle();
-  if (roleError || !role) throw new Error("Administrator access is required");
-  return data.user;
+  const { data, error } = await admin.auth.getClaims(token);
+  if (error || !data.claims?.sub) throw new Error("Your sign-in session is invalid");
+  const { data: status, error: statusError } = await admin.rpc("admin_onboarding_status");
+  if (statusError) throw new Error("Unable to verify administrator access");
+  if (status === "not_authorized") throw new Error("Administrator access is required");
+  if (status !== "ready") throw new Error("Administrator MFA verification is required");
+  return {
+    id: data.claims.sub,
+    ...(typeof data.claims.email === "string" ? { email: data.claims.email } : {}),
+  };
+}
+
+export type AdminOnboardingStatus =
+  "not_authorized" | "mfa_enrollment_required" | "mfa_challenge_required" | "ready";
+
+export async function getAdminOnboardingStatus(): Promise<AdminOnboardingStatus> {
+  const token = requestAccessToken();
+  if (!token) throw new Error("Sign in is required");
+  const { data: userData, error: userError } = await admin.auth.getClaims(token);
+  if (userError || !userData.claims?.sub) throw new Error("Your sign-in session is invalid");
+  const { data, error } = await admin.rpc("admin_onboarding_status");
+  if (error) throw new Error("Unable to verify administrator access");
+  return data as AdminOnboardingStatus;
 }
 
 async function activeScenes(): Promise<AdminScene[]> {
@@ -473,7 +526,7 @@ export async function getAdminAnalytics(since?: string): Promise<AnalyticsRow[]>
   await requireAdmin();
   const [sceneResult, visitResult] = await Promise.all([
     admin.from("scenes").select("id, slug, title_en").eq("is_live", true).order("sort_order"),
-    admin.rpc("admin_room_analytics", { p_since: since ?? null }),
+    admin.rpc("admin_secured_room_analytics", { p_since: since ?? null }),
   ]);
   if (sceneResult.error) throw new Error(sceneResult.error.message);
   if (visitResult.error) throw new Error(visitResult.error.message);
@@ -501,10 +554,9 @@ export async function getAdminAnalytics(since?: string): Promise<AnalyticsRow[]>
 
 export async function getAdminAmbience(sceneId: string): Promise<{
   ambience: AdminAmbience | null;
-  assets: AdminAsset[];
 }> {
   await requireAdmin();
-  const [profileResult, stemResult, assetResult] = await Promise.all([
+  const [profileResult, stemResult] = await Promise.all([
     admin
       .from("ambience_profiles")
       .select(
@@ -520,15 +572,9 @@ export async function getAdminAmbience(sceneId: string): Promise<{
       .eq("scene_id", sceneId)
       .not("asset_id", "is", null)
       .order("sort_order"),
-    admin
-      .from("ambience_assets")
-      .select("id, storage_path, byte_size, duration_seconds")
-      .eq("is_active", true)
-      .order("created_at", { ascending: false }),
   ]);
   if (profileResult.error) throw new Error(profileResult.error.message);
   if (stemResult.error) throw new Error(stemResult.error.message);
-  if (assetResult.error) throw new Error(assetResult.error.message);
   const profile = profileResult.data;
   return {
     ambience: profile
@@ -558,14 +604,24 @@ export async function getAdminAmbience(sceneId: string): Promise<{
           })),
         }
       : null,
-    assets: (assetResult.data ?? []).map((asset: RawAmbienceAsset) => ({
-      id: asset.id,
-      storagePath: asset.storage_path,
-      byteSize: Number(asset.byte_size),
-      durationSeconds: Number(asset.duration_seconds),
-      publicUrl: publicStorageUrl("ambience-audio", asset.storage_path) ?? "",
-    })),
   };
+}
+
+export async function getAdminAmbienceAssets(): Promise<AdminAsset[]> {
+  await requireAdmin();
+  const { data, error } = await admin
+    .from("ambience_assets")
+    .select("id, storage_path, byte_size, duration_seconds")
+    .eq("is_active", true)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((asset: RawAmbienceAsset) => ({
+    id: asset.id,
+    storagePath: asset.storage_path,
+    byteSize: Number(asset.byte_size),
+    durationSeconds: Number(asset.duration_seconds),
+    publicUrl: publicStorageUrl("ambience-audio", asset.storage_path) ?? "",
+  }));
 }
 
 export async function getAdminBackground(sceneId: string): Promise<AdminBackground> {
@@ -676,6 +732,11 @@ export async function saveAmbienceProfile(input: {
     .from("ambience_profiles")
     .upsert(payload, { onConflict: "scene_id" });
   if (error) throw new Error(error.message);
+  await recordAdminAudit({
+    action: "ambience.profile.save",
+    sceneId: input.sceneId,
+    affectedCount: 1,
+  });
 }
 
 export async function saveAmbienceStem(input: {
@@ -737,6 +798,12 @@ export async function saveAmbienceStem(input: {
     : admin.from("sound_stems").insert(payload);
   const { error } = await query;
   if (error) throw new Error(error.message);
+  await recordAdminAudit({
+    action: input.id ? "ambience.stem.update" : "ambience.stem.create",
+    sceneId: input.sceneId,
+    ...(input.id ? { targetId: input.id } : {}),
+    affectedCount: 1,
+  });
 }
 
 export async function deactivateAmbienceStem(stemId: string) {
@@ -746,6 +813,11 @@ export async function deactivateAmbienceStem(stemId: string) {
     .update({ is_active: false })
     .eq("id", String(stemId));
   if (error) throw new Error(error.message);
+  await recordAdminAudit({
+    action: "ambience.stem.deactivate",
+    targetId: stemId,
+    affectedCount: 1,
+  });
 }
 
 function inspectPlaybackWav(data: Buffer, role: AmbienceRole) {
@@ -776,12 +848,30 @@ function inspectPlaybackWav(data: Buffer, role: AmbienceRole) {
 
 export async function reserveAmbienceUpload(sceneSlug: string) {
   await requireAdmin();
-  const safeSlug = String(sceneSlug).replace(/[^a-z0-9-]/gi, "");
-  if (!safeSlug) throw new Error("Invalid Jagah");
-  const path = `rooms/${safeSlug}/ambience/${randomUUID()}.wav`;
-  const { data, error } = await admin.storage.from("ambience-audio").createSignedUploadUrl(path);
+  await consumeAdminRateLimit("upload.reserve", 30, 3600);
+  const { data: scene, error: sceneError } = await admin
+    .from("scenes")
+    .select("id")
+    .eq("slug", String(sceneSlug))
+    .eq("is_live", true)
+    .single();
+  if (sceneError || !scene) throw new Error("Jagah not found");
+  const { data: rows, error: reservationError } = await admin.rpc(
+    "admin_create_upload_reservation",
+    { p_scene_id: scene.id, p_purpose: "ambience" },
+  );
+  const reservation = rows?.[0];
+  if (reservationError || !reservation)
+    throw new Error(reservationError?.message ?? "Unable to reserve audio upload");
+  const { data, error } = await serviceAdmin.storage
+    .from("ambience-audio")
+    .createSignedUploadUrl(reservation.object_path);
   if (error || !data) throw new Error(error?.message ?? "Unable to reserve audio upload");
-  return { path, token: data.token };
+  return {
+    reservationId: reservation.reservation_id as string,
+    path: reservation.object_path as string,
+    token: data.token,
+  };
 }
 
 const BACKGROUND_MAX_BYTES = 5 * 1024 * 1024;
@@ -790,26 +880,40 @@ const BACKGROUND_PATH =
 
 export async function reserveBackgroundUpload(sceneId: string) {
   await requireAdmin();
-  const { data: scene, error: sceneError } = await admin
-    .from("scenes")
-    .select("slug")
-    .eq("id", sceneId)
-    .eq("is_live", true)
-    .single();
-  if (sceneError || !scene) throw new Error(sceneError?.message ?? "Jagah not found");
-  const path = `rooms/${scene.slug}/background/${randomUUID()}.webp`;
-  const { data, error } = await admin.storage.from("scene-media").createSignedUploadUrl(path);
+  await consumeAdminRateLimit("upload.reserve", 30, 3600);
+  const { data: rows, error: reservationError } = await admin.rpc(
+    "admin_create_upload_reservation",
+    { p_scene_id: sceneId, p_purpose: "background" },
+  );
+  const reservation = rows?.[0];
+  if (reservationError || !reservation)
+    throw new Error(reservationError?.message ?? "Unable to reserve background upload");
+  const { data, error } = await serviceAdmin.storage
+    .from("scene-media")
+    .createSignedUploadUrl(reservation.object_path);
   if (error || !data) throw new Error(error?.message ?? "Unable to reserve background upload");
-  return { path, token: data.token };
+  return {
+    reservationId: reservation.reservation_id as string,
+    path: reservation.object_path as string,
+    token: data.token,
+  };
 }
 
-export async function discardBackgroundUpload(sceneId: string, path: string) {
+export async function discardBackgroundUpload(
+  sceneId: string,
+  path: string,
+  reservationId: string,
+) {
   await requireAdmin();
-  const match = path.match(BACKGROUND_PATH);
-  const { data: scene } = await admin.from("scenes").select("slug").eq("id", sceneId).maybeSingle();
-  if (!match || !scene || match[1] !== scene.slug)
-    throw new Error("Invalid background upload path");
-  const { error } = await admin.storage.from("scene-media").remove([path]);
+  const { data: valid } = await admin.rpc("admin_check_upload_reservation", {
+    p_reservation_id: reservationId,
+    p_scene_id: sceneId,
+    p_purpose: "background",
+    p_object_path: path,
+  });
+  if (!valid) throw new Error("Invalid background upload reservation");
+  await admin.rpc("admin_discard_upload_reservation", { p_reservation_id: reservationId });
+  const { error } = await serviceAdmin.storage.from("scene-media").remove([path]);
   if (error) throw new Error(error.message);
 }
 
@@ -850,6 +954,7 @@ function inspectPlaybackWebp(data: Buffer) {
 export async function saveScenePresentation(input: {
   sceneId: string;
   backgroundStoragePath: string | null;
+  uploadReservationId?: string;
   foregroundTextColor: string;
   gagLabel: string;
   oneliners: Array<{
@@ -869,18 +974,29 @@ export async function saveScenePresentation(input: {
   const previousPath = scene.background_storage_path as string | null;
   const nextPath = input.backgroundStoragePath || null;
   const isNewUpload = Boolean(nextPath && nextPath !== previousPath);
+  let presentationSaved = false;
   try {
     if (isNewUpload && nextPath) {
+      if (!input.uploadReservationId) throw new Error("Background upload reservation is missing");
       const match = nextPath.match(BACKGROUND_PATH);
       if (!match || match[1] !== scene.slug) throw new Error("Invalid background upload path");
-      const { data: object, error: downloadError } = await admin.storage
+      const { data: validReservation } = await admin.rpc("admin_check_upload_reservation", {
+        p_reservation_id: input.uploadReservationId,
+        p_scene_id: input.sceneId,
+        p_purpose: "background",
+        p_object_path: nextPath,
+      });
+      if (!validReservation) throw new Error("Background upload reservation is invalid or expired");
+      await consumeAdminRateLimit("upload.finalize", 30, 3600);
+      const { data: object, error: downloadError } = await serviceAdmin.storage
         .from("scene-media")
         .download(nextPath);
       if (downloadError || !object)
         throw new Error(downloadError?.message ?? "Uploaded background is missing");
       inspectPlaybackWebp(Buffer.from(await object.arrayBuffer()));
     }
-    const { error } = await admin.rpc("admin_save_scene_presentation", {
+    await consumeAdminRateLimit("bulk.presentation", 30, 60);
+    const { error } = await admin.rpc("admin_secured_save_scene_presentation", {
       p_scene_id: input.sceneId,
       p_background_storage_path: nextPath,
       p_foreground_text_color: input.foregroundTextColor,
@@ -892,18 +1008,42 @@ export async function saveScenePresentation(input: {
       })),
     });
     if (error) throw new Error(error.message);
+    presentationSaved = true;
+    if (isNewUpload && input.uploadReservationId) {
+      const { error: completionError } = await admin.rpc("admin_complete_upload_reservation", {
+        p_reservation_id: input.uploadReservationId,
+      });
+      if (completionError) throw new Error(completionError.message);
+    }
   } catch (error) {
-    if (isNewUpload && nextPath) await admin.storage.from("scene-media").remove([nextPath]);
+    if (isNewUpload && nextPath && !presentationSaved) {
+      if (input.uploadReservationId) {
+        await admin.rpc("admin_discard_upload_reservation", {
+          p_reservation_id: input.uploadReservationId,
+        });
+      }
+      await serviceAdmin.storage.from("scene-media").remove([nextPath]);
+    }
     throw error;
   }
   if (previousPath && previousPath !== nextPath && BACKGROUND_PATH.test(previousPath)) {
-    await admin.storage.from("scene-media").remove([previousPath]);
+    await admin.rpc("admin_queue_storage_cleanup", {
+      p_bucket: "scene-media",
+      p_object_path: previousPath,
+      p_reason: "replaced_object",
+    });
   }
+  await recordAdminAudit({
+    action: "scene.presentation.save",
+    sceneId: input.sceneId,
+    affectedCount: input.oneliners.length + 1,
+  });
   return getAdminBackground(input.sceneId);
 }
 
 export async function finalizeAmbienceUpload(input: {
   sceneId: string;
+  reservationId: string;
   path: string;
   name: string;
   role: AmbienceRole;
@@ -916,6 +1056,7 @@ export async function finalizeAmbienceUpload(input: {
   selectedDurationSeconds: number;
 }) {
   await requireAdmin();
+  await consumeAdminRateLimit("upload.finalize", 30, 3600);
   let assetId: string | null = null;
   let removeUploadedObject = false;
   try {
@@ -923,6 +1064,13 @@ export async function finalizeAmbienceUpload(input: {
       /^rooms\/([a-z0-9-]+)\/ambience\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.wav$/i,
     );
     if (!pathMatch) throw new Error("Invalid upload path");
+    const { data: validReservation } = await admin.rpc("admin_check_upload_reservation", {
+      p_reservation_id: input.reservationId,
+      p_scene_id: input.sceneId,
+      p_purpose: "ambience",
+      p_object_path: input.path,
+    });
+    if (!validReservation) throw new Error("Audio upload reservation is invalid or expired");
     const { data: scene, error: sceneError } = await admin
       .from("scenes")
       .select("slug")
@@ -937,7 +1085,7 @@ export async function finalizeAmbienceUpload(input: {
     if (existingError) throw new Error(existingError.message);
     if (existingAsset) throw new Error("This upload has already been finalized");
     removeUploadedObject = true;
-    const { data: object, error: downloadError } = await admin.storage
+    const { data: object, error: downloadError } = await serviceAdmin.storage
       .from("ambience-audio")
       .download(input.path);
     if (downloadError || !object)
@@ -988,12 +1136,26 @@ export async function finalizeAmbienceUpload(input: {
       eventMinSeconds: input.role === "event" ? 35 : null,
       eventMaxSeconds: input.role === "event" ? 110 : null,
     });
+    const { error: completionError } = await admin.rpc("admin_complete_upload_reservation", {
+      p_reservation_id: input.reservationId,
+    });
+    if (completionError) throw new Error(completionError.message);
+    await recordAdminAudit({
+      action: "ambience.asset.finalize",
+      sceneId: input.sceneId,
+      targetId: asset.id,
+      affectedCount: 2,
+    });
   } catch (error) {
     if (assetId) {
       await admin.from("sound_stems").delete().eq("asset_id", assetId);
       await admin.from("ambience_assets").delete().eq("id", assetId);
     }
-    if (removeUploadedObject) await admin.storage.from("ambience-audio").remove([input.path]);
+    await admin.rpc("admin_discard_upload_reservation", {
+      p_reservation_id: input.reservationId,
+    });
+    if (removeUploadedObject)
+      await serviceAdmin.storage.from("ambience-audio").remove([input.path]);
     throw error;
   }
 }
@@ -1009,41 +1171,55 @@ export type SongDraft = {
 
 export async function previewSongs(inputs: string[]): Promise<SongDraft[]> {
   await requireAdmin();
+  await consumeAdminRateLimit("songs.preview", 6, 60);
   if (inputs.length < 1 || inputs.length > 50)
     throw new Error("Paste between 1 and 50 YouTube links");
-  return Promise.all(
-    inputs.map(async (input) => {
-      const videoId = youtubeVideoId(input);
-      if (!videoId) throw new Error(`Invalid YouTube link: ${input}`);
-      let providerTitle = "";
-      let providerChannel = "";
-      try {
-        const response = await fetch(
-          `https://www.youtube.com/oembed?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${videoId}`)}&format=json`,
-          { signal: AbortSignal.timeout(5000) },
-        );
-        if (response.ok) {
-          const payload = (await response.json()) as { title?: string; author_name?: string };
-          providerTitle = payload.title?.trim() ?? "";
-          providerChannel = payload.author_name?.trim() ?? "";
+  const unique = new Map<string, string>();
+  for (const input of inputs) {
+    const videoId = youtubeVideoId(input);
+    if (!videoId) throw new Error(`Invalid YouTube link: ${input}`);
+    if (!unique.has(videoId)) unique.set(videoId, input);
+  }
+  const entries = [...unique.entries()];
+  const output = new Array<SongDraft>(entries.length);
+  let cursor = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(5, entries.length) }, async () => {
+      while (cursor < entries.length) {
+        const index = cursor++;
+        const [videoId] = entries[index]!;
+        let providerTitle = "";
+        let providerChannel = "";
+        try {
+          const response = await fetch(
+            `https://www.youtube.com/oembed?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${videoId}`)}&format=json`,
+            { signal: AbortSignal.timeout(5000) },
+          );
+          if (response.ok) {
+            const payload = (await response.json()) as { title?: string; author_name?: string };
+            providerTitle = payload.title?.trim() ?? "";
+            providerChannel = payload.author_name?.trim() ?? "";
+          }
+        } catch {
+          // Manual metadata entry remains available when the provider is unavailable.
         }
-      } catch {
-        // Manual metadata entry remains available when the provider is unavailable.
+        output[index] = {
+          input: `https://www.youtube.com/watch?v=${videoId}`,
+          title: providerTitle,
+          artist: providerChannel,
+          year: null,
+          providerTitle,
+          providerChannel,
+        };
       }
-      return {
-        input: `https://www.youtube.com/watch?v=${videoId}`,
-        title: providerTitle,
-        artist: providerChannel,
-        year: null,
-        providerTitle,
-        providerChannel,
-      };
     }),
   );
+  return output;
 }
 
 export async function addSongs(queueId: string, songs: SongDraft[]): Promise<void> {
   await requireAdmin();
+  await consumeAdminRateLimit("bulk.songs", 30, 60);
   if (!queueId || songs.length < 1 || songs.length > 50) throw new Error("Invalid song import");
   const payload = songs.map((song) => {
     const videoId = youtubeVideoId(song.input);
@@ -1058,20 +1234,31 @@ export async function addSongs(queueId: string, songs: SongDraft[]): Promise<voi
       provider_channel: song.providerChannel,
     };
   });
-  const { error } = await admin.rpc("admin_append_queue_tracks", {
+  const { error } = await admin.rpc("admin_secured_append_queue_tracks", {
     p_curated_set_id: queueId,
     p_tracks: payload,
   });
   if (error) throw new Error(error.message);
+  await recordAdminAudit({
+    action: "songs.bulk_add",
+    targetId: queueId,
+    affectedCount: songs.length,
+  });
 }
 
 export async function removeSongs(queueId: string, membershipIds: string[]): Promise<void> {
   await requireAdmin();
-  const { error } = await admin.rpc("admin_remove_queue_tracks", {
+  await consumeAdminRateLimit("bulk.songs", 30, 60);
+  const { error } = await admin.rpc("admin_secured_remove_queue_tracks", {
     p_curated_set_id: queueId,
     p_membership_ids: membershipIds,
   });
   if (error) throw new Error(error.message);
+  await recordAdminAudit({
+    action: "songs.bulk_remove",
+    targetId: queueId,
+    affectedCount: membershipIds.length,
+  });
 }
 
 export async function updateSong(input: {
@@ -1085,7 +1272,7 @@ export async function updateSong(input: {
   await requireAdmin();
   const videoId = youtubeVideoId(input.source);
   if (!videoId) throw new Error("Enter a valid YouTube link or video ID");
-  const { error } = await admin.rpc("admin_update_queue_track", {
+  const { error } = await admin.rpc("admin_secured_update_queue_track", {
     p_membership_id: input.membershipId,
     p_title: input.title,
     p_artist: input.artist,
@@ -1094,17 +1281,22 @@ export async function updateSong(input: {
     p_scope: input.scope,
   });
   if (error) throw new Error(error.message);
+  await recordAdminAudit({
+    action: "songs.update",
+    targetId: input.membershipId,
+    affectedCount: 1,
+  });
 }
 
 export async function registerRoomVisit(visitId: string, sceneSlug: string): Promise<void> {
-  const { data: scene, error: sceneError } = await admin
+  const { data: scene, error: sceneError } = await serviceAdmin
     .from("scenes")
     .select("id")
     .eq("slug", sceneSlug)
     .eq("is_live", true)
     .maybeSingle();
   if (sceneError || !scene) return;
-  const { error } = await admin
+  const { error } = await serviceAdmin
     .from("room_visits")
     .upsert({ id: visitId, scene_id: scene.id }, { onConflict: "id", ignoreDuplicates: true });
   if (error) throw new Error(error.message);
@@ -1115,7 +1307,7 @@ export async function recordListening(
   sceneSlug: string,
   seconds: number,
 ): Promise<void> {
-  const { data: scene } = await admin
+  const { data: scene } = await serviceAdmin
     .from("scenes")
     .select("id")
     .eq("slug", sceneSlug)
@@ -1123,7 +1315,7 @@ export async function recordListening(
     .maybeSingle();
   if (!scene) return;
   if (!Number.isFinite(seconds)) return;
-  const { error } = await admin.rpc("record_room_heartbeat", {
+  const { error } = await serviceAdmin.rpc("record_room_heartbeat", {
     p_visit_id: visitId,
     p_scene_id: scene.id,
     p_seconds: Math.min(60, Math.max(1, Math.floor(seconds))),
