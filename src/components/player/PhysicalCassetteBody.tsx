@@ -136,11 +136,7 @@ function SvgSpool({
           ))}
         </g>
       </g>
-      <g
-        ref={hubRef}
-        className="cassette-svg-hub"
-        style={{ transformOrigin: `${cx}px ${cy}px` }}
-      >
+      <g ref={hubRef} className="cassette-svg-hub" style={{ transformOrigin: `${cx}px ${cy}px` }}>
         <circle className="cassette-svg-hub-rim" cx={cx} cy={cy} r="57" />
         <circle className="cassette-svg-hub-face" cx={cx} cy={cy} r="50" />
         {Array.from({ length: 12 }, (_, index) => (

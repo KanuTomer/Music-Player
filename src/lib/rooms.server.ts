@@ -297,7 +297,12 @@ export async function recordSourceFailure(sourceId: string, errorCode: number) {
   return { recorded: true };
 }
 
-export async function insertChatMessage(roomKey: string, displayName: string, text: string) {
+export async function insertChatMessage(
+  roomKey: string,
+  displayName: string,
+  text: string,
+  messageId?: string,
+) {
   const url = process.env["SUPABASE_URL"];
   const secret = process.env["SUPABASE_SECRET_KEY"];
   if (!url || !secret) throw new Error("Database configuration is unavailable");
@@ -316,15 +321,21 @@ export async function insertChatMessage(roomKey: string, displayName: string, te
     },
   });
 
+  const insertPayload: Database["public"]["Tables"]["chat_messages"]["Insert"] = {
+    room_key: roomKey,
+    session_display_name: displayName,
+    text: text,
+    is_ai_host: false,
+    expires_at: new Date(Date.now() + 45 * 60 * 1000).toISOString(),
+  };
+
+  if (messageId) {
+    insertPayload.id = messageId;
+  }
+
   const { data, error } = await client
     .from("chat_messages")
-    .insert({
-      room_key: roomKey,
-      session_display_name: displayName,
-      text: text,
-      is_ai_host: false,
-      expires_at: new Date(Date.now() + 45 * 60 * 1000).toISOString(),
-    })
+    .insert(insertPayload)
     .select()
     .single();
 

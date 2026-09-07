@@ -5,6 +5,14 @@ import { buildSeoMeta } from "@/lib/seo";
 import { loadRoomRoute } from "@/lib/room-route";
 
 export const Route = createFileRoute("/room/$slug/")({
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { song?: string | undefined; track?: string | undefined } => {
+    return {
+      song: typeof search["song"] === "string" ? search["song"] : undefined,
+      track: typeof search["track"] === "string" ? search["track"] : undefined,
+    };
+  },
   loader: ({ params }) => loadRoomRoute(params.slug),
   head: ({ loaderData }) => {
     if (!loaderData) {
@@ -32,9 +40,16 @@ export const Route = createFileRoute("/room/$slug/")({
 
 function RoomPage() {
   const { room, scenes } = Route.useLoaderData();
+  const search = Route.useSearch();
+  const initialTrackId = search.song || search.track;
   return (
     <div className="h-dvh bg-night">
-      <RoomExperience key={room.scene.slug} room={room} scenes={scenes} />
+      <RoomExperience
+        key={room.scene.slug}
+        room={room}
+        scenes={scenes}
+        initialTrackId={initialTrackId}
+      />
     </div>
   );
 }

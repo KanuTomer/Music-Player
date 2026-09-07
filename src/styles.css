@@ -213,11 +213,13 @@
 }
 
 @utility scanlines {
-  background-image: repeating-linear-gradient(to bottom,
-      oklch(0 0 0 / 0.16) 0px,
-      oklch(0 0 0 / 0.16) 1px,
-      transparent 1px,
-      transparent 3px);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    oklch(0 0 0 / 0.16) 0px,
+    oklch(0 0 0 / 0.16) 1px,
+    transparent 1px,
+    transparent 3px
+  );
 }
 
 @utility signboard {
@@ -230,11 +232,13 @@
 
 /* painted dhaba awning stripes */
 @utility awning {
-  background-image: repeating-linear-gradient(115deg,
-      var(--terracotta) 0px,
-      var(--terracotta) 10px,
-      var(--mustard) 10px,
-      var(--mustard) 20px);
+  background-image: repeating-linear-gradient(
+    115deg,
+    var(--terracotta) 0px,
+    var(--terracotta) 10px,
+    var(--mustard) 10px,
+    var(--mustard) 20px
+  );
 }
 
 /* corner-notched ticket / bus-stub silhouette */
@@ -256,9 +260,11 @@
 }
 
 @utility vignette {
-  background: radial-gradient(120% 90% at 50% 45%,
-      transparent 38%,
-      oklch(0.18 0.02 55 / 0.55) 100%);
+  background: radial-gradient(
+    120% 90% at 50% 45%,
+    transparent 38%,
+    oklch(0.18 0.02 55 / 0.55) 100%
+  );
 }
 
 @utility no-scrollbar {
@@ -271,7 +277,6 @@
 }
 
 @keyframes bulb-glow {
-
   0%,
   100% {
     opacity: 0.75;
@@ -356,7 +361,6 @@
 }
 
 @keyframes audio-wave-1 {
-
   0%,
   100% {
     height: 4px;
@@ -368,7 +372,6 @@
 }
 
 @keyframes audio-wave-2 {
-
   0%,
   100% {
     height: 14px;
@@ -380,7 +383,6 @@
 }
 
 @keyframes audio-wave-3 {
-
   0%,
   100% {
     height: 8px;
@@ -392,7 +394,6 @@
 }
 
 @keyframes audio-wave-4 {
-
   0%,
   100% {
     height: 16px;
@@ -456,18 +457,24 @@
 }
 
 .cassette-spool-left {
-  box-shadow: inset 0 0 0 0.24rem var(--color-ink), 0 0 4px rgba(0, 0, 0, 0.5);
+  box-shadow:
+    inset 0 0 0 0.24rem var(--color-ink),
+    0 0 4px rgba(0, 0, 0, 0.5);
 }
 
 .cassette-spool-right {
-  box-shadow: inset 0 0 0 0.14rem var(--color-ink), 0 0 4px rgba(0, 0, 0, 0.5);
+  box-shadow:
+    inset 0 0 0 0.14rem var(--color-ink),
+    0 0 4px rgba(0, 0, 0, 0.5);
 }
 
 .cassette-shell {
-  background: linear-gradient(180deg,
-      rgba(255, 255, 255, 0.08) 0%,
-      rgba(18, 16, 14, 0.45) 50%,
-      rgba(10, 8, 7, 0.65) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.08) 0%,
+    rgba(18, 16, 14, 0.45) 50%,
+    rgba(10, 8, 7, 0.65) 100%
+  );
   box-shadow:
     inset 0 1px 1px rgba(255, 255, 255, 0.15),
     inset 0 -1px 2px rgba(0, 0, 0, 0.6),
@@ -478,18 +485,18 @@
 @utility text-glow-dark {
   text-shadow:
     -2px -2px 0 rgba(0, 0, 0, 0.95),
-     2px -2px 0 rgba(0, 0, 0, 0.95),
-    -2px  2px 0 rgba(0, 0, 0, 0.95),
-     2px  2px 0 rgba(0, 0, 0, 0.95),
+    2px -2px 0 rgba(0, 0, 0, 0.95),
+    -2px 2px 0 rgba(0, 0, 0, 0.95),
+    2px 2px 0 rgba(0, 0, 0, 0.95),
     -1px -2px 0 rgba(0, 0, 0, 0.95),
-     1px -2px 0 rgba(0, 0, 0, 0.95),
-    -1px  2px 0 rgba(0, 0, 0, 0.95),
-     1px  2px 0 rgba(0, 0, 0, 0.95),
+    1px -2px 0 rgba(0, 0, 0, 0.95),
+    -1px 2px 0 rgba(0, 0, 0, 0.95),
+    1px 2px 0 rgba(0, 0, 0, 0.95),
     -2px -1px 0 rgba(0, 0, 0, 0.95),
-     2px -1px 0 rgba(0, 0, 0, 0.95),
-    -2px  1px 0 rgba(0, 0, 0, 0.95),
-     2px  1px 0 rgba(0, 0, 0, 0.95),
-     0px  4px 12px rgba(0, 0, 0, 0.9);
+    2px -1px 0 rgba(0, 0, 0, 0.95),
+    -2px 1px 0 rgba(0, 0, 0, 0.95),
+    2px 1px 0 rgba(0, 0, 0, 0.95),
+    0px 4px 12px rgba(0, 0, 0, 0.9);
 }
 
 .cassette-screw {
@@ -498,7 +505,9 @@
   height: 0.38rem;
   border-radius: 999px;
   background: radial-gradient(circle at 35% 35%, #f4d084, #9a7b42 65%, #46361a 100%);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.5);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.6),
+    inset 0 1px 1px rgba(255, 255, 255, 0.5);
   opacity: 0.85;
 }
 
@@ -588,7 +597,9 @@
   stroke-width: 5;
 }
 
-.cassette-svg-side-stripe-lower { stroke-width: 9; }
+.cassette-svg-side-stripe-lower {
+  stroke-width: 9;
+}
 
 .cassette-svg-jagah,
 .cassette-svg-title,
@@ -614,8 +625,15 @@
   font-weight: 600;
 }
 
-.cassette-svg-side-badge { fill: var(--cassette-muted-ink, rgba(69, 47, 28, 0.68)); opacity: 0.82; }
-.cassette-svg-side-letter { fill: var(--cassette-face-stroke, #ead8a8); font-size: 31px; font-weight: 700; }
+.cassette-svg-side-badge {
+  fill: var(--cassette-muted-ink, rgba(69, 47, 28, 0.68));
+  opacity: 0.82;
+}
+.cassette-svg-side-letter {
+  fill: var(--cassette-face-stroke, #ead8a8);
+  font-size: 31px;
+  font-weight: 700;
+}
 
 .cassette-svg-window-frame {
   fill: #4d3524;
@@ -650,8 +668,12 @@
 }
 
 @keyframes cassette-svg-reflection-breathe {
-  from { opacity: 0.6; }
-  to { opacity: 1; }
+  from {
+    opacity: 0.6;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .cassette-svg-hub {
@@ -664,7 +686,9 @@
 }
 
 @keyframes cassette-spin-reverse {
-  to { transform: rotate(-360deg); }
+  to {
+    transform: rotate(-360deg);
+  }
 }
 
 .cassette-svg-hub-rim {
@@ -679,12 +703,37 @@
   stroke-width: 3;
 }
 
-.cassette-svg-hub-slot { fill: #3a281b; stroke: rgba(255, 244, 207, 0.38); stroke-width: 1; }
-.cassette-svg-hub-inner { fill: url(#cassette-hub-fill); stroke: #836239; stroke-width: 3; }
-.cassette-svg-hub-tooth { fill: url(#cassette-hub-fill); stroke: #8d6c3d; stroke-width: 1.5; }
-.cassette-svg-spindle-ring { fill: #9a7848; stroke: #ead8ac; stroke-width: 2; }
-.cassette-svg-spindle { fill: #18100b; stroke: #a77d42; stroke-width: 2; }
-.cassette-svg-hub-highlight { fill: none; stroke: rgba(255, 252, 231, 0.62); stroke-width: 3; stroke-linecap: round; }
+.cassette-svg-hub-slot {
+  fill: #3a281b;
+  stroke: rgba(255, 244, 207, 0.38);
+  stroke-width: 1;
+}
+.cassette-svg-hub-inner {
+  fill: url(#cassette-hub-fill);
+  stroke: #836239;
+  stroke-width: 3;
+}
+.cassette-svg-hub-tooth {
+  fill: url(#cassette-hub-fill);
+  stroke: #8d6c3d;
+  stroke-width: 1.5;
+}
+.cassette-svg-spindle-ring {
+  fill: #9a7848;
+  stroke: #ead8ac;
+  stroke-width: 2;
+}
+.cassette-svg-spindle {
+  fill: #18100b;
+  stroke: #a77d42;
+  stroke-width: 2;
+}
+.cassette-svg-hub-highlight {
+  fill: none;
+  stroke: rgba(255, 252, 231, 0.62);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
 
 .cassette-svg-tape-path {
   fill: none;
@@ -707,23 +756,47 @@
 }
 
 @keyframes cassette-svg-tape-travel {
-  to { stroke-dashoffset: -485; }
+  to {
+    stroke-dashoffset: -485;
+  }
 }
 
-.cassette-svg-head-glass { fill: rgba(205, 180, 137, 0.12); stroke: rgba(245, 222, 183, 0.22); stroke-width: 2; }
-.cassette-svg-head-frame { stroke: #24170f; stroke-width: 5; }
+.cassette-svg-head-glass {
+  fill: rgba(205, 180, 137, 0.12);
+  stroke: rgba(245, 222, 183, 0.22);
+  stroke-width: 2;
+}
+.cassette-svg-head-frame {
+  stroke: #24170f;
+  stroke-width: 5;
+}
 .cassette-svg-head-hole,
-.cassette-svg-head-slot { fill: #0d0907; stroke: #6a4c31; stroke-width: 2; }
-.cassette-svg-reader > rect:first-child { fill: #695744; stroke: #17100d; stroke-width: 3; }
-.cassette-svg-reader-face { fill: #b7aa8c; stroke: #33271d; stroke-width: 2; }
-.cassette-svg-reader line { stroke: #514538; stroke-width: 3; stroke-linecap: round; }
+.cassette-svg-head-slot {
+  fill: #0d0907;
+  stroke: #6a4c31;
+  stroke-width: 2;
+}
+.cassette-svg-reader > rect:first-child {
+  fill: #695744;
+  stroke: #17100d;
+  stroke-width: 3;
+}
+.cassette-svg-reader-face {
+  fill: #b7aa8c;
+  stroke: #33271d;
+  stroke-width: 2;
+}
+.cassette-svg-reader line {
+  stroke: #514538;
+  stroke-width: 3;
+  stroke-linecap: round;
+}
 
 @utility animate-drift-up {
   animation: drift-up 2.6s ease-out forwards;
 }
 
 @media (prefers-reduced-motion: reduce) {
-
   *,
   *::before,
   *::after {
@@ -906,12 +979,16 @@
 
 .ambience-haze {
   background:
-    radial-gradient(circle at 22% 76%,
+    radial-gradient(
+      circle at 22% 76%,
       color-mix(in srgb, var(--ambience-accent) 64%, transparent),
-      transparent 10%),
-    radial-gradient(circle at 78% 18%,
+      transparent 10%
+    ),
+    radial-gradient(
+      circle at 78% 18%,
       color-mix(in srgb, var(--ambience-haze) 72%, transparent),
-      transparent 10%);
+      transparent 10%
+    );
   filter: blur(34px) saturate(1.18);
   mix-blend-mode: screen;
   animation: ambience-haze-drift 18s ease-in-out infinite alternate;
@@ -940,10 +1017,12 @@
 }
 
 .ambience-backdrop[data-effect="dhaba-heat"] .ambience-motion {
-  background: repeating-linear-gradient(17deg,
-      transparent 0 34px,
-      color-mix(in srgb, var(--ambience-accent) 24%, transparent) 40px,
-      transparent 48px);
+  background: repeating-linear-gradient(
+    17deg,
+    transparent 0 34px,
+    color-mix(in srgb, var(--ambience-accent) 24%, transparent) 40px,
+    transparent 48px
+  );
   filter: blur(12px);
   animation: ambience-heat-rise 8s ease-in-out infinite alternate;
 }
@@ -956,16 +1035,23 @@
     radial-gradient(circle at 58% 90%, #efc889 0 1.3px, transparent 2px),
     radial-gradient(circle at 78% 76%, #b96b35 0 1.2px, transparent 2px),
     radial-gradient(circle at 92% 88%, #d9a25f 0 1px, transparent 1.8px);
-  background-size: 170px 150px, 210px 180px, 260px 220px, 190px 170px, 230px 200px;
+  background-size:
+    170px 150px,
+    210px 180px,
+    260px 220px,
+    190px 170px,
+    230px 200px;
   animation: ambience-motes-rise 18s linear infinite;
 }
 
 .ambience-backdrop[data-effect="salon-reflections"] .ambience-motion {
-  background: linear-gradient(112deg,
-      transparent 18%,
-      rgb(178 255 244 / 10%) 38%,
-      rgba(0, 23, 60, 0.267) 49%,
-      transparent 66%);
+  background: linear-gradient(
+    112deg,
+    transparent 18%,
+    rgb(178 255 244 / 10%) 38%,
+    rgba(0, 23, 60, 0.267) 49%,
+    transparent 66%
+  );
   background-size: 220% 100%;
   filter: blur(8px);
   animation: ambience-reflection-sweep 7s ease-in-out infinite;
@@ -982,16 +1068,20 @@
   background-image:
     linear-gradient(90deg, transparent 0 12%, var(--ambience-accent) 20%, transparent 31%),
     linear-gradient(90deg, transparent 0 56%, var(--ambience-haze) 68%, transparent 82%);
-  background-size: 210% 100%, 260% 100%;
+  background-size:
+    210% 100%,
+    260% 100%;
   filter: blur(16px);
   animation: ambience-road-lights 8s ease-in-out infinite alternate;
 }
 
 .ambience-backdrop[data-effect="road-motion"] .ambience-motion {
-  background: repeating-linear-gradient(0deg,
-      transparent 0 14%,
-      rgb(255 185 74 / 18%) 15%,
-      transparent 16% 31%);
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0 14%,
+    rgb(255 185 74 / 18%) 15%,
+    transparent 16% 31%
+  );
   transform: perspective(420px) rotateX(64deg) translateY(48%);
   animation: ambience-road-flow 3.8s linear infinite;
 }
@@ -1007,21 +1097,27 @@
 }
 
 .ambience-backdrop[data-effect="kitchen-steam"] .ambience-pattern {
-  background-image: repeating-radial-gradient(ellipse at 50% 74%,
-      transparent 0 28px,
-      rgb(180 245 235 / 28%) 30px,
-      transparent 34px);
+  background-image: repeating-radial-gradient(
+    ellipse at 50% 74%,
+    transparent 0 28px,
+    rgb(180 245 235 / 28%) 30px,
+    transparent 34px
+  );
   animation: ambience-ripples 7s ease-out infinite;
 }
 
 .ambience-backdrop[data-effect="construction-dust"] .ambience-haze {
   background:
-    radial-gradient(ellipse at 48% 88%,
+    radial-gradient(
+      ellipse at 48% 88%,
       color-mix(in srgb, #0c015e8f 48%, transparent),
-      transparent 48%),
-    radial-gradient(ellipse at 82% 72%,
+      transparent 48%
+    ),
+    radial-gradient(
+      ellipse at 82% 72%,
       color-mix(in srgb, #000d4595 28%, transparent),
-      transparent 38%);
+      transparent 38%
+    );
   filter: blur(42px) saturate(0.78);
   mix-blend-mode: soft-light;
   animation: ambience-construction-haze 16s ease-in-out infinite alternate;
@@ -1039,10 +1135,12 @@
 
 .ambience-backdrop[data-effect="crt-room"] .ambience-pattern {
   opacity: 0.48;
-  background-image: repeating-linear-gradient(0deg,
-      transparent 0 3px,
-      rgb(255 215 160 / 26%) 4px,
-      transparent 5px);
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent 0 3px,
+    rgb(255 215 160 / 26%) 4px,
+    transparent 5px
+  );
   background-size: 100% 8px;
   animation: ambience-crt-roll 5s linear infinite;
 }
@@ -1061,10 +1159,12 @@
 }
 
 .ambience-backdrop[data-effect="office-glow"] .ambience-motion {
-  background: repeating-linear-gradient(90deg,
-      transparent 0 18%,
-      rgb(160 220 255 / 22%) 22%,
-      transparent 27% 44%);
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0 18%,
+    rgb(160 220 255 / 22%) 22%,
+    transparent 27% 44%
+  );
   filter: blur(10px);
   animation: ambience-office-pulse 6s ease-in-out infinite alternate;
 }
@@ -1077,10 +1177,12 @@
 
 .ambience-event {
   border: 1px solid color-mix(in srgb, var(--ambience-accent) 70%, transparent);
-  background: radial-gradient(circle at center,
-      transparent 20%,
-      color-mix(in srgb, var(--ambience-accent) 24%, transparent) 52%,
-      transparent 76%);
+  background: radial-gradient(
+    circle at center,
+    transparent 20%,
+    color-mix(in srgb, var(--ambience-accent) 24%, transparent) 52%,
+    transparent 76%
+  );
   animation: ambience-event-pulse 1800ms ease-out both;
 }
 
@@ -1135,7 +1237,6 @@
 }
 
 @keyframes ambience-reflection-sweep {
-
   0%,
   15% {
     background-position: 120% 0;
@@ -1212,7 +1313,6 @@
 }
 
 @keyframes ambience-crt-flicker {
-
   0%,
   100% {
     opacity: 0.32;
