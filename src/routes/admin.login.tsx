@@ -132,7 +132,6 @@ function AdminLogin() {
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 autoComplete="current-password"
-                minLength={12}
                 required
               />
             </label>
