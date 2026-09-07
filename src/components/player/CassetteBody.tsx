@@ -6,9 +6,7 @@ type CassetteBodyProps = {
   label?: string;
 };
 
-const HUB_WINDING_RADII = [51, 48, 45, 42] as const;
-const HUB_SLOT_ANGLES = Array.from({ length: 12 }, (_, index) => index * 30);
-const HUB_TOOTH_ANGLES = Array.from({ length: 6 }, (_, index) => index * 60);
+const HUB_SLOT_ANGLES = Array.from({ length: 6 }, (_, index) => index * 60);
 
 function CassetteHub({ compact, isPlaying }: { compact: boolean; isPlaying: boolean }) {
   const gradientId = `normal-cassette-hub-${useId().replaceAll(":", "")}`;
@@ -16,12 +14,12 @@ function CassetteHub({ compact, isPlaying }: { compact: boolean; isPlaying: bool
 
   return (
     <span
-      className={`${compact ? "size-[1.125rem]" : "size-5 sm:size-5.5"} relative z-10 block shrink-0 drop-shadow-[0_1px_2px_rgba(0,0,0,.72)] ${
+      className={`${compact ? "size-5.5" : "size-6.5 sm:size-7"} relative z-10 block shrink-0 ${
         isPlaying ? "cassette-reel-playing" : ""
       }`}
       aria-hidden
     >
-      <svg className="block size-full" viewBox="0 0 128 128">
+      <svg className="block size-full" viewBox="0 0 64 64">
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stopColor="#f1e4bd" />
@@ -29,66 +27,58 @@ function CassetteHub({ compact, isPlaying }: { compact: boolean; isPlaying: bool
             <stop offset="1" stopColor="#a88754" />
           </linearGradient>
         </defs>
-        <circle className="cassette-svg-tape-shadow" cx="64" cy="64" r="59" />
-        <circle className="cassette-svg-tape-pack" cx="64" cy="64" r="55" />
-        {HUB_WINDING_RADII.map((radius) => (
-          <circle
-            key={radius}
-            className="cassette-svg-tape-winding"
-            cx="64"
-            cy="64"
-            r={radius}
-          />
-        ))}
+        <circle cx="32" cy="33" r="29" fill="#050302" fillOpacity="0.72" />
         <circle
-          className="cassette-svg-hub-rim"
-          cx="64"
-          cy="64"
-          r="40"
-          style={{ fill: gradientFill }}
+          cx="32"
+          cy="32"
+          r="27"
+          fill="#100906"
+          stroke="#422818"
+          strokeWidth="2"
         />
         <circle
-          className="cassette-svg-hub-face"
-          cx="64"
-          cy="64"
-          r="36"
-          style={{ fill: gradientFill }}
+          cx="32"
+          cy="32"
+          r="24"
+          fill="none"
+          stroke="#844e28"
+          strokeOpacity="0.42"
+          strokeWidth="1.25"
         />
+        <circle cx="32" cy="32" r="20" fill={gradientFill} stroke="#2b1b11" strokeWidth="2" />
         {HUB_SLOT_ANGLES.map((angle) => (
           <rect
             key={angle}
-            className="cassette-svg-hub-slot"
-            x="61"
-            y="30"
-            width="6"
-            height="9"
-            rx="1.5"
-            transform={`rotate(${angle} 64 64)`}
+            x="29.5"
+            y="12"
+            width="5"
+            height="11"
+            rx="2"
+            fill="#3a281b"
+            stroke="#fff4cf"
+            strokeOpacity="0.38"
+            strokeWidth="0.8"
+            transform={`rotate(${angle} 32 32)`}
           />
         ))}
         <circle
-          className="cassette-svg-hub-inner"
-          cx="64"
-          cy="64"
-          r="21"
-          style={{ fill: gradientFill }}
+          cx="32"
+          cy="32"
+          r="10"
+          fill={gradientFill}
+          stroke="#836239"
+          strokeWidth="1.5"
         />
-        {HUB_TOOTH_ANGLES.map((angle) => (
-          <rect
-            key={angle}
-            className="cassette-svg-hub-tooth"
-            x="60"
-            y="43"
-            width="8"
-            height="13"
-            rx="2"
-            transform={`rotate(${angle} 64 64)`}
-            style={{ fill: gradientFill }}
-          />
-        ))}
-        <circle className="cassette-svg-spindle-ring" cx="64" cy="64" r="11" />
-        <circle className="cassette-svg-spindle" cx="64" cy="64" r="5.5" />
-        <path className="cassette-svg-hub-highlight" d="M 39 44 A 32 32 0 0 1 74 34" />
+        <circle cx="32" cy="32" r="6" fill="#9a7848" stroke="#ead8ac" strokeWidth="1.25" />
+        <circle cx="32" cy="32" r="3.5" fill="#18100b" stroke="#a77d42" strokeWidth="1.25" />
+        <path
+          d="M 18 18 A 20 20 0 0 1 39 13.5"
+          fill="none"
+          stroke="#fffce7"
+          strokeOpacity="0.62"
+          strokeLinecap="round"
+          strokeWidth="1.5"
+        />
       </svg>
     </span>
   );
