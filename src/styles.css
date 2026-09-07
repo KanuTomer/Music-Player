@@ -425,12 +425,6 @@
   }
 }
 
-@keyframes cassette-tape-travel {
-  to {
-    background-position: 12px 0;
-  }
-}
-
 .cassette-reel-playing {
   animation: cassette-spin 1.4s linear infinite;
   will-change: transform;
@@ -520,17 +514,11 @@
 }
 
 .cassette-tape {
-  background-image: repeating-linear-gradient(90deg,
-      var(--color-cinema-clay) 0,
-      var(--color-cinema-clay) 5px,
-      var(--color-cinema-gold) 5px,
-      var(--color-cinema-gold) 7px);
-  background-size: 12px 100%;
-  opacity: 0.85;
-}
-
-.cassette-running .cassette-tape {
-  animation: cassette-tape-travel 0.45s linear infinite;
+  background: #100906;
+  box-shadow:
+    inset 0 1px rgba(132, 78, 40, 0.28),
+    inset 0 -1px rgba(0, 0, 0, 0.68);
+  opacity: 0.96;
 }
 
 .cassette-reference-svg {
