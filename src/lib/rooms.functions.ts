@@ -1,5 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
-import { fetchRoom, fetchScenes, insertChatMessage, recordSourceFailure } from "./rooms.server";
+import {
+  fetchRoom,
+  fetchRoomAmbience,
+  fetchRoomPresentation,
+  fetchScenes,
+  insertChatMessage,
+  recordSourceFailure,
+} from "./rooms.server";
 import { recordListening, registerRoomVisit } from "./admin.server";
 
 export type Scene = {
@@ -13,6 +20,9 @@ export type Scene = {
   category: string;
   palette: Record<string, string>;
   art_key: string;
+  background_storage_path: string | null;
+  background_url: string | null;
+  foreground_text_color: string;
   is_dark: boolean;
   chat_mode: string;
   gag_label: string | null;
@@ -53,7 +63,17 @@ export type OneLiner = {
   id: string;
   text_en: string;
   text_hi: string | null;
+  display_text: string;
   daypart_tag: string;
+};
+
+export type RoomPresentation = {
+  scene_id: string;
+  background_storage_path: string | null;
+  background_url: string | null;
+  foreground_text_color: string;
+  gag_label: string | null;
+  oneliners: OneLiner[];
 };
 
 export type AmbienceSource = {
@@ -101,6 +121,7 @@ export type AmbienceVisualTheme = {
 export type AmbienceProfile = {
   id: string;
   max_master_gain: number;
+  music_duck_ratio: number;
   fade_out_ms: number;
   fade_in_ms: number;
   audio_theme: Partial<Record<AmbienceStem["role"], AmbienceFilter>>;
@@ -138,6 +159,18 @@ export const getRoom = createServerFn({ method: "GET" })
   .validator((data: { slug: string }) => ({ slug: String(data.slug) }))
   .handler(async ({ data }): Promise<RoomPayload | null> => {
     return fetchRoom(data.slug);
+  });
+
+export const getRoomAmbience = createServerFn({ method: "GET" })
+  .validator((data: { sceneId: string }) => ({ sceneId: String(data.sceneId) }))
+  .handler(async ({ data }): Promise<AmbienceProfile | null> => {
+    return fetchRoomAmbience(data.sceneId);
+  });
+
+export const getRoomPresentation = createServerFn({ method: "GET" })
+  .validator((data: { sceneId: string }) => ({ sceneId: String(data.sceneId) }))
+  .handler(async ({ data }): Promise<RoomPresentation | null> => {
+    return fetchRoomPresentation(data.sceneId);
   });
 
 export const sendChatMessage = createServerFn({ method: "POST" })

@@ -1,5 +1,7 @@
 import { getRequest } from "@tanstack/react-start/server";
+import { createHash, randomUUID } from "node:crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { ambienceProcessing, type AmbienceRole } from "./ambience-processing";
 
 type AdminClient = {
   // These admin-only tables and RPCs are introduced by the migration in this
@@ -13,6 +15,8 @@ type AdminClient = {
       token: string,
     ) => Promise<{ data: { user: { id: string; email?: string } | null }; error: Error | null }>;
   };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  storage: any;
 };
 
 const admin = supabaseAdmin as unknown as AdminClient;
@@ -36,6 +40,74 @@ export type AdminScene = {
   title: string;
   queueId: string;
   tracks: AdminTrack[];
+  ambience: AdminAmbience | null;
+};
+export type AdminAsset = {
+  id: string;
+  storagePath: string;
+  byteSize: number;
+  durationSeconds: number;
+  publicUrl: string;
+};
+export type AdminAmbienceStem = {
+  id: string;
+  name: string;
+  role: AmbienceRole;
+  assetId: string;
+  isActive: boolean;
+  sortOrder: number;
+  defaultVolume: number;
+  minGain: number;
+  maxGain: number;
+  crossfadeMs: number;
+  loopStartSeconds: number;
+  loopEndSeconds: number | null;
+  eventMinSeconds: number | null;
+  eventMaxSeconds: number | null;
+};
+export type AdminAmbience = {
+  id: string;
+  enabled: boolean;
+  maxMasterGain: number;
+  musicDuckRatio: number;
+  fadeInMs: number;
+  fadeOutMs: number;
+  audioTheme: Record<string, Record<string, number>>;
+  stems: AdminAmbienceStem[];
+};
+type RawAmbienceStem = {
+  id: string;
+  name: string;
+  role: string;
+  asset_id: string;
+  is_active: boolean;
+  sort_order: number;
+  default_volume: number;
+  min_gain: number;
+  max_gain: number;
+  crossfade_ms: number;
+  loop_start_seconds: number;
+  loop_end_seconds: number | null;
+  event_min_seconds: number | null;
+  event_max_seconds: number | null;
+};
+type RawAmbienceAsset = {
+  id: string;
+  storage_path: string;
+  byte_size: number;
+  duration_seconds: number;
+};
+type RawAdminMembership = {
+  id: string;
+  position: number;
+  track_id: string;
+  tracks: {
+    id: string;
+    title: string;
+    artist: string | null;
+    year: number | null;
+    playback_sources: Array<{ provider_item_id: string; source_url: string }>;
+  };
 };
 export type AnalyticsRow = {
   sceneId: string;
@@ -45,6 +117,32 @@ export type AnalyticsRow = {
   playedVisits: number;
   listeningSeconds: number;
   averageListeningSeconds: number;
+};
+
+export type AdminSceneSummary = {
+  id: string;
+  slug: string;
+  title: string;
+  titleHi: string;
+  queueId: string;
+  trackCount: number;
+  artKey: string;
+  isDark: boolean;
+  gagLabel: string | null;
+  backgroundStoragePath: string | null;
+  backgroundUrl: string | null;
+  foregroundTextColor: string;
+};
+
+export type AdminOneLiner = {
+  id: string;
+  text: string;
+  daypart: "all" | "morning" | "day" | "evening" | "night";
+};
+
+export type AdminBackground = {
+  scene: AdminSceneSummary;
+  oneliners: AdminOneLiner[];
 };
 
 export function youtubeVideoId(value: string): string | null {
@@ -64,6 +162,12 @@ export function youtubeVideoId(value: string): string | null {
   } catch {
     return null;
   }
+}
+
+export function countTrackUses(rows: Array<{ track_id: string }>) {
+  const usage = new Map<string, number>();
+  for (const item of rows) usage.set(item.track_id, (usage.get(item.track_id) ?? 0) + 1);
+  return usage;
 }
 
 export async function requireAdmin(): Promise<{ id: string; email?: string }> {
@@ -128,15 +232,69 @@ async function activeScenes(): Promise<AdminScene[]> {
         };
       }),
     );
-    output.push({ id: scene.id, slug: scene.slug, title: scene.title_en, queueId: set.id, tracks });
+    const { data: profile, error: profileError } = await admin
+      .from("ambience_profiles")
+      .select(
+        "id, enabled, max_master_gain, music_duck_ratio, fade_in_ms, fade_out_ms, audio_theme",
+      )
+      .eq("scene_id", scene.id)
+      .maybeSingle();
+    if (profileError) throw new Error(profileError.message);
+    const { data: ambienceStems, error: stemError } = await admin
+      .from("sound_stems")
+      .select(
+        "id, name, role, asset_id, is_active, sort_order, default_volume, min_gain, max_gain, crossfade_ms, loop_start_seconds, loop_end_seconds, event_min_seconds, event_max_seconds",
+      )
+      .eq("scene_id", scene.id)
+      .not("asset_id", "is", null)
+      .order("sort_order");
+    if (stemError) throw new Error(stemError.message);
+    const ambience = profile
+      ? {
+          id: profile.id,
+          enabled: profile.enabled,
+          maxMasterGain: Number(profile.max_master_gain),
+          musicDuckRatio: Number(profile.music_duck_ratio),
+          fadeInMs: profile.fade_in_ms,
+          fadeOutMs: profile.fade_out_ms,
+          audioTheme: (profile.audio_theme ?? {}) as Record<string, Record<string, number>>,
+          stems: (ambienceStems ?? []).map((stem: RawAmbienceStem) => ({
+            id: stem.id,
+            name: stem.name,
+            role: stem.role as AmbienceRole,
+            assetId: stem.asset_id,
+            isActive: stem.is_active,
+            sortOrder: stem.sort_order,
+            defaultVolume: Number(stem.default_volume),
+            minGain: Number(stem.min_gain),
+            maxGain: Number(stem.max_gain),
+            crossfadeMs: stem.crossfade_ms,
+            loopStartSeconds: Number(stem.loop_start_seconds),
+            loopEndSeconds: stem.loop_end_seconds == null ? null : Number(stem.loop_end_seconds),
+            eventMinSeconds: stem.event_min_seconds,
+            eventMaxSeconds: stem.event_max_seconds,
+          })),
+        }
+      : null;
+    output.push({
+      id: scene.id,
+      slug: scene.slug,
+      title: scene.title_en,
+      queueId: set.id,
+      tracks,
+      ambience,
+    });
   }
   return output;
 }
 
-export async function getAdminDashboard(
-  since?: string,
-): Promise<{ scenes: AdminScene[]; analytics: AnalyticsRow[] }> {
-  await requireAdmin();
+export async function getAdminDashboard(since?: string): Promise<{
+  scenes: AdminScene[];
+  analytics: AnalyticsRow[];
+  assets: AdminAsset[];
+  identity: { email: string; displayName: string | null; avatarUrl: string | null };
+}> {
+  const user = await requireAdmin();
   const scenes = await activeScenes();
   const { data: visits, error } = await admin.rpc("admin_room_analytics", {
     p_since: since ?? null,
@@ -151,6 +309,17 @@ export async function getAdminDashboard(
       seconds: Number(visit.listening_seconds ?? 0),
     });
   }
+  const { data: assets, error: assetError } = await admin
+    .from("ambience_assets")
+    .select("id, storage_path, byte_size, duration_seconds")
+    .eq("is_active", true)
+    .order("created_at", { ascending: false });
+  if (assetError) throw new Error(assetError.message);
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("display_name, avatar_url")
+    .eq("id", user.id)
+    .maybeSingle();
   return {
     scenes,
     analytics: scenes.map((scene) => {
@@ -167,7 +336,666 @@ export async function getAdminDashboard(
           : 0,
       };
     }),
+    assets: (assets ?? []).map((asset: RawAmbienceAsset) => ({
+      id: asset.id,
+      storagePath: asset.storage_path,
+      byteSize: Number(asset.byte_size),
+      durationSeconds: Number(asset.duration_seconds),
+      publicUrl: admin.storage.from("ambience-audio").getPublicUrl(asset.storage_path).data
+        .publicUrl,
+    })),
+    identity: {
+      email: user.email ?? "Administrator",
+      displayName: profile?.display_name ?? null,
+      avatarUrl: profile?.avatar_url ?? null,
+    },
   };
+}
+
+function publicStorageUrl(bucket: string, path: string | null) {
+  return path ? admin.storage.from(bucket).getPublicUrl(path).data.publicUrl : null;
+}
+
+export async function getAdminBootstrap(): Promise<{
+  scenes: AdminSceneSummary[];
+  identity: { email: string; displayName: string | null; avatarUrl: string | null };
+}> {
+  const user = await requireAdmin();
+  const [sceneResult, profileResult] = await Promise.all([
+    admin
+      .from("scenes")
+      .select(
+        "id, slug, title_en, title_hi, art_key, is_dark, gag_label, background_storage_path, foreground_text_color, curated_sets!inner(id, is_active)",
+      )
+      .eq("is_live", true)
+      .eq("curated_sets.is_active", true)
+      .order("sort_order"),
+    admin.from("profiles").select("display_name, avatar_url").eq("id", user.id).maybeSingle(),
+  ]);
+  if (sceneResult.error) throw new Error(sceneResult.error.message);
+  const rawScenes = (sceneResult.data ?? []) as Array<Record<string, unknown>>;
+  const setIds = rawScenes
+    .map((scene) => (scene["curated_sets"] as Array<{ id: string }> | undefined)?.[0]?.id)
+    .filter((id): id is string => Boolean(id));
+  const membershipResult = setIds.length
+    ? await admin.from("curated_set_tracks").select("curated_set_id").in("curated_set_id", setIds)
+    : { data: [], error: null };
+  if (membershipResult.error) throw new Error(membershipResult.error.message);
+  const counts = new Map<string, number>();
+  for (const membership of membershipResult.data ?? []) {
+    counts.set(membership.curated_set_id, (counts.get(membership.curated_set_id) ?? 0) + 1);
+  }
+  return {
+    scenes: rawScenes.flatMap((scene) => {
+      const queueId = (scene["curated_sets"] as Array<{ id: string }> | undefined)?.[0]?.id;
+      if (!queueId) return [];
+      const backgroundStoragePath = (scene["background_storage_path"] as string | null) ?? null;
+      return [
+        {
+          id: String(scene["id"]),
+          slug: String(scene["slug"]),
+          title: String(scene["title_en"]),
+          titleHi: String(scene["title_hi"]),
+          queueId,
+          trackCount: counts.get(queueId) ?? 0,
+          artKey: String(scene["art_key"]),
+          isDark: Boolean(scene["is_dark"]),
+          gagLabel: (scene["gag_label"] as string | null) ?? null,
+          backgroundStoragePath,
+          backgroundUrl: publicStorageUrl("scene-media", backgroundStoragePath),
+          foregroundTextColor: String(scene["foreground_text_color"] ?? "#FFF3D6"),
+        },
+      ];
+    }),
+    identity: {
+      email: user.email ?? "Administrator",
+      displayName: profileResult.data?.display_name ?? null,
+      avatarUrl: profileResult.data?.avatar_url ?? null,
+    },
+  };
+}
+
+export async function getAdminSongs(sceneId: string): Promise<{
+  queueId: string;
+  tracks: AdminTrack[];
+}> {
+  await requireAdmin();
+  const { data: set, error: setError } = await admin
+    .from("curated_sets")
+    .select("id")
+    .eq("scene_id", sceneId)
+    .eq("is_active", true)
+    .single();
+  if (setError || !set) throw new Error(setError?.message ?? "Active song queue not found");
+  const { data: memberships, error } = await admin
+    .from("curated_set_tracks")
+    .select(
+      "id, position, track_id, tracks!inner(id, title, artist, year, playback_sources!inner(id, provider_item_id, source_url, is_active))",
+    )
+    .eq("curated_set_id", set.id)
+    .eq("tracks.playback_sources.is_active", true)
+    .order("position");
+  if (error) throw new Error(error.message);
+  const trackIds = [
+    ...new Set((memberships ?? []).map((item: { track_id: string }) => item.track_id)),
+  ];
+  const usageResult = trackIds.length
+    ? await admin
+        .from("curated_set_tracks")
+        .select("track_id, curated_sets!inner(is_active)")
+        .in("track_id", trackIds)
+        .eq("curated_sets.is_active", true)
+    : { data: [], error: null };
+  if (usageResult.error) throw new Error(usageResult.error.message);
+  const usage = countTrackUses(usageResult.data ?? []);
+  return {
+    queueId: set.id,
+    tracks: (memberships ?? []).map((membership: RawAdminMembership) => {
+      const track = membership.tracks;
+      const source = track.playback_sources[0];
+      if (!source) throw new Error(`No active playback source for ${track.title}`);
+      return {
+        membershipId: membership.id,
+        trackId: track.id,
+        position: membership.position,
+        title: track.title,
+        artist: track.artist,
+        year: track.year,
+        videoId: source.provider_item_id,
+        sourceUrl: source.source_url,
+        sharedActiveUses: usage.get(track.id) ?? 1,
+      };
+    }),
+  };
+}
+
+export async function getAdminAnalytics(since?: string): Promise<AnalyticsRow[]> {
+  await requireAdmin();
+  const [sceneResult, visitResult] = await Promise.all([
+    admin.from("scenes").select("id, slug, title_en").eq("is_live", true).order("sort_order"),
+    admin.rpc("admin_room_analytics", { p_since: since ?? null }),
+  ]);
+  if (sceneResult.error) throw new Error(sceneResult.error.message);
+  if (visitResult.error) throw new Error(visitResult.error.message);
+  const visits = new Map<string, { visits: number; played: number; seconds: number }>();
+  for (const row of visitResult.data ?? []) {
+    visits.set(row.scene_id, {
+      visits: Number(row.visits ?? 0),
+      played: Number(row.played_visits ?? 0),
+      seconds: Number(row.listening_seconds ?? 0),
+    });
+  }
+  return (sceneResult.data ?? []).map((scene: { id: string; slug: string; title_en: string }) => {
+    const value = visits.get(scene.id) ?? { visits: 0, played: 0, seconds: 0 };
+    return {
+      sceneId: scene.id,
+      slug: scene.slug,
+      title: scene.title_en,
+      visits: value.visits,
+      playedVisits: value.played,
+      listeningSeconds: value.seconds,
+      averageListeningSeconds: value.played ? Math.round(value.seconds / value.played) : 0,
+    };
+  });
+}
+
+export async function getAdminAmbience(sceneId: string): Promise<{
+  ambience: AdminAmbience | null;
+  assets: AdminAsset[];
+}> {
+  await requireAdmin();
+  const [profileResult, stemResult, assetResult] = await Promise.all([
+    admin
+      .from("ambience_profiles")
+      .select(
+        "id, enabled, max_master_gain, music_duck_ratio, fade_in_ms, fade_out_ms, audio_theme",
+      )
+      .eq("scene_id", sceneId)
+      .maybeSingle(),
+    admin
+      .from("sound_stems")
+      .select(
+        "id, name, role, asset_id, is_active, sort_order, default_volume, min_gain, max_gain, crossfade_ms, loop_start_seconds, loop_end_seconds, event_min_seconds, event_max_seconds",
+      )
+      .eq("scene_id", sceneId)
+      .not("asset_id", "is", null)
+      .order("sort_order"),
+    admin
+      .from("ambience_assets")
+      .select("id, storage_path, byte_size, duration_seconds")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false }),
+  ]);
+  if (profileResult.error) throw new Error(profileResult.error.message);
+  if (stemResult.error) throw new Error(stemResult.error.message);
+  if (assetResult.error) throw new Error(assetResult.error.message);
+  const profile = profileResult.data;
+  return {
+    ambience: profile
+      ? {
+          id: profile.id,
+          enabled: profile.enabled,
+          maxMasterGain: Number(profile.max_master_gain),
+          musicDuckRatio: Number(profile.music_duck_ratio),
+          fadeInMs: profile.fade_in_ms,
+          fadeOutMs: profile.fade_out_ms,
+          audioTheme: (profile.audio_theme ?? {}) as Record<string, Record<string, number>>,
+          stems: (stemResult.data ?? []).map((stem: RawAmbienceStem) => ({
+            id: stem.id,
+            name: stem.name,
+            role: stem.role as AmbienceRole,
+            assetId: stem.asset_id,
+            isActive: stem.is_active,
+            sortOrder: stem.sort_order,
+            defaultVolume: Number(stem.default_volume),
+            minGain: Number(stem.min_gain),
+            maxGain: Number(stem.max_gain),
+            crossfadeMs: stem.crossfade_ms,
+            loopStartSeconds: Number(stem.loop_start_seconds),
+            loopEndSeconds: stem.loop_end_seconds == null ? null : Number(stem.loop_end_seconds),
+            eventMinSeconds: stem.event_min_seconds,
+            eventMaxSeconds: stem.event_max_seconds,
+          })),
+        }
+      : null,
+    assets: (assetResult.data ?? []).map((asset: RawAmbienceAsset) => ({
+      id: asset.id,
+      storagePath: asset.storage_path,
+      byteSize: Number(asset.byte_size),
+      durationSeconds: Number(asset.duration_seconds),
+      publicUrl: publicStorageUrl("ambience-audio", asset.storage_path) ?? "",
+    })),
+  };
+}
+
+export async function getAdminBackground(sceneId: string): Promise<AdminBackground> {
+  await requireAdmin();
+  const [sceneResult, lineResult] = await Promise.all([
+    admin
+      .from("scenes")
+      .select(
+        "id, slug, title_en, title_hi, art_key, is_dark, gag_label, background_storage_path, foreground_text_color, curated_sets!inner(id, is_active)",
+      )
+      .eq("id", sceneId)
+      .eq("curated_sets.is_active", true)
+      .single(),
+    admin
+      .from("oneliners")
+      .select("id, text_en, text_hi, daypart_tag")
+      .eq("scene_id", sceneId)
+      .order("id"),
+  ]);
+  if (sceneResult.error || !sceneResult.data)
+    throw new Error(sceneResult.error?.message ?? "Jagah not found");
+  if (lineResult.error) throw new Error(lineResult.error.message);
+  const scene = sceneResult.data;
+  const queueId = scene.curated_sets?.[0]?.id ?? "";
+  const backgroundStoragePath = scene.background_storage_path ?? null;
+  return {
+    scene: {
+      id: scene.id,
+      slug: scene.slug,
+      title: scene.title_en,
+      titleHi: scene.title_hi,
+      queueId,
+      trackCount: 0,
+      artKey: scene.art_key,
+      isDark: scene.is_dark,
+      gagLabel: scene.gag_label,
+      backgroundStoragePath,
+      backgroundUrl: publicStorageUrl("scene-media", backgroundStoragePath),
+      foregroundTextColor: scene.foreground_text_color ?? "#FFF3D6",
+    },
+    oneliners: (lineResult.data ?? []).map(
+      (line: {
+        id: string;
+        text_en: string;
+        text_hi: string | null;
+        daypart_tag: AdminOneLiner["daypart"];
+      }) => ({
+        id: line.id,
+        text: line.text_hi ?? line.text_en,
+        daypart: line.daypart_tag,
+      }),
+    ),
+  };
+}
+
+function numberInRange(value: unknown, minimum: number, maximum: number, label: string) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number < minimum || number > maximum)
+    throw new Error(`Invalid ${label}`);
+  return number;
+}
+
+function normalizeTheme(value: unknown) {
+  const theme = (value ?? {}) as Record<string, Record<string, unknown>>;
+  const roles: AmbienceRole[] = ["base", "texture", "event"];
+  return Object.fromEntries(
+    roles.map((role) => {
+      const filter = theme[role] ?? {};
+      return [
+        role,
+        {
+          highpass_hz: numberInRange(filter["highpass_hz"] ?? 20, 10, 2000, "high-pass frequency"),
+          lowpass_hz: numberInRange(
+            filter["lowpass_hz"] ?? 20000,
+            1000,
+            20000,
+            "low-pass frequency",
+          ),
+          peak_hz: numberInRange(filter["peak_hz"] ?? 1000, 40, 16000, "peak frequency"),
+          peak_gain_db: numberInRange(filter["peak_gain_db"] ?? 0, -12, 12, "peak gain"),
+          peak_q: numberInRange(filter["peak_q"] ?? 1, 0.1, 12, "peak Q"),
+        },
+      ];
+    }),
+  );
+}
+
+export async function saveAmbienceProfile(input: {
+  sceneId: string;
+  enabled: boolean;
+  maxMasterGain: number;
+  musicDuckRatio: number;
+  fadeInMs: number;
+  fadeOutMs: number;
+  audioTheme: unknown;
+}) {
+  await requireAdmin();
+  const payload = {
+    scene_id: String(input.sceneId),
+    enabled: Boolean(input.enabled),
+    max_master_gain: numberInRange(input.maxMasterGain, 0, 1, "master volume"),
+    music_duck_ratio: numberInRange(input.musicDuckRatio, 0, 1, "music volume"),
+    fade_in_ms: Math.round(numberInRange(input.fadeInMs, 0, 10000, "fade in")),
+    fade_out_ms: Math.round(numberInRange(input.fadeOutMs, 0, 10000, "fade out")),
+    audio_theme: normalizeTheme(input.audioTheme),
+  };
+  const { error } = await admin
+    .from("ambience_profiles")
+    .upsert(payload, { onConflict: "scene_id" });
+  if (error) throw new Error(error.message);
+}
+
+export async function saveAmbienceStem(input: {
+  id?: string;
+  sceneId: string;
+  name: string;
+  role: AmbienceRole;
+  assetId: string;
+  isActive: boolean;
+  sortOrder: number;
+  defaultVolume: number;
+  minGain: number;
+  maxGain: number;
+  crossfadeMs: number;
+  loopStartSeconds: number;
+  loopEndSeconds: number | null;
+  eventMinSeconds: number | null;
+  eventMaxSeconds: number | null;
+}) {
+  await requireAdmin();
+  if (!input.name.trim() || !["base", "texture", "event"].includes(input.role))
+    throw new Error("Invalid ambience sound");
+  const minGain = numberInRange(input.minGain, 0, 1, "minimum volume");
+  const maxGain = numberInRange(input.maxGain, minGain, 1, "maximum volume");
+  const defaultVolume = numberInRange(input.defaultVolume, minGain, maxGain, "default volume");
+  const loopStart = numberInRange(input.loopStartSeconds, 0, 3600, "loop start");
+  const loopEnd =
+    input.loopEndSeconds == null
+      ? null
+      : numberInRange(input.loopEndSeconds, loopStart + 0.001, 3600, "loop end");
+  const eventMin =
+    input.role === "event" && input.eventMinSeconds != null
+      ? Math.round(numberInRange(input.eventMinSeconds, 5, 3600, "effect delay"))
+      : null;
+  const eventMax =
+    input.role === "event" && input.eventMaxSeconds != null
+      ? Math.round(numberInRange(input.eventMaxSeconds, eventMin ?? 5, 3600, "effect delay"))
+      : null;
+  const payload = {
+    scene_id: input.sceneId,
+    name: input.name.trim(),
+    role: input.role,
+    asset_id: input.assetId,
+    is_active: Boolean(input.isActive),
+    sort_order: Math.max(0, Math.round(Number(input.sortOrder) || 0)),
+    default_volume: defaultVolume,
+    min_gain: minGain,
+    max_gain: maxGain,
+    crossfade_ms: Math.round(numberInRange(input.crossfadeMs, 0, 10000, "crossfade")),
+    loop_start_seconds: loopStart,
+    loop_end_seconds: loopEnd,
+    event_min_seconds: eventMin,
+    event_max_seconds: eventMax,
+    category: "ambient",
+    synth_key: "sample",
+  };
+  const query = input.id
+    ? admin.from("sound_stems").update(payload).eq("id", input.id)
+    : admin.from("sound_stems").insert(payload);
+  const { error } = await query;
+  if (error) throw new Error(error.message);
+}
+
+export async function deactivateAmbienceStem(stemId: string) {
+  await requireAdmin();
+  const { error } = await admin
+    .from("sound_stems")
+    .update({ is_active: false })
+    .eq("id", String(stemId));
+  if (error) throw new Error(error.message);
+}
+
+function inspectPlaybackWav(data: Buffer, role: AmbienceRole) {
+  const decoded = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
+  const view = new DataView(decoded);
+  if (
+    data.length < 44 ||
+    data.toString("ascii", 0, 4) !== "RIFF" ||
+    data.toString("ascii", 8, 12) !== "WAVE"
+  )
+    throw new Error("Prepared audio is not WAV");
+  if (
+    view.getUint16(20, true) !== 1 ||
+    view.getUint16(22, true) !== 1 ||
+    view.getUint32(24, true) !== ambienceProcessing.sampleRate ||
+    view.getUint16(34, true) !== 16
+  )
+    throw new Error("Prepared audio must be 32 kHz mono PCM16 WAV");
+  const duration = view.getUint32(40, true) / (ambienceProcessing.sampleRate * 2);
+  if (
+    duration <= 0 ||
+    duration > ambienceProcessing.maxDurationSeconds[role] + 0.01 ||
+    data.length > ambienceProcessing.maxPlaybackBytes
+  )
+    throw new Error("Prepared audio exceeds the role limit");
+  return duration;
+}
+
+export async function reserveAmbienceUpload(sceneSlug: string) {
+  await requireAdmin();
+  const safeSlug = String(sceneSlug).replace(/[^a-z0-9-]/gi, "");
+  if (!safeSlug) throw new Error("Invalid Jagah");
+  const path = `rooms/${safeSlug}/ambience/${randomUUID()}.wav`;
+  const { data, error } = await admin.storage.from("ambience-audio").createSignedUploadUrl(path);
+  if (error || !data) throw new Error(error?.message ?? "Unable to reserve audio upload");
+  return { path, token: data.token };
+}
+
+const BACKGROUND_MAX_BYTES = 5 * 1024 * 1024;
+const BACKGROUND_PATH =
+  /^rooms\/([a-z0-9-]+)\/background\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.webp$/i;
+
+export async function reserveBackgroundUpload(sceneId: string) {
+  await requireAdmin();
+  const { data: scene, error: sceneError } = await admin
+    .from("scenes")
+    .select("slug")
+    .eq("id", sceneId)
+    .eq("is_live", true)
+    .single();
+  if (sceneError || !scene) throw new Error(sceneError?.message ?? "Jagah not found");
+  const path = `rooms/${scene.slug}/background/${randomUUID()}.webp`;
+  const { data, error } = await admin.storage.from("scene-media").createSignedUploadUrl(path);
+  if (error || !data) throw new Error(error?.message ?? "Unable to reserve background upload");
+  return { path, token: data.token };
+}
+
+export async function discardBackgroundUpload(sceneId: string, path: string) {
+  await requireAdmin();
+  const match = path.match(BACKGROUND_PATH);
+  const { data: scene } = await admin.from("scenes").select("slug").eq("id", sceneId).maybeSingle();
+  if (!match || !scene || match[1] !== scene.slug)
+    throw new Error("Invalid background upload path");
+  const { error } = await admin.storage.from("scene-media").remove([path]);
+  if (error) throw new Error(error.message);
+}
+
+function inspectPlaybackWebp(data: Buffer) {
+  if (
+    data.length < 16 ||
+    data.length > BACKGROUND_MAX_BYTES ||
+    data.toString("ascii", 0, 4) !== "RIFF" ||
+    data.toString("ascii", 8, 12) !== "WEBP"
+  ) {
+    throw new Error("Prepared background must be a WebP image no larger than 5 MiB");
+  }
+  const chunk = data.toString("ascii", 12, 16);
+  let width = 0;
+  let height = 0;
+  if (chunk === "VP8X" && data.length >= 30) {
+    width = 1 + data.readUIntLE(24, 3);
+    height = 1 + data.readUIntLE(27, 3);
+  } else if (
+    chunk === "VP8 " &&
+    data.length >= 30 &&
+    data[23] === 0x9d &&
+    data[24] === 0x01 &&
+    data[25] === 0x2a
+  ) {
+    width = data.readUInt16LE(26) & 0x3fff;
+    height = data.readUInt16LE(28) & 0x3fff;
+  } else if (chunk === "VP8L" && data.length >= 25 && data[20] === 0x2f) {
+    const bits = data.readUInt32LE(21);
+    width = 1 + (bits & 0x3fff);
+    height = 1 + ((bits >>> 14) & 0x3fff);
+  }
+  if (!width || !height || Math.max(width, height) > 2560) {
+    throw new Error("Prepared background is invalid or exceeds the 2560-pixel edge limit");
+  }
+}
+
+export async function saveScenePresentation(input: {
+  sceneId: string;
+  backgroundStoragePath: string | null;
+  foregroundTextColor: string;
+  gagLabel: string;
+  oneliners: Array<{
+    id?: string;
+    text: string;
+    daypart: "all" | "morning" | "day" | "evening" | "night";
+  }>;
+}) {
+  await requireAdmin();
+  const { data: scene, error: sceneError } = await admin
+    .from("scenes")
+    .select("slug, background_storage_path")
+    .eq("id", input.sceneId)
+    .eq("is_live", true)
+    .single();
+  if (sceneError || !scene) throw new Error(sceneError?.message ?? "Jagah not found");
+  const previousPath = scene.background_storage_path as string | null;
+  const nextPath = input.backgroundStoragePath || null;
+  const isNewUpload = Boolean(nextPath && nextPath !== previousPath);
+  try {
+    if (isNewUpload && nextPath) {
+      const match = nextPath.match(BACKGROUND_PATH);
+      if (!match || match[1] !== scene.slug) throw new Error("Invalid background upload path");
+      const { data: object, error: downloadError } = await admin.storage
+        .from("scene-media")
+        .download(nextPath);
+      if (downloadError || !object)
+        throw new Error(downloadError?.message ?? "Uploaded background is missing");
+      inspectPlaybackWebp(Buffer.from(await object.arrayBuffer()));
+    }
+    const { error } = await admin.rpc("admin_save_scene_presentation", {
+      p_scene_id: input.sceneId,
+      p_background_storage_path: nextPath,
+      p_foreground_text_color: input.foregroundTextColor,
+      p_gag_label: input.gagLabel.trim() || null,
+      p_oneliners: input.oneliners.map((line) => ({
+        ...(line.id ? { id: line.id } : {}),
+        text: line.text,
+        daypart: line.daypart,
+      })),
+    });
+    if (error) throw new Error(error.message);
+  } catch (error) {
+    if (isNewUpload && nextPath) await admin.storage.from("scene-media").remove([nextPath]);
+    throw error;
+  }
+  if (previousPath && previousPath !== nextPath && BACKGROUND_PATH.test(previousPath)) {
+    await admin.storage.from("scene-media").remove([previousPath]);
+  }
+  return getAdminBackground(input.sceneId);
+}
+
+export async function finalizeAmbienceUpload(input: {
+  sceneId: string;
+  path: string;
+  name: string;
+  role: AmbienceRole;
+  sourceFilename: string;
+  sourceByteSize: number;
+  sourceDurationSeconds: number;
+  sourceSha256: string;
+  sourceUrl?: string;
+  selectedStartSeconds: number;
+  selectedDurationSeconds: number;
+}) {
+  await requireAdmin();
+  let assetId: string | null = null;
+  let removeUploadedObject = false;
+  try {
+    const pathMatch = input.path.match(
+      /^rooms\/([a-z0-9-]+)\/ambience\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.wav$/i,
+    );
+    if (!pathMatch) throw new Error("Invalid upload path");
+    const { data: scene, error: sceneError } = await admin
+      .from("scenes")
+      .select("slug")
+      .eq("id", input.sceneId)
+      .single();
+    if (sceneError || !scene || scene.slug !== pathMatch[1]) throw new Error("Invalid upload path");
+    const { data: existingAsset, error: existingError } = await admin
+      .from("ambience_assets")
+      .select("id")
+      .eq("storage_path", input.path)
+      .maybeSingle();
+    if (existingError) throw new Error(existingError.message);
+    if (existingAsset) throw new Error("This upload has already been finalized");
+    removeUploadedObject = true;
+    const { data: object, error: downloadError } = await admin.storage
+      .from("ambience-audio")
+      .download(input.path);
+    if (downloadError || !object)
+      throw new Error(downloadError?.message ?? "Uploaded audio is missing");
+    const bytes = Buffer.from(await object.arrayBuffer());
+    const duration = inspectPlaybackWav(bytes, input.role);
+    const hash = createHash("sha256").update(bytes).digest("hex").toUpperCase();
+    const { data: asset, error: assetError } = await admin
+      .from("ambience_assets")
+      .insert({
+        storage_path: input.path,
+        mime_type: "audio/wav",
+        byte_size: bytes.length,
+        duration_seconds: duration,
+        sha256: hash,
+        is_active: true,
+      })
+      .select("id")
+      .single();
+    if (assetError || !asset) throw new Error(assetError?.message ?? "Unable to save audio asset");
+    assetId = asset.id;
+    const { error: sourceError } = await admin.from("ambience_asset_sources").insert({
+      asset_id: asset.id,
+      source_order: 1,
+      source_url: input.sourceUrl?.trim() || null,
+      source_title: input.sourceFilename.trim() || input.name.trim(),
+      source_sha256: String(input.sourceSha256).toUpperCase(),
+      original_filename: input.sourceFilename,
+      original_byte_size: Math.round(Number(input.sourceByteSize)),
+      original_duration_seconds: Number(input.sourceDurationSeconds),
+      selected_start_seconds: Number(input.selectedStartSeconds),
+      selected_duration_seconds: Number(input.selectedDurationSeconds),
+    });
+    if (sourceError) throw new Error(sourceError.message);
+    await saveAmbienceStem({
+      sceneId: input.sceneId,
+      name: input.name,
+      role: input.role,
+      assetId: asset.id,
+      isActive: true,
+      sortOrder: 99,
+      defaultVolume: input.role === "base" ? 0.9 : input.role === "texture" ? 0.6 : 0.35,
+      minGain: input.role === "base" ? 0.82 : input.role === "texture" ? 0.52 : 0.22,
+      maxGain: input.role === "base" ? 0.96 : input.role === "texture" ? 0.68 : 0.48,
+      crossfadeMs: input.role === "event" ? 0 : 2500,
+      loopStartSeconds: 0,
+      loopEndSeconds: null,
+      eventMinSeconds: input.role === "event" ? 35 : null,
+      eventMaxSeconds: input.role === "event" ? 110 : null,
+    });
+  } catch (error) {
+    if (assetId) {
+      await admin.from("sound_stems").delete().eq("asset_id", assetId);
+      await admin.from("ambience_assets").delete().eq("id", assetId);
+    }
+    if (removeUploadedObject) await admin.storage.from("ambience-audio").remove([input.path]);
+    throw error;
+  }
 }
 
 export type SongDraft = {

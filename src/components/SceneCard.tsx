@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Play } from "lucide-react";
-import { artFor } from "@/lib/scene-art";
+import { backgroundFor } from "@/lib/scene-art";
 import type { Scene } from "@/lib/rooms.functions";
 
 export function SceneCard({ scene }: { scene: Scene }) {
@@ -18,7 +18,7 @@ export function SceneCard({ scene }: { scene: Scene }) {
 
       <div className="relative min-h-0 flex-1 overflow-hidden">
         <img
-          src={artFor(scene.art_key)}
+          src={backgroundFor(scene)}
           alt={`${scene.title_en} scene illustration`}
           loading="lazy"
           width={1024}

@@ -5,13 +5,13 @@ export function OneLinerCaption({
   lines,
   active,
   trackKey,
-  noShadow = false,
+  textColor,
 }: {
   lines: OneLiner[];
   active: boolean;
   /** Changes whenever a new song starts — retriggers the line. */
   trackKey?: string | null;
-  noShadow?: boolean;
+  textColor: string;
 }) {
   const [current, setCurrent] = useState<OneLiner | null>(null);
   const lastIndex = useRef(-1);
@@ -60,9 +60,10 @@ export function OneLinerCaption({
       <div className="animate-in fade-in zoom-in-95 duration-700 max-w-[21ch] sm:max-w-none">
         <p
           lang="hi"
-          className={`font-vintage-deva text-[clamp(2rem,7.6vw,3.6rem)] sm:text-5xl md:text-[clamp(2.5rem,6dvh,4rem)] leading-[1.18] font-black text-cream ${noShadow ? "" : "text-glow-dark"}`}
+          className="font-vintage-deva text-[clamp(2rem,7.6vw,3.6rem)] leading-[1.18] font-black sm:text-5xl md:text-[clamp(2.5rem,6dvh,4rem)]"
+          style={{ color: textColor }}
         >
-          {current.text_hi}
+          {current.display_text}
         </p>
       </div>
     </div>

@@ -43,7 +43,9 @@ function Cover({
       ) : (
         <span className="flex size-full flex-col items-center justify-center bg-gradient-to-br from-ember to-terracotta text-charcoal shadow-inner">
           <Music2 className={compact ? "size-3" : "size-3.5"} aria-hidden />
-          {!compact ? <span className="mt-0.5 font-vintage-deva text-[7.5px] font-bold">संगीत</span> : null}
+          {!compact ? (
+            <span className="mt-0.5 font-vintage-deva text-[7.5px] font-bold">संगीत</span>
+          ) : null}
         </span>
       )}
     </span>
@@ -157,9 +159,17 @@ function PlayButton({ compact = false }: { compact?: boolean }) {
       } shrink-0 rounded-full border-0 bg-gradient-to-br from-[#f27a42] via-[#e2612a] to-[#c74c1a] text-charcoal shadow-[0_2px_10px_rgba(240,126,70,0.45),inset_0_1px_1px_rgba(255,255,255,0.45)] ring-1 ring-ember/40 transition-all hover:scale-105 hover:shadow-[0_3px_16px_rgba(240,126,70,0.65)] hover:brightness-110 active:scale-95`}
     >
       {player.isPlaying ? (
-        <Pause className={compact ? "size-3.5" : "size-4 sm:size-4.5"} aria-hidden fill="currentColor" />
+        <Pause
+          className={compact ? "size-3.5" : "size-4 sm:size-4.5"}
+          aria-hidden
+          fill="currentColor"
+        />
       ) : (
-        <Play className={`${compact ? "size-3.5" : "size-4 sm:size-4.5"} translate-x-0.5`} aria-hidden fill="currentColor" />
+        <Play
+          className={`${compact ? "size-3.5" : "size-4 sm:size-4.5"} translate-x-0.5`}
+          aria-hidden
+          fill="currentColor"
+        />
       )}
     </Button>
   );
@@ -179,7 +189,10 @@ export function FullCassettePlayer() {
   return (
     <div className="pointer-events-auto isolate relative w-full max-w-[min(92vw,27.5rem)] overflow-hidden rounded-xl sm:rounded-2xl border border-white/20 bg-black/25 p-2 sm:p-2.5 text-cream shadow-[0_16px_40px_rgba(0,0,0,0.5),0_0_24px_rgba(240,126,70,0.06)] ring-1 ring-white/15 backdrop-blur-xl">
       {/* Specular top border sheen */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" aria-hidden />
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent"
+        aria-hidden
+      />
 
       {/* Top row: Track info + Live indicator */}
       <div className="flex items-center gap-2.5 border-b border-white/10 pb-1.5">
@@ -193,7 +206,8 @@ export function FullCassettePlayer() {
               <span className="text-red-300">Track unavailable</span>
             ) : (
               <>
-                <span className="font-bold text-amber-400">कलाकार</span> · <span className="text-white/80">{display.subtitle}</span>
+                <span className="font-bold text-amber-400">कलाकार</span> ·{" "}
+                <span className="text-white/80">{display.subtitle}</span>
               </>
             )}
           </p>
@@ -256,6 +270,7 @@ export function FullCassettePlayer() {
         {/* Right: Ambience Control */}
         <div className="flex items-center justify-end">
           <AmbienceControl
+            available={player.ambienceAvailable}
             enabled={player.ambienceEnabled}
             active={player.ambienceActive}
             status={player.ambienceStatus}
@@ -300,7 +315,10 @@ export function CompactCassettePlayer({ className = "" }: { className?: string }
     <div
       className={`paper relative overflow-hidden border border-white/20 bg-black/25 text-cream shadow-[0_12px_40px_-8px_rgba(0,0,0,0.5)] backdrop-blur-xl ring-1 ring-white/10 ${className}`}
     >
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" aria-hidden />
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"
+        aria-hidden
+      />
       <div className="mx-auto grid w-full max-w-5xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 px-3 py-2 sm:grid-cols-[auto_auto_minmax(8rem,1fr)_auto] sm:gap-3 sm:px-4">
         <CassetteBody
           variant="compact"
@@ -312,18 +330,16 @@ export function CompactCassettePlayer({ className = "" }: { className?: string }
           <p className="truncate text-[9.5px] font-bold tracking-[0.16em] text-ember uppercase">
             {player.room.scene.title_en}
           </p>
-          <p className="truncate text-sm font-bold leading-tight text-cream">
-            {display.title}
-          </p>
+          <p className="truncate text-sm font-bold leading-tight text-cream">{display.title}</p>
           <p className="truncate text-[11px] text-cream/70 font-medium">{display.subtitle}</p>
         </div>
 
         <div className="min-w-0">
           <div className="mb-1 flex items-center justify-between gap-2 min-w-0 sm:hidden">
-            <p className="truncate text-xs font-bold leading-tight text-cream">
-              {display.title}
-            </p>
-            <span className="truncate text-[9.5px] text-cream/60 font-medium">{player.room.scene.title_en}</span>
+            <p className="truncate text-xs font-bold leading-tight text-cream">{display.title}</p>
+            <span className="truncate text-[9.5px] text-cream/60 font-medium">
+              {player.room.scene.title_en}
+            </span>
           </div>
           <SeekBar compact />
         </div>
@@ -338,6 +354,7 @@ export function CompactCassettePlayer({ className = "" }: { className?: string }
           </TransportButton>
           <div className="hidden sm:block">
             <AmbienceControl
+              available={player.ambienceAvailable}
               enabled={player.ambienceEnabled}
               active={player.ambienceActive}
               status={player.ambienceStatus}
@@ -355,6 +372,7 @@ export function CompactCassettePlayer({ className = "" }: { className?: string }
                 : display.subtitle}
           </p>
           <AmbienceControl
+            available={player.ambienceAvailable}
             enabled={player.ambienceEnabled}
             active={player.ambienceActive}
             status={player.ambienceStatus}

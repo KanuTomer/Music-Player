@@ -18,9 +18,20 @@ import {
   snapshotQueue,
   sourceFailureAction,
 } from "./queue";
-import { reportPlaybackSourceFailure, type QueueItem, type RoomPayload } from "./rooms.functions";
+import {
+  getRoomAmbience,
+  reportPlaybackSourceFailure,
+  type QueueItem,
+  type RoomPayload,
+} from "./rooms.functions";
 import { useAmbienceEngine } from "@/hooks/useAmbienceEngine";
-import { effectiveMusicVolume, fixedAmbienceLevel, type AmbienceStatus } from "./ambience";
+import {
+  effectiveMusicVolume,
+  fixedAmbienceLevel,
+  shouldEnableAvailableAmbience,
+  type AmbienceStatus,
+} from "./ambience";
+import { supabase } from "@/integrations/supabase/client";
 
 type YTPlayer = {
   loadVideoById: (id: string) => void;
@@ -64,11 +75,13 @@ type PlayerState = {
   track: QueueItem["track"] | null;
   isPlaying: boolean;
   musicReady: boolean;
+  musicTransitioning: boolean;
   musicBlocked: boolean;
   isCuratedPlaylist: boolean;
   nowPlaying: NowPlaying;
   musicVolume: number;
   ambienceLevel: number;
+  ambienceAvailable: boolean;
   ambienceEnabled: boolean;
   ambienceStatus: AmbienceStatus;
   ambienceActive: boolean;
@@ -77,8 +90,9 @@ type PlayerState = {
   ambienceEventPlaying: boolean;
   openRoom: (room: RoomPayload) => void;
   toggle: () => void;
-  next: () => void;
-  previous: () => void;
+  next: (options?: TrackChangeOptions) => void;
+  previous: (options?: TrackChangeOptions) => void;
+  cancelPendingTrackChange: () => void;
   seek: (seconds: number) => void;
   setMusicVolume: (v: number) => void;
   toggleAmbience: () => void;
@@ -86,6 +100,11 @@ type PlayerState = {
   start: () => void;
   fadeForThemeChange: () => Promise<void>;
   leave: () => void;
+};
+
+type TrackChangeOptions = {
+  delayMs?: number;
+  forcePlay?: boolean;
 };
 const PlayerContext = createContext<PlayerState | null>(null);
 declare global {
@@ -131,6 +150,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const fadeTimerRef = useRef<number | null>(null);
   const volumeRampTimerRef = useRef<number | null>(null);
   const playRetryTimerRef = useRef<number | null>(null);
+  const delayedAdvanceTimerRef = useRef<number | null>(null);
+  const delayedAdvanceShouldPlayRef = useRef(false);
   const themeTransitionRef = useRef(false);
   const queueRef = useRef<QueueItem[]>([]);
   const indexRef = useRef(0);
@@ -140,12 +161,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const sessionSeedRef = useRef<string | null>(null);
   const shuffledQueuesRef = useRef<Map<string, QueueItem[]>>(new Map());
   const ambienceSuppressedRef = useRef(false);
+  const musicDuckRatioRef = useRef(1);
   const [room, setRoom] = useState<RoomPayload | null>(null);
   const [daypart, setDaypart] = useState<Daypart>(() => currentDaypart());
   const [playlist, setPlaylist] = useState<QueueItem[]>([]);
   const [index, setIndexState] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [musicReady, setMusicReady] = useState(false);
+  const [musicTransitioning, setMusicTransitioning] = useState(false);
   const [musicBlocked, setMusicBlocked] = useState(false);
   const [apiReady, setApiReady] = useState(false);
   const [musicVolume, setMusicVol] = useState(0.7);
@@ -155,6 +178,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const track = playlist[index]?.track ?? null;
   const ambience = useAmbienceEngine(room, ambienceEnabled, ambienceLevel);
   const resumeAmbienceFromGesture = ambience.resumeFromGesture;
+  const ambienceAvailable = Boolean(room?.ambience);
+  const activeMusicDuckRatio = room?.ambience?.music_duck_ratio ?? 1;
+  musicDuckRatioRef.current = activeMusicDuckRatio;
 
   const setPlayerOutputVolume = useCallback((player: YTPlayer, value: number) => {
     const clamped = Math.min(1, Math.max(0, value));
@@ -197,8 +223,48 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     ambienceActiveRef.current = ambience.active;
     if (themeTransitionRef.current) return;
-    rampMusicOutput(effectiveMusicVolume(volumeRef.current, ambience.active), 500);
-  }, [ambience.active, rampMusicOutput]);
+    rampMusicOutput(
+      effectiveMusicVolume(volumeRef.current, ambience.active, activeMusicDuckRatio),
+      500,
+    );
+  }, [activeMusicDuckRatio, ambience.active, rampMusicOutput]);
+
+  useEffect(() => {
+    const sceneId = room?.scene.id;
+    if (!sceneId) return;
+    const channel = supabase
+      .channel(`ambience-profile:${sceneId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "ambience_profiles",
+          filter: `scene_id=eq.${sceneId}`,
+        },
+        () => {
+          void getRoomAmbience({ data: { sceneId } })
+            .then((nextAmbience) => {
+              setRoom((current) =>
+                current?.scene.id === sceneId ? { ...current, ambience: nextAmbience } : current,
+              );
+              const nextEnabled = shouldEnableAvailableAmbience(
+                Boolean(nextAmbience),
+                ambienceSuppressedRef.current,
+              );
+              setAmbienceEnabled(nextEnabled);
+              if (nextEnabled) void resumeAmbienceFromGesture();
+            })
+            .catch(() => {
+              // Keep the last known state; the room loader will retry on navigation.
+            });
+        },
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [room?.scene.id, resumeAmbienceFromGesture]);
 
   const setIndex = useCallback((next: number) => {
     indexRef.current = next;
@@ -235,7 +301,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       setMusicBlocked(false);
       setNowPlaying(emptyNowPlaying(indexRef.current, queueRef.current.length));
       player.loadVideoById(source.provider_item_id);
-      const target = effectiveMusicVolume(volumeRef.current, ambienceActiveRef.current);
+      const target = effectiveMusicVolume(
+        volumeRef.current,
+        ambienceActiveRef.current,
+        musicDuckRatioRef.current,
+      );
       setPlayerOutputVolume(player, themeTransitionRef.current ? 0 : target);
       intendPlayRef.current = autoplay;
       if (autoplay) scheduleExpectedPlayback(player, source.provider_item_id);
@@ -265,6 +335,42 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       if (player && readyRef.current) cueCurrent(player, intendPlayRef.current);
     },
     [cueCurrent, setIndex],
+  );
+  const cancelPendingTrackChange = useCallback(() => {
+    if (delayedAdvanceTimerRef.current == null) return;
+    window.clearTimeout(delayedAdvanceTimerRef.current);
+    delayedAdvanceTimerRef.current = null;
+    setMusicTransitioning(false);
+    if (!delayedAdvanceShouldPlayRef.current) return;
+    delayedAdvanceShouldPlayRef.current = false;
+    intendPlayRef.current = true;
+    setIsPlaying(true);
+    if (readyRef.current) playerRef.current?.playVideo();
+  }, []);
+  const requestAdvance = useCallback(
+    (delta: number, options?: TrackChangeOptions) => {
+      const delayMs = Math.max(0, options?.delayMs ?? 0);
+      if (delayMs === 0) {
+        advance(delta);
+        return;
+      }
+      if (delayedAdvanceTimerRef.current != null) return;
+
+      delayedAdvanceShouldPlayRef.current = options?.forcePlay || intendPlayRef.current;
+      intendPlayRef.current = false;
+      playerRef.current?.pauseVideo();
+      setIsPlaying(false);
+      setMusicTransitioning(true);
+      delayedAdvanceTimerRef.current = window.setTimeout(() => {
+        delayedAdvanceTimerRef.current = null;
+        const shouldPlay = delayedAdvanceShouldPlayRef.current;
+        delayedAdvanceShouldPlayRef.current = false;
+        intendPlayRef.current = shouldPlay;
+        setMusicTransitioning(false);
+        advance(delta);
+      }, delayMs);
+    },
+    [advance],
   );
   const reportFailure = useCallback((sourceId: string, errorCode: number) => {
     void reportPlaybackSourceFailure({ data: { sourceId, errorCode } }).catch(() => {
@@ -439,13 +545,19 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const openRoom = useCallback(
     (nextRoom: RoomPayload) => {
       if (room?.scene.slug === nextRoom.scene.slug) return;
+      if (delayedAdvanceTimerRef.current != null) {
+        window.clearTimeout(delayedAdvanceTimerRef.current);
+        delayedAdvanceTimerRef.current = null;
+        delayedAdvanceShouldPlayRef.current = false;
+        setMusicTransitioning(false);
+      }
       ambienceSuppressedRef.current = false;
       intendPlayRef.current = true;
       setIsPlaying(false);
       setMusicReady(false);
       setMusicBlocked(false);
-      setAmbienceEnabled(true);
-      void resumeAmbienceFromGesture();
+      setAmbienceEnabled(Boolean(nextRoom.ambience));
+      if (nextRoom.ambience) void resumeAmbienceFromGesture();
       if (!sessionSeedRef.current && typeof window !== "undefined") {
         sessionSeedRef.current = createQueueSessionSeed();
       }
@@ -478,21 +590,27 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   );
   const start = useCallback(() => {
     void resumeAmbienceFromGesture();
-    if (!ambienceSuppressedRef.current) setAmbienceEnabled(true);
+    if (room?.ambience && !ambienceSuppressedRef.current) setAmbienceEnabled(true);
     intendPlayRef.current = true;
     if (readyRef.current) playerRef.current?.playVideo();
-  }, [resumeAmbienceFromGesture]);
+  }, [resumeAmbienceFromGesture, room?.ambience]);
   const toggle = useCallback(() => {
     if (!isPlaying) void resumeAmbienceFromGesture();
-    if (!isPlaying && !ambienceSuppressedRef.current) setAmbienceEnabled(true);
+    if (!isPlaying && room?.ambience && !ambienceSuppressedRef.current) setAmbienceEnabled(true);
     intendPlayRef.current = !isPlaying;
     if (readyRef.current) {
       if (isPlaying) playerRef.current?.pauseVideo();
       else playerRef.current?.playVideo();
     }
-  }, [isPlaying, resumeAmbienceFromGesture]);
-  const next = useCallback(() => advance(1), [advance]);
-  const previous = useCallback(() => advance(-1), [advance]);
+  }, [isPlaying, resumeAmbienceFromGesture, room?.ambience]);
+  const next = useCallback(
+    (options?: TrackChangeOptions) => requestAdvance(1, options),
+    [requestAdvance],
+  );
+  const previous = useCallback(
+    (options?: TrackChangeOptions) => requestAdvance(-1, options),
+    [requestAdvance],
+  );
   const seek = useCallback((seconds: number) => {
     if (readyRef.current) playerRef.current?.seekTo(Math.max(0, seconds), true);
   }, []);
@@ -501,17 +619,24 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       const clamped = Math.min(1, Math.max(0, value));
       volumeRef.current = clamped;
       setMusicVol(clamped);
-      rampMusicOutput(effectiveMusicVolume(clamped, ambienceActiveRef.current), 160);
+      rampMusicOutput(
+        effectiveMusicVolume(clamped, ambienceActiveRef.current, musicDuckRatioRef.current),
+        160,
+      );
     },
     [rampMusicOutput],
   );
   const toggleAmbience = useCallback(() => {
+    if (!ambienceAvailable) return;
     const nextEnabled = !ambienceEnabled;
     ambienceSuppressedRef.current = !nextEnabled;
     setAmbienceEnabled(nextEnabled);
     if (nextEnabled) void resumeAmbienceFromGesture();
-  }, [ambienceEnabled, resumeAmbienceFromGesture]);
-  const triggerAmbienceEvent = useCallback(() => ambience.triggerEvent(), [ambience]);
+  }, [ambienceAvailable, ambienceEnabled, resumeAmbienceFromGesture]);
+  const triggerAmbienceEvent = useCallback(
+    () => (ambienceAvailable ? ambience.triggerEvent() : Promise.resolve(false)),
+    [ambience, ambienceAvailable],
+  );
   const fadeForThemeChange = useCallback(() => {
     const player = playerRef.current;
     if (!player || !readyRef.current || !isPlaying) {
@@ -539,6 +664,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     });
   }, [isPlaying, setPlayerOutputVolume]);
   const leave = useCallback(() => {
+    if (delayedAdvanceTimerRef.current != null) {
+      window.clearTimeout(delayedAdvanceTimerRef.current);
+      delayedAdvanceTimerRef.current = null;
+    }
+    delayedAdvanceShouldPlayRef.current = false;
+    setMusicTransitioning(false);
     generationRef.current += 1;
     readyRef.current = false;
     intendPlayRef.current = false;
@@ -558,13 +689,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     track,
     isPlaying,
     musicReady,
+    musicTransitioning,
     musicBlocked,
     isCuratedPlaylist: Boolean(room),
     nowPlaying,
     musicVolume,
     ambienceLevel,
+    ambienceAvailable,
     ambienceEnabled,
-    ambienceStatus: ambience.status,
+    ambienceStatus: ambienceAvailable ? ambience.status : "unavailable",
     ambienceActive: ambience.active,
     ambienceEventPulse: ambience.eventPulse,
     ambienceEventReady: ambience.eventReady,
@@ -573,6 +706,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     toggle,
     next,
     previous,
+    cancelPendingTrackChange,
     seek,
     setMusicVolume,
     toggleAmbience,

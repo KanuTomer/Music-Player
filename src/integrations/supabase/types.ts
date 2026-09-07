@@ -12,26 +12,41 @@ export type Database = {
         Row: {
           asset_id: string;
           id: string;
+          original_byte_size: number | null;
+          original_duration_seconds: number | null;
+          original_filename: string | null;
+          selected_duration_seconds: number | null;
+          selected_start_seconds: number | null;
           source_order: number;
           source_sha256: string;
           source_title: string;
-          source_url: string;
+          source_url: string | null;
         };
         Insert: {
           asset_id: string;
           id?: string;
+          original_byte_size?: number | null;
+          original_duration_seconds?: number | null;
+          original_filename?: string | null;
+          selected_duration_seconds?: number | null;
+          selected_start_seconds?: number | null;
           source_order?: number;
           source_sha256: string;
           source_title: string;
-          source_url: string;
+          source_url?: string | null;
         };
         Update: {
           asset_id?: string;
           id?: string;
+          original_byte_size?: number | null;
+          original_duration_seconds?: number | null;
+          original_filename?: string | null;
+          selected_duration_seconds?: number | null;
+          selected_start_seconds?: number | null;
           source_order?: number;
           source_sha256?: string;
           source_title?: string;
-          source_url?: string;
+          source_url?: string | null;
         };
         Relationships: [
           {
@@ -85,6 +100,7 @@ export type Database = {
           fade_out_ms: number;
           id: string;
           max_master_gain: number;
+          music_duck_ratio: number;
           scene_id: string;
           visual_theme: Json;
         };
@@ -96,6 +112,7 @@ export type Database = {
           fade_out_ms?: number;
           id?: string;
           max_master_gain?: number;
+          music_duck_ratio?: number;
           scene_id: string;
           visual_theme?: Json;
         };
@@ -107,6 +124,7 @@ export type Database = {
           fade_out_ms?: number;
           id?: string;
           max_master_gain?: number;
+          music_duck_ratio?: number;
           scene_id?: string;
           visual_theme?: Json;
         };
@@ -511,10 +529,12 @@ export type Database = {
       scenes: {
         Row: {
           art_key: string;
+          background_storage_path: string | null;
           category: string;
           chat_mode: string;
           created_at: string;
           description: string | null;
+          foreground_text_color: string;
           gag_label: string | null;
           hook: string;
           id: string;
@@ -531,10 +551,12 @@ export type Database = {
         };
         Insert: {
           art_key: string;
+          background_storage_path?: string | null;
           category?: string;
           chat_mode?: string;
           created_at?: string;
           description?: string | null;
+          foreground_text_color?: string;
           gag_label?: string | null;
           hook: string;
           id?: string;
@@ -551,10 +573,12 @@ export type Database = {
         };
         Update: {
           art_key?: string;
+          background_storage_path?: string | null;
           category?: string;
           chat_mode?: string;
           created_at?: string;
           description?: string | null;
+          foreground_text_color?: string;
           gag_label?: string | null;
           hook?: string;
           id?: string;

@@ -15,6 +15,8 @@ import { Route as GenerateRouteImport } from './routes/generate'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
 import { Route as RoomSlugRouteImport } from './routes/room.$slug'
+import { Route as RoomSlugIndexRouteImport } from './routes/room.$slug.index'
+import { Route as RoomSlugCassetteRouteImport } from './routes/room.$slug.cassette'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -46,21 +48,34 @@ const RoomSlugRoute = RoomSlugRouteImport.update({
   path: '/room/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RoomSlugIndexRoute = RoomSlugIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => RoomSlugRoute,
+} as any)
+const RoomSlugCassetteRoute = RoomSlugCassetteRouteImport.update({
+  id: '/cassette',
+  path: '/cassette',
+  getParentRoute: () => RoomSlugRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/generate': typeof GenerateRoute
   '/admin/login': typeof AdminLoginRoute
-  '/room/$slug': typeof RoomSlugRoute
+  '/room/$slug': typeof RoomSlugRouteWithChildren
   '/admin/': typeof AdminIndexRoute
+  '/room/$slug/cassette': typeof RoomSlugCassetteRoute
+  '/room/$slug/': typeof RoomSlugIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/generate': typeof GenerateRoute
   '/admin/login': typeof AdminLoginRoute
-  '/room/$slug': typeof RoomSlugRoute
   '/admin': typeof AdminIndexRoute
+  '/room/$slug/cassette': typeof RoomSlugCassetteRoute
+  '/room/$slug': typeof RoomSlugIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -68,15 +83,30 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/generate': typeof GenerateRoute
   '/admin/login': typeof AdminLoginRoute
-  '/room/$slug': typeof RoomSlugRoute
+  '/room/$slug': typeof RoomSlugRouteWithChildren
   '/admin/': typeof AdminIndexRoute
+  '/room/$slug/cassette': typeof RoomSlugCassetteRoute
+  '/room/$slug/': typeof RoomSlugIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/admin' | '/generate' | '/admin/login' | '/room/$slug' | '/admin/'
+    | '/'
+    | '/admin'
+    | '/generate'
+    | '/admin/login'
+    | '/room/$slug'
+    | '/admin/'
+    | '/room/$slug/cassette'
+    | '/room/$slug/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/generate' | '/admin/login' | '/room/$slug' | '/admin'
+  to:
+    | '/'
+    | '/generate'
+    | '/admin/login'
+    | '/admin'
+    | '/room/$slug/cassette'
+    | '/room/$slug'
   id:
     | '__root__'
     | '/'
@@ -85,13 +115,15 @@ export interface FileRouteTypes {
     | '/admin/login'
     | '/room/$slug'
     | '/admin/'
+    | '/room/$slug/cassette'
+    | '/room/$slug/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
   GenerateRoute: typeof GenerateRoute
-  RoomSlugRoute: typeof RoomSlugRoute
+  RoomSlugRoute: typeof RoomSlugRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -138,6 +170,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RoomSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/room/$slug/': {
+      id: '/room/$slug/'
+      path: '/'
+      fullPath: '/room/$slug/'
+      preLoaderRoute: typeof RoomSlugIndexRouteImport
+      parentRoute: typeof RoomSlugRoute
+    }
+    '/room/$slug/cassette': {
+      id: '/room/$slug/cassette'
+      path: '/cassette'
+      fullPath: '/room/$slug/cassette'
+      preLoaderRoute: typeof RoomSlugCassetteRouteImport
+      parentRoute: typeof RoomSlugRoute
+    }
   }
 }
 
@@ -153,11 +199,25 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
+interface RoomSlugRouteChildren {
+  RoomSlugCassetteRoute: typeof RoomSlugCassetteRoute
+  RoomSlugIndexRoute: typeof RoomSlugIndexRoute
+}
+
+const RoomSlugRouteChildren: RoomSlugRouteChildren = {
+  RoomSlugCassetteRoute: RoomSlugCassetteRoute,
+  RoomSlugIndexRoute: RoomSlugIndexRoute,
+}
+
+const RoomSlugRouteWithChildren = RoomSlugRoute._addFileChildren(
+  RoomSlugRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   GenerateRoute: GenerateRoute,
-  RoomSlugRoute: RoomSlugRoute,
+  RoomSlugRoute: RoomSlugRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

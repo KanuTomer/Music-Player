@@ -1,17 +1,33 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useBlocker, useNavigate } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ChevronDown, Loader2, UserRound } from "lucide-react";
+import { DiscardChangesDialog } from "@/components/admin/AdminFormFeedback";
+import { AmbienceAudioPanel } from "@/components/admin/AmbienceAudioPanel";
+import { BackgroundPanel } from "@/components/admin/BackgroundPanel";
 import { supabase } from "@/integrations/supabase/client";
-import { retainComparedSceneIds, sortComparedAnalytics } from "@/lib/admin-analytics";
+import {
+  retainComparedSceneIds,
+  sortComparedAnalytics,
+  toggleAllIds,
+  toggleSelectedId,
+} from "@/lib/admin-analytics";
+import { hasAdminDraftChanges, sameAdminDraft } from "@/lib/admin-drafts";
 import {
   addAdminSongs,
-  getAdminData,
+  getAdminAmbienceData,
+  getAdminAnalyticsData,
+  getAdminBackgroundData,
+  getAdminBootstrapData,
+  getAdminSongsData,
   previewAdminSongs,
   removeAdminSongs,
   updateAdminSong,
 } from "@/lib/admin.functions";
+import type { AdminSceneSummary } from "@/lib/admin.server";
 
 type Range = "7d" | "30d" | "all";
-type Section = "songs" | "analytics";
+type Section = "songs" | "analytics" | "ambience" | "background";
 type Draft = {
   input: string;
   title: string;
@@ -31,7 +47,40 @@ type Track = {
   sourceUrl: string;
   sharedActiveUses: number;
 };
-type Scene = { id: string; slug: string; title: string; queueId: string; tracks: Track[] };
+type AmbienceStem = {
+  id: string;
+  name: string;
+  role: "base" | "texture" | "event";
+  assetId: string;
+  isActive: boolean;
+  sortOrder: number;
+  defaultVolume: number;
+  minGain: number;
+  maxGain: number;
+  crossfadeMs: number;
+  loopStartSeconds: number;
+  loopEndSeconds: number | null;
+  eventMinSeconds: number | null;
+  eventMaxSeconds: number | null;
+};
+type Ambience = {
+  id: string;
+  enabled: boolean;
+  maxMasterGain: number;
+  musicDuckRatio: number;
+  fadeInMs: number;
+  fadeOutMs: number;
+  audioTheme: Record<string, Record<string, number>>;
+  stems: AmbienceStem[];
+};
+type Asset = {
+  id: string;
+  storagePath: string;
+  byteSize: number;
+  durationSeconds: number;
+  publicUrl: string;
+};
+type Scene = AdminSceneSummary & { tracks: Track[]; ambience: Ambience | null };
 type Analytics = {
   sceneId: string;
   title: string;
@@ -43,98 +92,244 @@ type Analytics = {
 
 const seconds = (value: number) => `${Math.floor(value / 60)}m ${value % 60}s`;
 const ADMIN_SIGN_IN_NOTICE_KEY = "sainik-dhaba.admin.sign-in-notice";
+const EMPTY_SCENES: AdminSceneSummary[] = [];
 
 export const Route = createFileRoute("/admin/")({ component: AdminPage });
 
 function AdminPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [clientReady, setClientReady] = useState(false);
   const [range, setRange] = useState<Range>("30d");
-  const [scenes, setScenes] = useState<Scene[]>([]);
-  const [analytics, setAnalytics] = useState<Analytics[]>([]);
   const [selectedSlug, setSelectedSlug] = useState("");
+  const [expandedSlug, setExpandedSlug] = useState("");
   const [comparedSceneIds, setComparedSceneIds] = useState<string[]>([]);
   const [section, setSection] = useState<Section>("songs");
   const [selected, setSelected] = useState<string[]>([]);
   const [urls, setUrls] = useState("");
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [edit, setEdit] = useState<Track | null>(null);
+  const [editBaseline, setEditBaseline] = useState<Track | null>(null);
+  const [ambienceDirty, setAmbienceDirty] = useState(false);
+  const [backgroundDirty, setBackgroundDirty] = useState(false);
+  const [pendingTransition, setPendingTransition] = useState<(() => void | Promise<void>) | null>(
+    null,
+  );
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
-  const selectedSlugRef = useRef(selectedSlug);
+  const [busyAction, setBusyAction] = useState("");
+  const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [songPage, setSongPage] = useState(0);
+  const allowNextNavigationRef = useRef(false);
 
-  const current = scenes.find((scene) => scene.slug === selectedSlug) ?? scenes[0];
+  const bootstrapQuery = useQuery({
+    queryKey: ["admin", "bootstrap"],
+    queryFn: () => getAdminBootstrapData(),
+    staleTime: 60_000,
+    enabled: clientReady,
+  });
+  const scenes = bootstrapQuery.data?.scenes ?? EMPTY_SCENES;
+  const identity = bootstrapQuery.data?.identity ?? null;
+  const currentSummary = scenes.find((scene) => scene.slug === selectedSlug) ?? scenes[0];
+  const songsQuery = useQuery({
+    queryKey: ["admin", "songs", currentSummary?.id],
+    queryFn: () => getAdminSongsData({ data: { sceneId: currentSummary!.id } }),
+    enabled: Boolean(clientReady && currentSummary && section === "songs"),
+    staleTime: 30_000,
+  });
+  const analyticsQuery = useQuery({
+    queryKey: ["admin", "analytics", range],
+    queryFn: () => getAdminAnalyticsData({ data: { range } }),
+    enabled: clientReady && section === "analytics",
+    staleTime: 30_000,
+    placeholderData: (previous) => previous,
+  });
+  const ambienceQuery = useQuery({
+    queryKey: ["admin", "ambience", currentSummary?.id],
+    queryFn: () => getAdminAmbienceData({ data: { sceneId: currentSummary!.id } }),
+    enabled: Boolean(clientReady && currentSummary && section === "ambience"),
+    staleTime: 30_000,
+  });
+  const backgroundQuery = useQuery({
+    queryKey: ["admin", "background", currentSummary?.id],
+    queryFn: () => getAdminBackgroundData({ data: { sceneId: currentSummary!.id } }),
+    enabled: Boolean(clientReady && currentSummary && section === "background"),
+    staleTime: 30_000,
+  });
+  const current: Scene | undefined = currentSummary
+    ? {
+        ...currentSummary,
+        queueId: songsQuery.data?.queueId ?? currentSummary.queueId,
+        tracks: songsQuery.data?.tracks ?? [],
+        ambience: ambienceQuery.data?.ambience ?? null,
+      }
+    : undefined;
+  const analytics = (analyticsQuery.data ?? []) as Analytics[];
+  const assets = (ambienceQuery.data?.assets ?? []) as Asset[];
+  const sectionLoading =
+    bootstrapQuery.isPending ||
+    (section === "songs" && songsQuery.isFetching) ||
+    (section === "analytics" && analyticsQuery.isFetching) ||
+    (section === "ambience" && ambienceQuery.isFetching) ||
+    (section === "background" && backgroundQuery.isFetching);
+  const totalTracks = current?.tracks.length ?? 0;
+  const pageCount = Math.max(1, Math.ceil(totalTracks / rowsPerPage));
+  const activeSongPage = Math.min(songPage, pageCount - 1);
+  const pageTracks =
+    current?.tracks.slice(activeSongPage * rowsPerPage, (activeSongPage + 1) * rowsPerPage) ?? [];
   const comparedAnalytics = sortComparedAnalytics(analytics, comparedSceneIds);
   const singleComparedAnalytics = comparedAnalytics.length === 1 ? comparedAnalytics[0] : null;
+  const allScenesCompared =
+    scenes.length > 0 && scenes.every((scene) => comparedSceneIds.includes(scene.id));
+  const songImportDirty = Boolean(urls.trim() || drafts.length);
+  const songEditDirty = Boolean(edit && editBaseline && !sameAdminDraft(edit, editBaseline));
+  const hasUnsavedChanges = hasAdminDraftChanges({
+    songInput: urls,
+    songDraftCount: drafts.length,
+    songEditChanged: songEditDirty,
+    ambienceChanged: ambienceDirty || backgroundDirty,
+  });
+  const blocker = useBlocker({
+    shouldBlockFn: () => hasUnsavedChanges && !allowNextNavigationRef.current,
+    enableBeforeUnload: hasUnsavedChanges,
+    withResolver: true,
+  });
+
+  const discardLocalDrafts = useCallback(() => {
+    setUrls("");
+    setDrafts([]);
+    setEdit(null);
+    setEditBaseline(null);
+    setAmbienceDirty(false);
+    setBackgroundDirty(false);
+  }, []);
+
+  function requestTransition(action: () => void | Promise<void>) {
+    if (!hasUnsavedChanges) {
+      void action();
+      return;
+    }
+    setPendingTransition(() => action);
+  }
+
+  function continueAfterDiscard() {
+    const action = pendingTransition;
+    setPendingTransition(null);
+    discardLocalDrafts();
+    allowNextNavigationRef.current = true;
+    if (blocker.status === "blocked") blocker.proceed?.();
+    else if (action) void action();
+    window.setTimeout(() => {
+      allowNextNavigationRef.current = false;
+    }, 1000);
+  }
 
   function selectJagah(slug: string) {
-    if (slug === current?.slug) return;
+    if (slug === current?.slug) {
+      setExpandedSlug((previous) => (previous === slug ? "" : slug));
+      return;
+    }
     const nextScene = scenes.find((scene) => scene.slug === slug);
     setSelectedSlug(slug);
+    setExpandedSlug(slug);
     setComparedSceneIds(nextScene ? [nextScene.id] : []);
     setSection("songs");
     setSelected([]);
     setUrls("");
     setDrafts([]);
     setEdit(null);
+    setEditBaseline(null);
+    setAmbienceDirty(false);
+    setBackgroundDirty(false);
+    setSongPage(0);
     setMessage("");
   }
 
-  useEffect(() => {
-    selectedSlugRef.current = selectedSlug;
-  }, [selectedSlug]);
+  const refreshSongs = useCallback(async () => {
+    if (!currentSummary) return;
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["admin", "songs", currentSummary.id] }),
+      queryClient.invalidateQueries({ queryKey: ["admin", "bootstrap"] }),
+    ]);
+  }, [currentSummary, queryClient]);
 
-  const load = useCallback(async () => {
-    setBusy(true);
-    try {
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) {
-        void navigate({ to: "/admin/login" });
-        return;
-      }
-      const result = await getAdminData({ data: { range } });
-      setScenes(result.scenes as Scene[]);
-      setAnalytics(result.analytics as Analytics[]);
-      setSelectedSlug((previous) => previous || result.scenes[0]?.slug || "");
-      setComparedSceneIds((previous) => {
-        const defaultScene =
-          result.scenes.find((scene) => scene.slug === selectedSlugRef.current) ?? result.scenes[0];
-        return retainComparedSceneIds(
-          previous,
-          result.scenes.map((scene) => scene.id),
-          defaultScene?.id,
-        );
-      });
-      setSelected([]);
-      setMessage("");
-    } catch (error) {
-      const text = error instanceof Error ? error.message : "Unable to load admin data";
-      if (/sign in|administrator|session/i.test(text)) {
-        window.sessionStorage.setItem(
-          ADMIN_SIGN_IN_NOTICE_KEY,
-          "Your sign-in session expired. Please sign in again.",
-        );
-        try {
-          await supabase.auth.signOut();
-        } finally {
-          await navigate({ to: "/admin/login" });
-        }
-        return;
-      }
-      setMessage(text);
-    } finally {
-      setBusy(false);
-    }
-  }, [navigate, range]);
+  const refreshAmbience = useCallback(async () => {
+    if (!currentSummary) return;
+    await queryClient.invalidateQueries({ queryKey: ["admin", "ambience", currentSummary.id] });
+  }, [currentSummary, queryClient]);
+
+  const refreshBackground = useCallback(async () => {
+    if (!currentSummary) return;
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["admin", "background", currentSummary.id] }),
+      queryClient.invalidateQueries({ queryKey: ["admin", "bootstrap"] }),
+    ]);
+  }, [currentSummary, queryClient]);
 
   function toggleComparedScene(sceneId: string) {
-    setComparedSceneIds((ids) =>
-      ids.includes(sceneId) ? ids.filter((id) => id !== sceneId) : [...ids, sceneId],
-    );
+    setComparedSceneIds((ids) => toggleSelectedId(ids, sceneId));
   }
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    void supabase.auth.getSession().then(({ data }) => {
+      if (!data.session) void navigate({ to: "/admin/login" });
+      else setClientReady(true);
+    });
+  }, [navigate]);
+
+  useEffect(() => {
+    if (!scenes.length) return;
+    setSelectedSlug((previous) => previous || scenes[0]!.slug);
+    setExpandedSlug((previous) => previous || scenes[0]!.slug);
+    setComparedSceneIds((previous) =>
+      retainComparedSceneIds(
+        previous,
+        scenes.map((scene) => scene.id),
+        scenes[0]?.id,
+      ),
+    );
+    const first = scenes[0];
+    if (first) {
+      void queryClient.prefetchQuery({
+        queryKey: ["admin", "songs", first.id],
+        queryFn: () => getAdminSongsData({ data: { sceneId: first.id } }),
+        staleTime: 30_000,
+      });
+    }
+  }, [queryClient, scenes]);
+
+  useEffect(() => {
+    const error = bootstrapQuery.error;
+    if (!error) return;
+    const text = error instanceof Error ? error.message : "Unable to load admin data";
+    if (/sign in|administrator|session/i.test(text)) {
+      window.sessionStorage.setItem(
+        ADMIN_SIGN_IN_NOTICE_KEY,
+        "Your sign-in session expired. Please sign in again.",
+      );
+      void supabase.auth.signOut().finally(() => navigate({ to: "/admin/login" }));
+    } else setMessage(text);
+  }, [bootstrapQuery.error, navigate]);
+
+  useEffect(() => {
+    const error =
+      songsQuery.error ?? analyticsQuery.error ?? ambienceQuery.error ?? backgroundQuery.error;
+    if (!error) return;
+    const text = error instanceof Error ? error.message : "Unable to load this section";
+    if (/sign in|administrator|session/i.test(text)) {
+      window.sessionStorage.setItem(
+        ADMIN_SIGN_IN_NOTICE_KEY,
+        "Your sign-in session expired. Please sign in again.",
+      );
+      void supabase.auth.signOut().finally(() => navigate({ to: "/admin/login" }));
+    } else setMessage(text);
+  }, [
+    songsQuery.error,
+    analyticsQuery.error,
+    ambienceQuery.error,
+    backgroundQuery.error,
+    navigate,
+  ]);
 
   async function preview() {
     const inputs = urls
@@ -143,6 +338,7 @@ function AdminPage() {
       .filter(Boolean);
     if (!inputs.length) return;
     setBusy(true);
+    setBusyAction("Previewing import");
     try {
       setDrafts(await previewAdminSongs({ data: { inputs } }));
       setMessage("Review the imported metadata before saving.");
@@ -150,22 +346,25 @@ function AdminPage() {
       setMessage(error instanceof Error ? error.message : "Unable to preview songs");
     } finally {
       setBusy(false);
+      setBusyAction("");
     }
   }
 
   async function saveDrafts() {
     if (!current || !drafts.length) return;
     setBusy(true);
+    setBusyAction("Adding songs");
     try {
       await addAdminSongs({ data: { queueId: current.queueId, songs: drafts } });
       setUrls("");
       setDrafts([]);
-      await load();
+      await refreshSongs();
       setMessage("Songs added to the active Jagah queue.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to add songs");
     } finally {
       setBusy(false);
+      setBusyAction("");
     }
   }
 
@@ -177,21 +376,22 @@ function AdminPage() {
     )
       return;
     setBusy(true);
+    setBusyAction("Removing songs");
     try {
       await removeAdminSongs({ data: { queueId: current.queueId, membershipIds: selected } });
-      await load();
+      await refreshSongs();
       setMessage("Selected songs removed.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to remove songs");
     } finally {
       setBusy(false);
+      setBusyAction("");
     }
   }
 
   async function saveEdit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!edit) return;
-    const form = new FormData(event.currentTarget);
     const scope =
       edit.sharedActiveUses > 1 &&
       !window.confirm(
@@ -200,19 +400,21 @@ function AdminPage() {
         ? "local"
         : "shared";
     setBusy(true);
+    setBusyAction("Saving song");
     try {
       await updateAdminSong({
         data: {
           membershipId: edit.membershipId,
-          title: String(form.get("title")),
-          artist: String(form.get("artist")),
-          year: form.get("year") ? Number(form.get("year")) : null,
-          source: String(form.get("source")),
+          title: edit.title,
+          artist: edit.artist ?? "",
+          year: edit.year,
+          source: edit.sourceUrl,
           scope,
         },
       });
       setEdit(null);
-      await load();
+      setEditBaseline(null);
+      await refreshSongs();
       setMessage(
         scope === "shared"
           ? "Shared song data updated."
@@ -222,22 +424,53 @@ function AdminPage() {
       setMessage(error instanceof Error ? error.message : "Unable to update the song");
     } finally {
       setBusy(false);
+      setBusyAction("");
     }
   }
 
   return (
-    <main className="min-h-dvh bg-zinc-950 p-4 text-zinc-100 md:p-8">
+    <main
+      className="min-h-dvh bg-zinc-950 p-4 text-zinc-100 [&_button]:cursor-pointer [&_button:disabled]:cursor-not-allowed md:p-8"
+      aria-busy={busy || sectionLoading}
+    >
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-zinc-700 pb-4">
         <div>
           <h1 className="text-xl font-bold">Sainik Dhaba admin</h1>
           <p className="text-sm text-amber-300">Catalogue and analytics</p>
         </div>
-        <button
-          className="rounded border border-zinc-600 px-3 py-2 text-sm"
-          onClick={() => void supabase.auth.signOut().then(() => navigate({ to: "/admin/login" }))}
-        >
-          Log out
-        </button>
+        <details className="relative">
+          <summary className="flex list-none items-center gap-2 rounded border border-zinc-600 px-3 py-2 text-sm">
+            {identity?.avatarUrl ? (
+              <img className="size-6 rounded-full" src={identity.avatarUrl} alt="" />
+            ) : (
+              <span className="grid size-6 place-items-center rounded-full bg-amber-600 text-xs font-bold text-zinc-950">
+                {(identity?.displayName ?? identity?.email ?? "A").slice(0, 1).toUpperCase()}
+              </span>
+            )}
+            <span className="max-w-44 truncate">
+              {identity?.displayName ?? identity?.email ?? "Administrator"}
+            </span>
+            <ChevronDown className="size-4" />
+          </summary>
+          <div className="absolute right-0 z-20 mt-2 w-64 rounded border border-zinc-700 bg-zinc-900 p-3 shadow-xl">
+            <div className="flex items-center gap-2 text-sm">
+              <UserRound className="size-4 text-amber-300" />
+              <span className="truncate">{identity?.email ?? "Administrator"}</span>
+            </div>
+            <p className="mt-2 text-xs text-zinc-400">Administrator account</p>
+            <button
+              className="mt-3 w-full rounded border border-zinc-600 px-3 py-2 text-sm"
+              onClick={() =>
+                requestTransition(async () => {
+                  await supabase.auth.signOut();
+                  await navigate({ to: "/admin/login" });
+                })
+              }
+            >
+              Log out
+            </button>
+          </div>
+        </details>
       </header>
       <section className="grid gap-6 lg:grid-cols-[15rem_minmax(0,1fr)]">
         <nav aria-label="Jagah administration">
@@ -248,17 +481,20 @@ function AdminPage() {
                 <button
                   type="button"
                   className={`flex min-h-11 w-full items-center justify-between gap-2 rounded border px-3 py-2 text-left text-sm disabled:opacity-60 ${current?.id === scene.id ? "border-amber-500 bg-zinc-800" : "border-zinc-700 hover:bg-zinc-900"}`}
-                  aria-expanded={current?.id === scene.id}
+                  aria-expanded={expandedSlug === scene.slug}
                   aria-controls={`jagah-menu-${scene.id}`}
                   disabled={busy}
-                  onClick={() => selectJagah(scene.slug)}
+                  onClick={() => {
+                    if (scene.slug === current?.slug) selectJagah(scene.slug);
+                    else requestTransition(() => selectJagah(scene.slug));
+                  }}
                 >
                   <span>{scene.title}</span>
                   <span aria-hidden className="text-zinc-400">
-                    {current?.id === scene.id ? "▾" : "▸"}
+                    {expandedSlug === scene.slug ? "▾" : "▸"}
                   </span>
                 </button>
-                {current?.id === scene.id ? (
+                {expandedSlug === scene.slug ? (
                   <ul
                     id={`jagah-menu-${scene.id}`}
                     className="mt-1 ml-3 space-y-1 border-l border-zinc-700 pl-2"
@@ -267,6 +503,8 @@ function AdminPage() {
                       [
                         { id: "songs", label: "Songs" },
                         { id: "analytics", label: "Analytics" },
+                        { id: "ambience", label: "Ambience audio" },
+                        { id: "background", label: "Background" },
                       ] as const
                     ).map((item) => (
                       <li key={item.id}>
@@ -274,14 +512,18 @@ function AdminPage() {
                           type="button"
                           className={`min-h-10 w-full rounded px-3 py-2 text-left text-sm ${section === item.id ? "bg-zinc-800 font-semibold text-amber-300" : "text-zinc-300 hover:bg-zinc-900"}`}
                           aria-current={section === item.id ? "page" : undefined}
-                          onClick={() => setSection(item.id)}
+                          onClick={() =>
+                            item.id === section
+                              ? undefined
+                              : requestTransition(() => setSection(item.id))
+                          }
                         >
                           {item.label}
-                          {item.id === "songs" ? ` (${scene.tracks.length})` : ""}
+                          {item.id === "songs" ? ` (${scene.trackCount})` : ""}
                         </button>
                       </li>
                     ))}
-                    {["Ambience audio", "Background", "Ambience visual"].map((label) => (
+                    {["Ambience visual"].map((label) => (
                       <li key={label}>
                         <button
                           type="button"
@@ -300,133 +542,174 @@ function AdminPage() {
           </ul>
           {!scenes.length ? (
             <p className="text-sm text-zinc-400">
-              {busy ? "Loading Jagahs…" : "No Jagahs available."}
+              {bootstrapQuery.isPending ? "Loading Jagahs…" : "No Jagahs available."}
             </p>
           ) : null}
         </nav>
         <div className="min-w-0">
           <p className="mb-3 text-sm text-zinc-400">
-            Jagahs / {current?.title ?? "…"} / {section === "songs" ? "Songs" : "Analytics"}
+            Jagahs / {current?.title ?? "…"} /{" "}
+            {section === "songs"
+              ? "Songs"
+              : section === "analytics"
+                ? "Analytics"
+                : section === "ambience"
+                  ? "Ambience audio"
+                  : "Background"}
           </p>
-          {section === "analytics" ? (
-            <section aria-labelledby="jagah-analytics-title">
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                <h2 id="jagah-analytics-title" className="font-semibold">
-                  {current?.title} analytics
-                </h2>
-                <label className="flex items-center gap-2 text-sm">
-                  Period
-                  <select
-                    className="rounded border border-zinc-600 bg-zinc-900 p-2"
-                    value={range}
-                    disabled={busy}
-                    onChange={(event) => setRange(event.target.value as Range)}
-                  >
-                    <option value="7d">Last 7 days</option>
-                    <option value="30d">Last 30 days</option>
-                    <option value="all">All time</option>
-                  </select>
-                </label>
-              </div>
-              <fieldset className="mb-5 rounded border border-zinc-700 p-3">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <legend className="px-1 text-sm font-medium">Compare Jagahs</legend>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      className="rounded border border-zinc-600 px-2 py-1 text-xs"
+          {section === "ambience" && current ? (
+            ambienceQuery.isPending ? (
+              <SectionLoading label="ambience audio" />
+            ) : (
+              <AmbienceAudioPanel
+                key={current.id}
+                scene={current}
+                assets={assets}
+                onChanged={refreshAmbience}
+                onDirtyChange={setAmbienceDirty}
+              />
+            )
+          ) : section === "background" && current ? (
+            backgroundQuery.isPending || !backgroundQuery.data ? (
+              <SectionLoading label="background editor" />
+            ) : (
+              <BackgroundPanel
+                key={current.id}
+                data={backgroundQuery.data}
+                onChanged={refreshBackground}
+                onDirtyChange={setBackgroundDirty}
+              />
+            )
+          ) : section === "analytics" ? (
+            analyticsQuery.isPending ? (
+              <SectionLoading label="analytics" />
+            ) : (
+              <section aria-labelledby="jagah-analytics-title">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                  <h2 id="jagah-analytics-title" className="font-semibold">
+                    {current?.title} analytics
+                  </h2>
+                  <label className="flex items-center gap-2 text-sm">
+                    Period
+                    <select
+                      className="rounded border border-zinc-600 bg-zinc-900 p-2"
+                      value={range}
                       disabled={busy}
-                      onClick={() => setComparedSceneIds(scenes.map((scene) => scene.id))}
+                      onChange={(event) => setRange(event.target.value as Range)}
                     >
-                      Select all
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded border border-zinc-600 px-2 py-1 text-xs"
-                      disabled={busy || !comparedSceneIds.length}
-                      onClick={() => setComparedSceneIds([])}
-                    >
-                      Clear
-                    </button>
+                      <option value="7d">Last 7 days</option>
+                      <option value="30d">Last 30 days</option>
+                      <option value="all">All time</option>
+                    </select>
+                  </label>
+                </div>
+                <fieldset className="mb-5 rounded border border-zinc-700 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <legend className="px-1 text-sm font-medium">Compare Jagahs</legend>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-zinc-400">
+                        {comparedSceneIds.length} selected
+                      </span>
+                      <button
+                        type="button"
+                        className="rounded border border-zinc-600 px-2 py-1 text-xs"
+                        disabled={busy || !scenes.length}
+                        onClick={() =>
+                          setComparedSceneIds((ids) =>
+                            toggleAllIds(
+                              ids,
+                              scenes.map((scene) => scene.id),
+                            ),
+                          )
+                        }
+                      >
+                        {allScenesCompared ? "Deselect all" : "Select all"}
+                      </button>
+                    </div>
                   </div>
-                </div>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                  {scenes.map((scene) => (
-                    <label
-                      key={scene.id}
-                      className="flex min-h-10 items-center gap-2 rounded border border-zinc-700 px-3 py-2 text-sm"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={comparedSceneIds.includes(scene.id)}
-                        disabled={busy}
-                        onChange={() => toggleComparedScene(scene.id)}
-                      />
-                      <span>{scene.title}</span>
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-              {comparedAnalytics.length === 1 ? (
-                <>
-                  <dl className="grid gap-3 sm:grid-cols-2">
-                    {[
-                      ["Visits", singleComparedAnalytics?.visits ?? 0],
-                      ["Played visits", singleComparedAnalytics?.playedVisits ?? 0],
-                      ["Total listening", seconds(singleComparedAnalytics?.listeningSeconds ?? 0)],
-                      [
-                        "Average listening time",
-                        seconds(singleComparedAnalytics?.averageListeningSeconds ?? 0),
-                      ],
-                    ].map(([label, value]) => (
-                      <div key={label} className="rounded border border-zinc-700 p-4">
-                        <dt className="text-sm text-zinc-400">{label}</dt>
-                        <dd className="mt-2 text-2xl font-semibold">{busy ? "…" : value}</dd>
-                      </div>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                    {scenes.map((scene) => (
+                      <label
+                        key={scene.id}
+                        className="flex min-h-10 cursor-pointer items-center gap-2 rounded border border-zinc-700 px-3 py-2 text-sm hover:border-zinc-500 hover:bg-zinc-900"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={comparedSceneIds.includes(scene.id)}
+                          disabled={busy}
+                          onChange={() => toggleComparedScene(scene.id)}
+                        />
+                        <span>{scene.title}</span>
+                      </label>
                     ))}
-                  </dl>
-                  {!busy && !singleComparedAnalytics?.visits ? (
-                    <p className="mt-2 text-sm text-zinc-400">
-                      No visits recorded for this Jagah in the selected period.
-                    </p>
-                  ) : null}
-                </>
-              ) : comparedAnalytics.length > 1 ? (
-                <div className="overflow-x-auto rounded border border-zinc-700">
-                  <table className="w-full text-left text-sm">
-                    <thead className="border-b border-zinc-700 text-zinc-400">
-                      <tr>
-                        <th className="p-3">Jagah</th>
-                        <th className="p-3">Visits</th>
-                        <th className="p-3">Played visits</th>
-                        <th className="p-3">Total listening</th>
-                        <th className="p-3">Average listening</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {comparedAnalytics.map((row) => (
-                        <tr key={row.sceneId} className="border-b border-zinc-800 last:border-0">
-                          <td className="p-3 font-medium">{row.title}</td>
-                          <td className="p-3">{busy ? "…" : row.visits}</td>
-                          <td className="p-3">{busy ? "…" : row.playedVisits}</td>
-                          <td className="p-3">{busy ? "…" : seconds(row.listeningSeconds)}</td>
-                          <td className="p-3">
-                            {busy ? "…" : seconds(row.averageListeningSeconds)}
-                          </td>
-                        </tr>
+                  </div>
+                </fieldset>
+                {comparedAnalytics.length === 1 ? (
+                  <>
+                    <dl className="grid gap-3 sm:grid-cols-2">
+                      {[
+                        ["Visits", singleComparedAnalytics?.visits ?? 0],
+                        ["Played visits", singleComparedAnalytics?.playedVisits ?? 0],
+                        [
+                          "Total listening",
+                          seconds(singleComparedAnalytics?.listeningSeconds ?? 0),
+                        ],
+                        [
+                          "Average listening time",
+                          seconds(singleComparedAnalytics?.averageListeningSeconds ?? 0),
+                        ],
+                      ].map(([label, value]) => (
+                        <div key={label} className="rounded border border-zinc-700 p-4">
+                          <dt className="text-sm text-zinc-400">{label}</dt>
+                          <dd className="mt-2 text-2xl font-semibold">{busy ? "…" : value}</dd>
+                        </div>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <p className="rounded border border-dashed border-zinc-700 p-4 text-sm text-zinc-400">
-                  Select at least one Jagah to view analytics.
+                    </dl>
+                    {!busy && !singleComparedAnalytics?.visits ? (
+                      <p className="mt-2 text-sm text-zinc-400">
+                        No visits recorded for this Jagah in the selected period.
+                      </p>
+                    ) : null}
+                  </>
+                ) : comparedAnalytics.length > 1 ? (
+                  <div className="overflow-x-auto rounded border border-zinc-700">
+                    <table className="w-full text-left text-sm">
+                      <thead className="border-b border-zinc-700 text-zinc-400">
+                        <tr>
+                          <th className="p-3">Jagah</th>
+                          <th className="p-3">Visits</th>
+                          <th className="p-3">Played visits</th>
+                          <th className="p-3">Total listening</th>
+                          <th className="p-3">Average listening</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {comparedAnalytics.map((row) => (
+                          <tr key={row.sceneId} className="border-b border-zinc-800 last:border-0">
+                            <td className="p-3 font-medium">{row.title}</td>
+                            <td className="p-3">{busy ? "…" : row.visits}</td>
+                            <td className="p-3">{busy ? "…" : row.playedVisits}</td>
+                            <td className="p-3">{busy ? "…" : seconds(row.listeningSeconds)}</td>
+                            <td className="p-3">
+                              {busy ? "…" : seconds(row.averageListeningSeconds)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="rounded border border-dashed border-zinc-700 p-4 text-sm text-zinc-400">
+                    Select at least one Jagah to view analytics.
+                  </p>
+                )}
+                <p className="mt-4 text-sm text-zinc-400">
+                  Average listening time is calculated across visits that played music.
                 </p>
-              )}
-              <p className="mt-4 text-sm text-zinc-400">
-                Average listening time is calculated across visits that played music.
-              </p>
-            </section>
+              </section>
+            )
+          ) : songsQuery.isPending ? (
+            <SectionLoading label="songs" />
           ) : (
             <section aria-label={`${current?.title ?? "Jagah"} songs`}>
               <h2 className="font-semibold">{current?.title ?? "Loading…"} song library</h2>
@@ -438,13 +721,29 @@ function AdminPage() {
                   onChange={(event) => setUrls(event.target.value)}
                   placeholder="One URL per line"
                 />
-                <button
-                  className="mt-2 rounded bg-amber-600 px-3 py-2 text-sm font-semibold text-zinc-950 disabled:opacity-60"
-                  disabled={busy}
-                  onClick={() => void preview()}
-                >
-                  Preview import
-                </button>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <button
+                    className="rounded bg-amber-600 px-3 py-2 text-sm font-semibold text-zinc-950 disabled:opacity-60"
+                    disabled={busy || !urls.trim()}
+                    onClick={() => void preview()}
+                  >
+                    {busyAction === "Previewing import" ? "Previewing…" : "Preview import"}
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded border border-zinc-600 px-3 py-2 text-sm disabled:opacity-50"
+                    disabled={busy || !songImportDirty}
+                    onClick={() => {
+                      setUrls("");
+                      setDrafts([]);
+                    }}
+                  >
+                    Discard draft
+                  </button>
+                  {songImportDirty ? (
+                    <span className="text-xs font-medium text-amber-300">Unsaved song draft</span>
+                  ) : null}
+                </div>
                 {drafts.length ? (
                   <div className="mt-4 space-y-2">
                     {drafts.map((draft, index) => (
@@ -504,7 +803,9 @@ function AdminPage() {
                       disabled={busy}
                       onClick={() => void saveDrafts()}
                     >
-                      Add {drafts.length} song(s)
+                      {busyAction === "Adding songs"
+                        ? "Adding songs…"
+                        : `Add ${drafts.length} song(s)`}
                     </button>
                   </div>
                 ) : null}
@@ -514,18 +815,26 @@ function AdminPage() {
                 <div className="flex gap-2">
                   <button
                     className="rounded border border-zinc-600 px-3 py-2 text-sm"
+                    disabled={busy || !totalTracks}
                     onClick={() =>
-                      setSelected(current?.tracks.map((track) => track.membershipId) ?? [])
+                      setSelected((items) =>
+                        toggleAllIds(
+                          items,
+                          current?.tracks.map((track) => track.membershipId) ?? [],
+                        ),
+                      )
                     }
                   >
-                    Select all
+                    {selected.length === totalTracks && totalTracks
+                      ? "Deselect all"
+                      : `Select all (${totalTracks})`}
                   </button>
                   <button
                     className="rounded bg-red-700 px-3 py-2 text-sm disabled:opacity-60"
                     disabled={!selected.length || busy}
                     onClick={() => void removeSelected()}
                   >
-                    Remove selected
+                    {busyAction === "Removing songs" ? "Removing…" : "Remove selected"}
                   </button>
                 </div>
               </div>
@@ -542,18 +851,14 @@ function AdminPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {current?.tracks.map((track) => (
+                    {pageTracks.map((track) => (
                       <tr key={track.membershipId} className="border-b border-zinc-800">
                         <td className="p-2">
                           <input
                             type="checkbox"
                             checked={selected.includes(track.membershipId)}
-                            onChange={(event) =>
-                              setSelected((items) =>
-                                event.target.checked
-                                  ? [...items, track.membershipId]
-                                  : items.filter((id) => id !== track.membershipId),
-                              )
+                            onChange={() =>
+                              setSelected((items) => toggleSelectedId(items, track.membershipId))
                             }
                           />
                         </td>
@@ -581,7 +886,10 @@ function AdminPage() {
                         <td className="p-2">
                           <button
                             className="rounded border border-zinc-600 px-2 py-1"
-                            onClick={() => setEdit(track)}
+                            onClick={() => {
+                              setEdit({ ...track });
+                              setEditBaseline({ ...track });
+                            }}
                           >
                             Edit
                           </button>
@@ -590,6 +898,45 @@ function AdminPage() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm text-zinc-400">
+                <label className="flex items-center gap-2">
+                  Rows
+                  <select
+                    className="rounded border border-zinc-600 bg-zinc-900 p-2 text-zinc-100"
+                    value={rowsPerPage}
+                    disabled={busy}
+                    onChange={(event) => {
+                      setRowsPerPage(Number(event.target.value));
+                      setSongPage(0);
+                    }}
+                  >
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                  </select>
+                </label>
+                <span>
+                  {totalTracks
+                    ? `${activeSongPage * rowsPerPage + 1}–${Math.min(totalTracks, (activeSongPage + 1) * rowsPerPage)} of ${totalTracks}`
+                    : "No songs"}
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    className="rounded border border-zinc-600 px-3 py-2"
+                    disabled={busy || activeSongPage === 0}
+                    onClick={() => setSongPage((page) => Math.max(0, page - 1))}
+                  >
+                    Previous
+                  </button>
+                  <button
+                    className="rounded border border-zinc-600 px-3 py-2"
+                    disabled={busy || activeSongPage >= pageCount - 1}
+                    onClick={() => setSongPage((page) => Math.min(pageCount - 1, page + 1))}
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             </section>
           )}
@@ -600,8 +947,22 @@ function AdminPage() {
           <form className="w-full max-w-lg space-y-3 rounded bg-zinc-900 p-5" onSubmit={saveEdit}>
             <div className="flex items-center justify-between">
               <h2 className="font-semibold">Edit song</h2>
-              <button type="button" className="text-zinc-400" onClick={() => setEdit(null)}>
-                Close
+              <button
+                type="button"
+                className="rounded border border-zinc-600 px-3 py-1.5 text-sm text-zinc-300"
+                onClick={() => {
+                  if (songEditDirty) {
+                    setPendingTransition(() => () => {
+                      setEdit(null);
+                      setEditBaseline(null);
+                    });
+                  } else {
+                    setEdit(null);
+                    setEditBaseline(null);
+                  }
+                }}
+              >
+                Cancel
               </button>
             </div>
             <label className="block text-sm">
@@ -609,7 +970,8 @@ function AdminPage() {
               <input
                 className="mt-1 w-full rounded border border-zinc-600 bg-zinc-950 p-2"
                 name="title"
-                defaultValue={edit.title}
+                value={edit.title}
+                onChange={(event) => setEdit({ ...edit, title: event.target.value })}
                 required
               />
             </label>
@@ -618,16 +980,19 @@ function AdminPage() {
               <input
                 className="mt-1 w-full rounded border border-zinc-600 bg-zinc-950 p-2"
                 name="artist"
-                defaultValue={edit.artist ?? ""}
+                value={edit.artist ?? ""}
+                onChange={(event) => setEdit({ ...edit, artist: event.target.value })}
               />
             </label>
             <label className="block text-sm">
               Year
               <input
                 className="mt-1 w-full rounded border border-zinc-600 bg-zinc-950 p-2"
-                name="year"
                 type="number"
-                defaultValue={edit.year ?? ""}
+                value={edit.year ?? ""}
+                onChange={(event) =>
+                  setEdit({ ...edit, year: event.target.value ? Number(event.target.value) : null })
+                }
               />
             </label>
             <label className="block text-sm">
@@ -635,7 +1000,8 @@ function AdminPage() {
               <input
                 className="mt-1 w-full rounded border border-zinc-600 bg-zinc-950 p-2"
                 name="source"
-                defaultValue={edit.sourceUrl}
+                value={edit.sourceUrl}
+                onChange={(event) => setEdit({ ...edit, sourceUrl: event.target.value })}
                 required
               />
             </label>
@@ -645,16 +1011,36 @@ function AdminPage() {
                 local copy.
               </p>
             ) : null}
-            <button
-              className="rounded bg-amber-600 px-3 py-2 text-sm font-semibold text-zinc-950"
-              disabled={busy}
-              type="submit"
-            >
-              Save changes
-            </button>
+            <div className="flex items-center justify-between gap-3 border-t border-zinc-700 pt-3">
+              <span className={`text-xs ${songEditDirty ? "text-amber-300" : "text-zinc-500"}`}>
+                {songEditDirty ? "Unsaved changes" : "No changes yet"}
+              </span>
+              <button
+                className="rounded bg-amber-600 px-3 py-2 text-sm font-semibold text-zinc-950 disabled:opacity-50"
+                disabled={busy || !songEditDirty}
+                type="submit"
+              >
+                {busyAction === "Saving song" ? (
+                  <>
+                    <Loader2 className="mr-1 inline size-4 animate-spin" />
+                    Saving…
+                  </>
+                ) : (
+                  "Save changes"
+                )}
+              </button>
+            </div>
           </form>
         </div>
       ) : null}
+      <DiscardChangesDialog
+        open={Boolean(pendingTransition) || blocker.status === "blocked"}
+        onStay={() => {
+          setPendingTransition(null);
+          if (blocker.status === "blocked") blocker.reset?.();
+        }}
+        onDiscard={continueAfterDiscard}
+      />
       {message ? (
         <p
           className="fixed bottom-4 right-4 max-w-md rounded bg-zinc-800 p-3 text-sm shadow-lg"
@@ -663,6 +1049,25 @@ function AdminPage() {
           {message}
         </p>
       ) : null}
+      {busyAction ? (
+        <p
+          className="fixed bottom-4 left-4 rounded bg-zinc-800 p-3 text-sm shadow-lg"
+          role="status"
+        >
+          <Loader2 className="mr-2 inline size-4 animate-spin" />
+          {busyAction}…
+        </p>
+      ) : null}
     </main>
+  );
+}
+
+function SectionLoading({ label }: { label: string }) {
+  return (
+    <div className="space-y-3" role="status" aria-label={`Loading ${label}`}>
+      <div className="h-7 w-56 animate-pulse rounded bg-zinc-800" />
+      <div className="h-40 animate-pulse rounded-lg border border-zinc-800 bg-zinc-900/60" />
+      <div className="h-56 animate-pulse rounded-lg border border-zinc-800 bg-zinc-900/60" />
+    </div>
   );
 }
