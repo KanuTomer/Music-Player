@@ -6,6 +6,12 @@ import { isAllowedSlug } from "@/lib/theme-data";
 import { buildSeoMeta } from "@/lib/seo";
 
 export const Route = createFileRoute("/room/$slug")({
+  validateSearch: (search: Record<string, unknown>): { song?: string | undefined; track?: string | undefined } => {
+    return {
+      song: typeof search["song"] === "string" ? search["song"] : undefined,
+      track: typeof search["track"] === "string" ? search["track"] : undefined,
+    };
+  },
   loader: async ({ params }) => {
     const retiredRedirects: Record<string, string> = {
       "doordarshan-shaam": "papa-ke-gaane",
@@ -13,10 +19,11 @@ export const Route = createFileRoute("/room/$slug")({
       "chai-ki-tapri": "bartan-time",
     };
 
-    if (params.slug in retiredRedirects) {
+    const targetSlug = retiredRedirects[params.slug];
+    if (targetSlug) {
       throw redirect({
         to: "/room/$slug",
-        params: { slug: retiredRedirects[params.slug] },
+        params: { slug: targetSlug },
       });
     }
 
@@ -62,9 +69,16 @@ export const Route = createFileRoute("/room/$slug")({
 
 function RoomPage() {
   const { room, scenes } = Route.useLoaderData();
+  const search = Route.useSearch();
+  const initialTrackId = search.song || search.track;
   return (
     <div className="h-dvh bg-night">
-      <RoomExperience key={room.scene.slug} room={room} scenes={scenes} />
+      <RoomExperience
+        key={room.scene.slug}
+        room={room}
+        scenes={scenes}
+        initialTrackId={initialTrackId}
+      />
     </div>
   );
 }

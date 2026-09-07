@@ -32,7 +32,7 @@ function getNameColor(name: string): string {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
   const index = Math.abs(hash) % NAME_COLORS.length;
-  return NAME_COLORS[index];
+  return NAME_COLORS[index] ?? "text-emerald-400";
 }
 
 export function LiveChat({ roomKey, roomName, inlineLauncher = false }: LiveChatProps) {
@@ -101,15 +101,31 @@ export function LiveChat({ roomKey, roomName, inlineLauncher = false }: LiveChat
         if (error) {
           console.error("Error loading chat messages:", error);
         } else if (data) {
-          // Merge database messages with existing local messages, removing duplicates
+          // Merge database messages with existing local messages, strictly removing duplicates
           setMessages((prev) => {
-            const merged = [...prev];
-            data.forEach((dbMsg) => {
-              if (!merged.some((m) => m.id === dbMsg.id)) {
-                merged.push(dbMsg);
+            const combined = [...prev, ...data];
+            const seenIds = new Set<string>();
+            const deduped: ChatMessage[] = [];
+
+            for (const msg of combined) {
+              if (seenIds.has(msg.id)) continue;
+
+              // Also guard against stale temp messages matching a DB message
+              const isDuplicateContent = deduped.some(
+                (m) =>
+                  m.session_display_name === msg.session_display_name &&
+                  m.text === msg.text &&
+                  Math.abs(new Date(m.created_at).getTime() - new Date(msg.created_at).getTime()) <
+                    45000,
+              );
+
+              if (!isDuplicateContent) {
+                seenIds.add(msg.id);
+                deduped.push(msg);
               }
-            });
-            return merged.sort(
+            }
+
+            return deduped.sort(
               (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
             );
           });
@@ -141,25 +157,28 @@ export function LiveChat({ roomKey, roomName, inlineLauncher = false }: LiveChat
         (payload) => {
           const newMsg = payload.new as ChatMessage;
           setMessages((prev) => {
-            if (prev.some((m) => m.id === newMsg.id)) return prev;
-            // Also deduplicate if we recently optimistically added the exact same message
-            const isRecentOptimistic = prev.some(
+            // 1. Check if ID already exists (e.g. optimistic or broadcast already added it)
+            const existingIndex = prev.findIndex((m) => m.id === newMsg.id);
+            if (existingIndex >= 0) {
+              const updated = [...prev];
+              updated[existingIndex] = newMsg;
+              return updated;
+            }
+
+            // 2. Fallback deduplicate: check if there is an optimistic entry with same content
+            const matchingOptimisticIdx = prev.findIndex(
               (m) =>
                 m.session_display_name === newMsg.session_display_name &&
                 m.text === newMsg.text &&
                 Math.abs(new Date(m.created_at).getTime() - new Date(newMsg.created_at).getTime()) <
-                15000,
+                  45000,
             );
-            if (isRecentOptimistic) {
-              return prev.map((m) =>
-                m.session_display_name === newMsg.session_display_name &&
-                  m.text === newMsg.text &&
-                  Math.abs(new Date(m.created_at).getTime() - new Date(newMsg.created_at).getTime()) <
-                  15000
-                  ? newMsg
-                  : m,
-              );
+            if (matchingOptimisticIdx >= 0) {
+              const updated = [...prev];
+              updated[matchingOptimisticIdx] = newMsg;
+              return updated;
             }
+
             return [...prev, newMsg];
           });
         },
@@ -167,7 +186,19 @@ export function LiveChat({ roomKey, roomName, inlineLauncher = false }: LiveChat
       .on("broadcast", { event: "chat_message" }, ({ payload }) => {
         const newMsg = payload as ChatMessage;
         setMessages((prev) => {
+          // Guard against existing ID
           if (prev.some((m) => m.id === newMsg.id)) return prev;
+
+          // Guard against duplicate content received via broadcast or DB
+          const isDuplicateContent = prev.some(
+            (m) =>
+              m.session_display_name === newMsg.session_display_name &&
+              m.text === newMsg.text &&
+              Math.abs(new Date(m.created_at).getTime() - new Date(newMsg.created_at).getTime()) <
+                30000,
+          );
+          if (isDuplicateContent) return prev;
+
           return [...prev, newMsg];
         });
       })
@@ -218,13 +249,14 @@ export function LiveChat({ roomKey, roomName, inlineLauncher = false }: LiveChat
       });
     }
 
-    // 3. Persist to database in background
+    // 3. Persist to database in background with matching client ID
     try {
       await sendChatMessage({
         data: {
           roomKey,
           displayName: senderName,
           text,
+          id: tempId,
         },
       });
     } catch (err) {

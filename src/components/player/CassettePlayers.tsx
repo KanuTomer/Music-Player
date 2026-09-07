@@ -2,6 +2,7 @@ import {
   Music2,
   Pause,
   Play,
+  Share2,
   SkipBack,
   SkipForward,
   Volume1,
@@ -10,6 +11,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import type { ReactNode } from "react";
+import { toast } from "sonner";
 import { getPlayerDisplay, clock } from "@/lib/player-display";
 import { usePlayer } from "@/lib/player";
 import { AmbienceControl } from "@/components/player/AmbienceControl";
@@ -17,6 +19,39 @@ import { CassetteBody } from "@/components/player/CassetteBody";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { SmoothReveal } from "@/components/ui/smooth-reveal";
+
+function shareCurrentSong(
+  sceneSlug: string,
+  track: { id: string; title: string; artist: string | null } | null,
+  sceneTitle?: string,
+) {
+  if (!track) return;
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const shareUrl = `${origin}/room/${sceneSlug}?song=${encodeURIComponent(track.id)}`;
+  const title = `${track.title} — ${track.artist || sceneTitle || "Sainik Dhaba"}`;
+  const text = `Suno "${track.title}" (${track.artist || sceneTitle || "Sainik Dhaba"}) on Sainik Dhaba 📻✨`;
+
+  if (typeof navigator !== "undefined" && navigator.share) {
+    navigator
+      .share({
+        title,
+        text,
+        url: shareUrl,
+      })
+      .catch(() => {
+        /* share dismissed */
+      });
+    return;
+  }
+
+  if (typeof navigator !== "undefined" && navigator.clipboard) {
+    void navigator.clipboard.writeText(shareUrl).then(() => {
+      toast.success("Gaane ka link copy ho gaya! 🎶", {
+        description: "Kisi ke sath bhi share karein aur milke sunein.",
+      });
+    });
+  }
+}
 
 function Cover({
   coverId,
@@ -181,7 +216,7 @@ export function FullCassettePlayer() {
       {/* Specular top border sheen */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" aria-hidden />
 
-      {/* Top row: Track info + Live indicator */}
+      {/* Top row: Track info + Live indicator & Share */}
       <div className="flex items-center gap-2.5 border-b border-white/10 pb-1.5">
         <Cover coverId={display.coverId} title={display.title} />
         <div key={display.coverId ?? "idle"} className="min-w-0 flex-1 animate-fade-in">
@@ -193,12 +228,34 @@ export function FullCassettePlayer() {
               <span className="text-red-300">Track unavailable</span>
             ) : (
               <>
-                <span className="font-bold text-amber-400">कलाकार</span> · <span className="text-white/80">{display.subtitle}</span>
+                <span className="font-bold text-amber-400">कलाकार</span> ·{" "}
+                <span className="text-white/80">{display.subtitle}</span>
               </>
             )}
           </p>
         </div>
-        <LiveEqualizer isPlaying={player.isPlaying} status={display.status} />
+        <div className="flex items-center gap-1.5">
+          <LiveEqualizer isPlaying={player.isPlaying} status={display.status} />
+          {player.track && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() =>
+                shareCurrentSong(
+                  player.room?.scene.slug ?? "sainik-dhaba",
+                  player.track,
+                  player.room?.scene.title_en,
+                )
+              }
+              aria-label="Share this song"
+              title="Share this song"
+              className="size-7 sm:size-7.5 rounded-full border border-white/15 bg-white/5 text-cream/75 transition-all hover:bg-white/20 hover:text-amber-300 hover:border-amber-400/50 hover:scale-105 active:scale-95 cursor-pointer"
+            >
+              <Share2 className="size-3.5" aria-hidden />
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Cassette Deck Body */}
@@ -320,15 +377,34 @@ export function CompactCassettePlayer({ className = "" }: { className?: string }
 
         <div className="min-w-0">
           <div className="mb-1 flex items-center justify-between gap-2 min-w-0 sm:hidden">
-            <p className="truncate text-xs font-bold leading-tight text-cream">
-              {display.title}
-            </p>
-            <span className="truncate text-[9.5px] text-cream/60 font-medium">{player.room.scene.title_en}</span>
+            <p className="truncate text-xs font-bold leading-tight text-cream">{display.title}</p>
+            <span className="truncate text-[9.5px] text-cream/60 font-medium">
+              {player.room.scene.title_en}
+            </span>
           </div>
           <SeekBar compact />
         </div>
 
         <div className="flex items-center gap-1.5 sm:gap-2">
+          {player.track && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() =>
+                shareCurrentSong(
+                  player.room?.scene.slug ?? "sainik-dhaba",
+                  player.track,
+                  player.room?.scene.title_en,
+                )
+              }
+              aria-label="Share this song"
+              title="Share this song"
+              className="size-7.5 rounded-full border border-white/15 bg-white/5 text-cream/75 transition-all hover:bg-white/20 hover:text-amber-300 hover:border-amber-400/50 hover:scale-105 active:scale-95 cursor-pointer"
+            >
+              <Share2 className="size-3.5" aria-hidden />
+            </Button>
+          )}
           <TransportButton action={player.previous} label="Previous track" compact>
             <SkipBack className="size-3.5" aria-hidden />
           </TransportButton>

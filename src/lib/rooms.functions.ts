@@ -141,19 +141,22 @@ export const getRoom = createServerFn({ method: "GET" })
   });
 
 export const sendChatMessage = createServerFn({ method: "POST" })
-  .validator((data: { roomKey: string; displayName: string; text: string }) => {
+  .validator((data: { roomKey: string; displayName: string; text: string; id?: string }) => {
     const roomKey = String(data.roomKey);
     const displayName = String(data.displayName).trim();
     const text = String(data.text).trim();
+    const id = data.id ? String(data.id) : undefined;
 
     if (!roomKey) throw new Error("Room key is required");
     if (!displayName || displayName.length > 50) throw new Error("Invalid display name");
     if (!text || text.length > 300)
       throw new Error("Message text must be between 1 and 300 characters");
 
-    return { roomKey, displayName, text };
+    return { roomKey, displayName, text, id };
   })
-  .handler(async ({ data }) => insertChatMessage(data.roomKey, data.displayName, data.text));
+  .handler(async ({ data }) =>
+    insertChatMessage(data.roomKey, data.displayName, data.text, data.id),
+  );
 
 export const recordRoomVisit = createServerFn({ method: "POST" })
   .validator((data: { visitId: string; sceneSlug: string }) => ({
