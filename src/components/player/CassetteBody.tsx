@@ -1,8 +1,56 @@
+import { useId } from "react";
+
 type CassetteBodyProps = {
   variant: "full" | "compact";
   isPlaying: boolean;
   label?: string;
 };
+
+const HUB_SLOT_ANGLES = Array.from({ length: 6 }, (_, index) => index * 60);
+const HUB_COLOR = "#D8C590";
+const HUB_CENTER_POINTS = Array.from({ length: 12 }, (_, index) => {
+  const angle = (index * Math.PI) / 6 - Math.PI / 2;
+  const radius = index % 2 === 0 ? 5.5 : 3.8;
+  return `${(32 + Math.cos(angle) * radius).toFixed(2)},${(32 + Math.sin(angle) * radius).toFixed(2)}`;
+}).join(" ");
+
+function CassetteHub({ compact, isPlaying }: { compact: boolean; isPlaying: boolean }) {
+  const maskId = `normal-cassette-hub-mask-${useId().replaceAll(":", "")}`;
+
+  return (
+    <span
+      className={`${compact ? "size-5.5" : "size-6.5 sm:size-7"} relative z-10 block shrink-0 ${
+        isPlaying ? "cassette-reel-playing" : ""
+      }`}
+      aria-hidden
+    >
+      <svg className="block size-full" viewBox="0 0 64 64">
+        <defs>
+          <mask id={maskId} maskUnits="userSpaceOnUse" x="8" y="8" width="48" height="48">
+            <rect x="8" y="8" width="48" height="48" fill="black" />
+            <circle cx="32" cy="32" r="22" fill="white" />
+            {HUB_SLOT_ANGLES.map((angle) => (
+              <rect
+                key={angle}
+                x="28.5"
+                y="11.5"
+                width="7"
+                height="14"
+                rx="2.5"
+                fill="black"
+                transform={`rotate(${angle} 32 32)`}
+              />
+            ))}
+          </mask>
+        </defs>
+        <circle cx="32" cy="32" r="22" fill={HUB_COLOR} mask={`url(#${maskId})`} />
+        <circle cx="32" cy="32" r="22" fill="none" stroke="#715535" strokeWidth="0.8" />
+        <circle cx="32" cy="32" r="8" fill={HUB_COLOR} stroke="#715535" strokeWidth="0.8" />
+        <polygon points={HUB_CENTER_POINTS} fill="#100906" />
+      </svg>
+    </span>
+  );
+}
 
 export function CassetteBody({ variant, isPlaying, label }: CassetteBodyProps) {
   const compact = variant === "compact";
@@ -11,7 +59,7 @@ export function CassetteBody({ variant, isPlaying, label }: CassetteBodyProps) {
     <div
       className={`cassette-shell relative flex min-w-0 w-full items-center justify-center overflow-hidden rounded-lg sm:rounded-xl border border-white/15 shadow-sm ${
         compact ? "h-10 p-1" : "h-10.5 sm:h-12 p-1 sm:p-1.5"
-      } ${isPlaying ? "cassette-running" : ""}`}
+      }`}
       aria-label={`${label ? `${label} ` : ""}cassette${isPlaying ? ", playing" : ", paused"}`}
       role="img"
     >
@@ -31,38 +79,27 @@ export function CassetteBody({ variant, isPlaying, label }: CassetteBodyProps) {
         >
           {/* Running Magnetic Tape Ribbon across window */}
           <div
-            className={`cassette-tape absolute inset-x-2 sm:inset-x-4 top-1/2 -translate-y-1/2 rounded-xs opacity-80 ${
+            className={`cassette-tape absolute inset-x-2 sm:inset-x-4 top-1/2 -translate-y-1/2 overflow-hidden rounded-xs opacity-80 ${
               compact ? "h-1.5" : "h-2 sm:h-2.5"
             }`}
             aria-hidden
-          />
+          >
+            <span
+              className={`cassette-tape-highlights ${isPlaying ? "cassette-tape-highlights-playing" : ""}`}
+            >
+              {[8, 21, 58, 71].map((left, index) => (
+                <span
+                  key={left}
+                  className={`cassette-tape-highlight cassette-tape-highlight-${index % 2 === 0 ? "short" : "long"}`}
+                  style={{ left: `${left}%` }}
+                />
+              ))}
+            </span>
+          </div>
 
           {/* Left & Right Spools */}
           {(["left", "right"] as const).map((side) => (
-            <span
-              key={side}
-              className={`cassette-spool cassette-spool-${side} relative z-10 flex items-center justify-center rounded-full border border-cinema-gold/50 bg-gradient-to-b from-cinema/80 to-charcoal shadow-xs ${
-                compact ? "size-5" : "size-5.5 sm:size-6.5"
-              }`}
-              aria-hidden
-            >
-              <span
-                className={`cassette-reel relative flex items-center justify-center rounded-full border-cinema-gold/70 bg-ink ${
-                  compact
-                    ? "size-3 border-[1px]"
-                    : "size-3.5 border-[1.5px] sm:size-4.5 border-[2px]"
-                } ${isPlaying ? "cassette-reel-playing" : ""}`}
-              >
-                <span className="cassette-reel-hole cassette-reel-hole-a" />
-                <span className="cassette-reel-hole cassette-reel-hole-b" />
-                <span className="cassette-reel-hole cassette-reel-hole-c" />
-                <span
-                  className={`relative z-10 rounded-full border border-black/80 bg-gradient-to-br from-cinema-gold via-[#e6b95c] to-[#997327] ${
-                    compact ? "size-0.5" : "size-1 sm:size-1.5"
-                  }`}
-                />
-              </span>
-            </span>
+            <CassetteHub key={side} compact={compact} isPlaying={isPlaying} />
           ))}
 
           {/* Glass Specular Glare */}

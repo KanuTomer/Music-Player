@@ -90,7 +90,13 @@ type Analytics = {
   averageListeningSeconds: number;
 };
 
-const seconds = (value: number) => `${Math.floor(value / 60)}m ${value % 60}s`;
+const seconds = (value: number) => {
+  const total = Math.max(0, Math.round(value));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const remainder = total % 60;
+  return hours > 0 ? `${hours}h ${minutes}m ${remainder}s` : `${minutes}m ${remainder}s`;
+};
 const ADMIN_SIGN_IN_NOTICE_KEY = "sainik-dhaba.admin.sign-in-notice";
 const EMPTY_SCENES: AdminSceneSummary[] = [];
 

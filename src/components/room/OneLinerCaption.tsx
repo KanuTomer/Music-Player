@@ -6,49 +6,67 @@ export function OneLinerCaption({
   active,
   trackKey,
   textColor,
+  textShadow,
 }: {
   lines: OneLiner[];
   active: boolean;
   /** Changes whenever a new song starts — retriggers the line. */
   trackKey?: string | null;
   textColor: string;
+  textShadow: string;
 }) {
   const [current, setCurrent] = useState<OneLiner | null>(null);
+  const [visible, setVisible] = useState(false);
   const lastIndex = useRef(-1);
 
-  const pickNext = () => {
-    if (lines.length === 0) return null;
-    let i = Math.floor(Math.random() * lines.length);
-    if (lines.length > 1 && i === lastIndex.current) i = (i + 1) % lines.length;
-    lastIndex.current = i;
-    return lines[i] ?? null;
-  };
-
-  // Show a line whenever the song changes.
   useEffect(() => {
-    if (!active || lines.length === 0) {
-      setCurrent(null);
-      return;
-    }
-    const show = window.setTimeout(() => setCurrent(pickNext()), 600);
-    const hide = window.setTimeout(() => setCurrent(null), 16000);
-    return () => {
-      window.clearTimeout(show);
-      window.clearTimeout(hide);
+    const timeouts = new Set<number>();
+    const frames = new Set<number>();
+    let idleTimer: number | null = null;
+    let disposed = false;
+
+    const schedule = (callback: () => void, delay: number) => {
+      const timer = window.setTimeout(() => {
+        timeouts.delete(timer);
+        if (!disposed) callback();
+      }, delay);
+      timeouts.add(timer);
+      return timer;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active, trackKey, lines]);
 
-  // Slow idle cycle so the room still talks between songs.
-  useEffect(() => {
-    if (!active || lines.length === 0) return;
-    const timer = window.setInterval(() => {
-      setCurrent(pickNext());
-      window.setTimeout(() => setCurrent(null), 15000);
-    }, 45000);
-    return () => window.clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active, lines]);
+    const fadeOut = () => {
+      setVisible(false);
+      schedule(() => setCurrent(null), 900);
+    };
+
+    const showNext = () => {
+      let index = Math.floor(Math.random() * lines.length);
+      if (lines.length > 1 && index === lastIndex.current) index = (index + 1) % lines.length;
+      lastIndex.current = index;
+      setCurrent(lines[index] ?? null);
+      setVisible(false);
+      const frame = window.requestAnimationFrame(() => {
+        frames.delete(frame);
+        if (!disposed) setVisible(true);
+      });
+      frames.add(frame);
+      schedule(fadeOut, 15000);
+    };
+
+    if (!active || lines.length === 0) {
+      fadeOut();
+    } else {
+      schedule(showNext, 600);
+      idleTimer = window.setInterval(showNext, 45000);
+    }
+
+    return () => {
+      disposed = true;
+      for (const timer of timeouts) window.clearTimeout(timer);
+      for (const frame of frames) window.cancelAnimationFrame(frame);
+      if (idleTimer !== null) window.clearInterval(idleTimer);
+    };
+  }, [active, trackKey, lines]);
 
   if (!current) return null;
 
@@ -57,11 +75,17 @@ export function OneLinerCaption({
       aria-live="polite"
       className="pointer-events-none w-full px-2 text-center flex justify-center"
     >
-      <div className="animate-in fade-in zoom-in-95 duration-700 max-w-[21ch] sm:max-w-none">
+      <div
+        className={`max-w-[21ch] transition-[opacity,transform] duration-[900ms] ease-in-out motion-reduce:transition-none sm:max-w-none ${
+          visible
+            ? "scale-100 translate-y-0 opacity-100"
+            : "scale-[0.98] translate-y-1 opacity-0"
+        }`}
+      >
         <p
           lang="hi"
           className="font-vintage-deva text-[clamp(2rem,7.6vw,3.6rem)] leading-[1.18] font-black sm:text-5xl md:text-[clamp(2.5rem,6dvh,4rem)]"
-          style={{ color: textColor }}
+          style={{ color: textColor, textShadow }}
         >
           {current.display_text}
         </p>

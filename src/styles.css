@@ -421,13 +421,7 @@
 
 @keyframes cassette-spin {
   to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes cassette-tape-travel {
-  to {
-    background-position: 12px 0;
+    transform: rotate(-360deg);
   }
 }
 
@@ -520,17 +514,52 @@
 }
 
 .cassette-tape {
-  background-image: repeating-linear-gradient(90deg,
-      var(--color-cinema-clay) 0,
-      var(--color-cinema-clay) 5px,
-      var(--color-cinema-gold) 5px,
-      var(--color-cinema-gold) 7px);
-  background-size: 12px 100%;
-  opacity: 0.85;
+  background: #100906;
+  box-shadow:
+    inset 0 1px rgba(132, 78, 40, 0.28),
+    inset 0 -1px rgba(0, 0, 0, 0.68);
+  opacity: 0.96;
 }
 
-.cassette-running .cassette-tape {
-  animation: cassette-tape-travel 0.45s linear infinite;
+.cassette-tape-highlights {
+  position: absolute;
+  inset: 1px auto 1px 0;
+  width: 200%;
+  animation: cassette-tape-highlight-travel 2.2s linear infinite;
+  animation-play-state: paused;
+  will-change: transform;
+}
+
+.cassette-tape-highlights-playing {
+  animation-play-state: running;
+}
+
+.cassette-tape-highlight {
+  position: absolute;
+  top: 50%;
+  height: 46%;
+  border-radius: 999px;
+  background: rgba(174, 108, 65, 0.32);
+  transform: translateY(-50%) skewX(-18deg);
+}
+
+.cassette-tape-highlight-short {
+  width: 3%;
+}
+
+.cassette-tape-highlight-long {
+  width: 6.5%;
+  background: rgba(126, 72, 41, 0.38);
+}
+
+@keyframes cassette-tape-highlight-travel {
+  from {
+    transform: translateX(-50%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
 }
 
 .cassette-reference-svg {
@@ -701,6 +730,10 @@
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
+  }
+
+  .cassette-tape-highlights {
+    animation: none !important;
   }
 }
 
