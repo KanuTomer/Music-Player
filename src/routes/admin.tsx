@@ -1,6 +1,15 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { buildSeoMeta } from "@/lib/seo";
 
-export const Route = createFileRoute("/admin")({ component: AdminLayout });
+export const Route = createFileRoute("/admin")({
+  head: () => ({
+    meta: buildSeoMeta({
+      title: "Admin — Sainik Dhaba",
+      robots: "noindex, nofollow",
+    }),
+  }),
+  component: AdminLayout,
+});
 
 function AdminLayout() {
   // Room pages lock document scrolling; admin pages need their own scroll area.

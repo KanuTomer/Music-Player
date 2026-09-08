@@ -12,7 +12,7 @@ import { type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { PlayerProvider } from "../lib/player";
 import { Toaster } from "../components/ui/sonner";
-import { buildSeoMeta } from "@/lib/seo";
+import { buildSeoMeta, getCanonicalUrl } from "@/lib/seo";
 
 function NotFoundComponent() {
   return (
@@ -82,6 +82,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       ...buildSeoMeta(),
     ],
     links: [
+      { rel: "canonical", href: getCanonicalUrl("/") },
       { rel: "stylesheet", href: appCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },

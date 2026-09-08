@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { DoorClosed } from "lucide-react";
 import { RoomExperience } from "@/components/room/RoomExperience";
-import { buildSeoMeta } from "@/lib/seo";
+import { buildSeoMeta, getCanonicalUrl } from "@/lib/seo";
 import { loadRoomRoute } from "@/lib/room-route";
 
 export const Route = createFileRoute("/room/$slug/")({
@@ -19,16 +19,33 @@ export const Route = createFileRoute("/room/$slug/")({
       return {
         meta: buildSeoMeta({
           title: "Room unavailable — Sainik Dhaba",
-          robots: "noindex",
+          robots: "noindex, nofollow",
         }),
       };
     }
     const { scene } = loaderData.room;
-    const title = `Sainik Dhaba · ${scene.title_en} 📻`;
+    const title = `Sainik Dhaba · ${scene.title_en} 📻 — Ambient Music & Atmosphere`;
+    const canonicalUrl = getCanonicalUrl(`/room/${scene.slug}`);
+    const keywords = [
+      "Sainik Dhaba",
+      scene.title_en,
+      scene.title_hi,
+      "Indian ambient room",
+      "retro Hindi music",
+      "ambient radio",
+      "nostalgia soundscape",
+      "lo-fi India",
+    ].filter(Boolean) as string[];
+
     return {
+      links: [{ rel: "canonical", href: canonicalUrl }],
       meta: buildSeoMeta({
         title,
-        description: scene.hook,
+        description:
+          scene.hook ||
+          `Sit inside ${scene.title_en} on Sainik Dhaba. Continuous retro Hindi music, ambient soundscapes, and everyday nostalgia.`,
+        keywords,
+        canonicalUrl,
         imageAlt: `Sainik Dhaba — ${scene.title_en}`,
       }),
     };

@@ -12,7 +12,8 @@ export const Route = createFileRoute("/generate")({
     meta: buildSeoMeta({
       title: TITLE,
       description: DESC,
-      robots: "noindex",
+      keywords: "Sainik Dhaba, room generator, ambient rooms, Indian audio spaces",
+      robots: "noindex, nofollow",
     }),
   }),
   component: GeneratePage,
