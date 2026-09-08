@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Loader2, Plus, SlidersHorizontal, Trash2, Upload } from "lucide-react";
 import {
   DiscardChangesDialog,
@@ -18,12 +18,13 @@ import {
 import {
   ambienceProcessing,
   decodePcm16Wav,
-  prepareAmbienceWav,
+  prepareAmbiencePcm,
   sha256Hex,
   suggestedWindow,
   type AmbienceRole,
   type DecodedWav,
 } from "@/lib/ambience-processing";
+import { ambienceMp3, validateAmbienceMp3, type Mp3Inspection } from "@/lib/mp3-audio";
 import type { AdminAmbience, AdminAsset, AdminAmbienceStem } from "@/lib/admin.server";
 import { sameAdminDraft } from "@/lib/admin-drafts";
 
@@ -99,11 +100,20 @@ export function AmbienceAudioPanel({ scene, assets, onChanged, onDirtyChange }: 
   );
   const [sourceFile, setSourceFile] = useState<File | null>(null);
   const [decoded, setDecoded] = useState<DecodedWav | null>(null);
+  const [sourceMp3, setSourceMp3] = useState<Mp3Inspection | null>(null);
   const [sourceUrl, setSourceUrl] = useState("");
   const [uploadRole, setUploadRole] = useState<AmbienceRole>("texture");
   const [uploadName, setUploadName] = useState("");
   const [trim, setTrim] = useState({ startSeconds: 0, durationSeconds: 0 });
   const [previewUrl, setPreviewUrl] = useState("");
+  const [preparedPreview, setPreparedPreview] = useState<{
+    blob: Blob;
+    role: AmbienceRole;
+    startSeconds: number;
+    durationSeconds: number;
+  } | null>(null);
+  const [encodingProgress, setEncodingProgress] = useState(0);
+  const encodingAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const next = profileSnapshot(profile);
@@ -114,6 +124,7 @@ export function AmbienceAudioPanel({ scene, assets, onChanged, onDirtyChange }: 
   }, [profile]);
   useEffect(
     () => () => {
+      encodingAbortRef.current?.abort();
       if (previewUrl) URL.revokeObjectURL(previewUrl);
     },
     [previewUrl],
@@ -185,67 +196,139 @@ export function AmbienceAudioPanel({ scene, assets, onChanged, onDirtyChange }: 
   async function chooseFile(file: File | null) {
     if (!file) return;
     if (file.size > ambienceProcessing.maxSourceBytes) {
-      setMessage("Choose a WAV file no larger than 64 MiB.");
+      setMessage("Choose a WAV or compliant MP3 file no larger than 64 MiB.");
       return;
     }
     try {
-      const next = decodePcm16Wav(await file.arrayBuffer());
-      const window = suggestedWindow(next, uploadRole);
+      const buffer = await file.arrayBuffer();
+      const isMp3 = file.type === ambienceMp3.mimeType || /\.mp3$/i.test(file.name);
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPreviewUrl("");
+      setPreparedPreview(null);
       setSourceFile(file);
-      setDecoded(next);
-      setTrim(window);
-      setUploadName(file.name.replace(/\.wav$/i, ""));
-      setMessage("Preview and adjust the selected source segment before publishing.");
+      setUploadName(file.name.replace(/\.(?:wav|mp3)$/i, ""));
+      if (isMp3) {
+        const inspection = validateAmbienceMp3(
+          buffer,
+          ambienceProcessing.maxDurationSeconds[uploadRole],
+        );
+        setDecoded(null);
+        setSourceMp3(inspection);
+        setTrim({ startSeconds: 0, durationSeconds: inspection.durationSeconds });
+        setPreviewUrl(URL.createObjectURL(file));
+        setMessage("This MP3 already meets the playback standard and will be uploaded unchanged.");
+      } else {
+        const next = decodePcm16Wav(buffer);
+        setDecoded(next);
+        setSourceMp3(null);
+        setTrim(suggestedWindow(next, uploadRole));
+        setMessage("Preview and adjust the selected source segment before publishing.");
+      }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to read WAV file");
+      setSourceFile(null);
+      setDecoded(null);
+      setSourceMp3(null);
+      setMessage(error instanceof Error ? error.message : "Unable to read the audio file");
     }
   }
 
   function clearPreview() {
+    encodingAbortRef.current?.abort();
+    encodingAbortRef.current = null;
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl("");
+    setPreparedPreview(null);
+    setEncodingProgress(0);
+  }
+
+  async function prepareMp3() {
+    if (!decoded) throw new Error("Choose a WAV source first.");
+    const cached = preparedPreview;
+    if (
+      cached &&
+      cached.role === uploadRole &&
+      cached.startSeconds === trim.startSeconds &&
+      cached.durationSeconds === trim.durationSeconds
+    )
+      return cached;
+    encodingAbortRef.current?.abort();
+    const controller = new AbortController();
+    encodingAbortRef.current = controller;
+    setEncodingProgress(0);
+    const prepared = prepareAmbiencePcm(
+      decoded,
+      uploadRole,
+      trim.startSeconds,
+      trim.durationSeconds,
+    );
+    const { encodePreparedAmbienceMp3 } = await import("@/lib/ambience-mp3-encoder");
+    try {
+      const blob = await encodePreparedAmbienceMp3(prepared, {
+        signal: controller.signal,
+        onProgress: setEncodingProgress,
+      });
+      const next = {
+        blob,
+        role: uploadRole,
+        startSeconds: prepared.selectedStartSeconds,
+        durationSeconds: prepared.selectedDurationSeconds,
+      };
+      setPreparedPreview(next);
+      return next;
+    } finally {
+      if (encodingAbortRef.current === controller) encodingAbortRef.current = null;
+    }
   }
 
   async function previewSelection() {
-    if (!decoded) return;
+    if (!sourceFile) return;
     setBusy("Preparing preview");
     setMessage("");
     try {
-      const prepared = prepareAmbienceWav(
-        decoded,
-        uploadRole,
-        trim.startSeconds,
-        trim.durationSeconds,
-      );
-      clearPreview();
-      setPreviewUrl(URL.createObjectURL(prepared.blob));
-      setMessage("Preview ready. Listen to it below, then adjust the segment or publish it.");
+      if (sourceMp3) {
+        validateAmbienceMp3(
+          await sourceFile.arrayBuffer(),
+          ambienceProcessing.maxDurationSeconds[uploadRole],
+        );
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        setPreviewUrl(URL.createObjectURL(sourceFile));
+        setMessage("Preview ready. This compliant MP3 will be uploaded unchanged.");
+      } else {
+        const prepared = await prepareMp3();
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        setPreviewUrl(URL.createObjectURL(prepared.blob));
+        setMessage("MP3 preview ready. Listen to it below, then adjust or publish it.");
+      }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to prepare preview");
+      if (error instanceof DOMException && error.name === "AbortError")
+        setMessage("Audio preparation canceled.");
+      else
+        setMessage(error instanceof Error ? error.message : "Unable to prepare preview");
     } finally {
       setBusy(null);
     }
   }
 
   async function publishUpload() {
-    if (!sourceFile || !decoded || !uploadName.trim()) return;
+    if (!sourceFile || (!decoded && !sourceMp3) || !uploadName.trim()) return;
     await run("Processing and uploading sound", async () => {
-      const prepared = prepareAmbienceWav(
-        decoded,
-        uploadRole,
-        trim.startSeconds,
-        trim.durationSeconds,
-      );
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(URL.createObjectURL(prepared.blob));
+      const prepared = sourceMp3
+        ? {
+            blob: sourceFile,
+            startSeconds: 0,
+            durationSeconds: validateAmbienceMp3(
+              await sourceFile.arrayBuffer(),
+              ambienceProcessing.maxDurationSeconds[uploadRole],
+            ).durationSeconds,
+          }
+        : await prepareMp3();
       const originalHash = await sha256Hex(sourceFile);
       const reserved = await reserveAdminAmbienceUpload({ data: { sceneSlug: scene.slug } });
       const { error } = await supabase.storage
         .from("ambience-audio")
         .uploadToSignedUrl(reserved.path, reserved.token, prepared.blob, {
-          contentType: "audio/wav",
+          cacheControl: "31536000",
+          contentType: ambienceMp3.mimeType,
         });
       if (error) throw new Error(error.message);
       await finalizeAdminAmbienceUpload({
@@ -257,15 +340,16 @@ export function AmbienceAudioPanel({ scene, assets, onChanged, onDirtyChange }: 
           role: uploadRole,
           sourceFilename: sourceFile.name,
           sourceByteSize: sourceFile.size,
-          sourceDurationSeconds: decoded.durationSeconds,
+          sourceDurationSeconds: decoded?.durationSeconds ?? sourceMp3!.durationSeconds,
           sourceSha256: originalHash,
           ...(sourceUrl.trim() ? { sourceUrl: sourceUrl.trim() } : {}),
-          selectedStartSeconds: prepared.selectedStartSeconds,
-          selectedDurationSeconds: prepared.selectedDurationSeconds,
+          selectedStartSeconds: prepared.startSeconds,
+          selectedDurationSeconds: prepared.durationSeconds,
         },
       });
       setSourceFile(null);
       setDecoded(null);
+      setSourceMp3(null);
       setSourceUrl("");
       setUploadName("");
       clearPreview();
@@ -280,6 +364,7 @@ export function AmbienceAudioPanel({ scene, assets, onChanged, onDirtyChange }: 
   function discardUpload() {
     setSourceFile(null);
     setDecoded(null);
+    setSourceMp3(null);
     setSourceUrl("");
     setUploadName("");
     setTrim({ startSeconds: 0, durationSeconds: 0 });
@@ -591,11 +676,11 @@ export function AmbienceAudioPanel({ scene, assets, onChanged, onDirtyChange }: 
         <div className="rounded border border-zinc-700 p-4">
           <div className="flex items-center gap-2">
             <Upload className="size-4 text-amber-300" />
-            <h3 className="font-semibold">Process a local WAV</h3>
+            <h3 className="font-semibold">Prepare local audio</h3>
           </div>
           <p className="mt-1 text-xs text-zinc-400">
-            The original remains on this device. The published file is a 32 kHz mono WAV under 12
-            MiB.
+            The original remains on this device. The published file is a 32 kHz mono MP3 at 64
+            kbps.
           </p>
           <div className="mt-3 grid gap-3 md:grid-cols-3">
             <label className="text-sm">
@@ -621,6 +706,19 @@ export function AmbienceAudioPanel({ scene, assets, onChanged, onDirtyChange }: 
                   const role = event.target.value as AmbienceRole;
                   setUploadRole(role);
                   if (decoded) setTrim(suggestedWindow(decoded, role));
+                  if (sourceMp3) {
+                    if (
+                      sourceMp3.durationSeconds <=
+                      ambienceProcessing.maxDurationSeconds[role] + 0.1
+                    ) {
+                      setMessage("This MP3 meets the selected role limit.");
+                    } else {
+                      setMessage(
+                        `This MP3 is too long for ${role} (maximum ${ambienceProcessing.maxDurationSeconds[role]} seconds).`,
+                      );
+                    }
+                    setTrim({ startSeconds: 0, durationSeconds: sourceMp3.durationSeconds });
+                  }
                   clearPreview();
                 }}
               >
@@ -643,69 +741,74 @@ export function AmbienceAudioPanel({ scene, assets, onChanged, onDirtyChange }: 
           </div>
           <label className="mt-3 block text-sm">
             <span className="flex items-center gap-1">
-              Original WAV
-              <InfoTip label="original WAV">
-                Choose an original WAV up to 64 MiB. It stays on this device; only the trimmed,
-                optimized playback copy is uploaded.
+              Original WAV or compliant MP3
+              <InfoTip label="original audio">
+                Choose a WAV up to 64 MiB for local trimming and optimization, or a 32 kHz mono MP3
+                at 64 kbps that already fits the selected role limit.
               </InfoTip>
             </span>
             <input
               className="mt-1 block w-full text-sm"
               type="file"
-              accept="audio/wav,.wav"
+              accept="audio/wav,audio/mpeg,.wav,.mp3"
               disabled={!!busy}
               onChange={(event) => void chooseFile(event.target.files?.[0] ?? null)}
             />
           </label>
-          {decoded ? (
+          {sourceFile ? (
             <div className="mt-3 rounded bg-zinc-900 p-3">
               <p className="text-sm text-zinc-300">
-                Original: {decoded.durationSeconds.toFixed(1)} seconds. The selected segment will be
-                normalized and faded for seamless playback.
+                Original: {(decoded?.durationSeconds ?? sourceMp3?.durationSeconds ?? 0).toFixed(1)}
+                {" seconds. "}
+                {decoded
+                  ? "The selected segment will be normalized, faded, and encoded as MP3."
+                  : "This compliant MP3 will be uploaded without re-encoding."}
               </p>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                <label className="text-sm">
-                  <span className="flex items-center gap-1">
-                    Start (seconds)
-                    <InfoTip label="segment start">
-                      The point in the original recording where the published excerpt begins.
-                    </InfoTip>
-                  </span>
-                  <input
-                    className="mt-1 w-full"
-                    type="number"
-                    min={0}
-                    max={Math.max(0, decoded.durationSeconds - 0.1)}
-                    step={0.1}
-                    value={trim.startSeconds}
-                    onChange={(event) => {
-                      setTrim((current) => ({ ...current, startSeconds: value(event) }));
-                      clearPreview();
-                    }}
-                  />
-                </label>
-                <label className="text-sm">
-                  <span className="flex items-center gap-1">
-                    Duration (max {ambienceProcessing.maxDurationSeconds[uploadRole]} s)
-                    <InfoTip label="segment duration">
-                      The length of the excerpt. Shorter files load faster; each role has a safe
-                      maximum.
-                    </InfoTip>
-                  </span>
-                  <input
-                    className="mt-1 w-full"
-                    type="number"
-                    min={0.1}
-                    max={ambienceProcessing.maxDurationSeconds[uploadRole]}
-                    step={0.1}
-                    value={trim.durationSeconds}
-                    onChange={(event) => {
-                      setTrim((current) => ({ ...current, durationSeconds: value(event) }));
-                      clearPreview();
-                    }}
-                  />
-                </label>
-              </div>
+              {decoded ? (
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <label className="text-sm">
+                    <span className="flex items-center gap-1">
+                      Start (seconds)
+                      <InfoTip label="segment start">
+                        The point in the original recording where the published excerpt begins.
+                      </InfoTip>
+                    </span>
+                    <input
+                      className="mt-1 w-full"
+                      type="number"
+                      min={0}
+                      max={Math.max(0, decoded.durationSeconds - 0.1)}
+                      step={0.1}
+                      value={trim.startSeconds}
+                      onChange={(event) => {
+                        setTrim((current) => ({ ...current, startSeconds: value(event) }));
+                        clearPreview();
+                      }}
+                    />
+                  </label>
+                  <label className="text-sm">
+                    <span className="flex items-center gap-1">
+                      Duration (max {ambienceProcessing.maxDurationSeconds[uploadRole]} s)
+                      <InfoTip label="segment duration">
+                        The length of the excerpt. Shorter files load faster; each role has a safe
+                        maximum.
+                      </InfoTip>
+                    </span>
+                    <input
+                      className="mt-1 w-full"
+                      type="number"
+                      min={0.1}
+                      max={ambienceProcessing.maxDurationSeconds[uploadRole]}
+                      step={0.1}
+                      value={trim.durationSeconds}
+                      onChange={(event) => {
+                        setTrim((current) => ({ ...current, durationSeconds: value(event) }));
+                        clearPreview();
+                      }}
+                    />
+                  </label>
+                </div>
+              ) : null}
               <div className="mt-3 flex flex-wrap gap-2">
                 <button
                   className="rounded border border-emerald-700 px-3 py-2 text-sm font-semibold text-emerald-300 disabled:opacity-60"
@@ -715,12 +818,22 @@ export function AmbienceAudioPanel({ scene, assets, onChanged, onDirtyChange }: 
                   {busy === "Preparing preview" ? (
                     <>
                       <Loader2 className="mr-1 inline size-4 animate-spin" />
-                      Preparing preview…
+                      Preparing preview…{" "}
+                      {encodingProgress > 0 ? `${Math.round(encodingProgress * 100)}%` : ""}
                     </>
                   ) : (
                     "Preview selected segment"
                   )}
                 </button>
+                {encodingAbortRef.current ? (
+                  <button
+                    type="button"
+                    className="rounded border border-amber-600 px-3 py-2 text-sm font-semibold text-amber-300"
+                    onClick={() => encodingAbortRef.current?.abort()}
+                  >
+                    Cancel preparation
+                  </button>
+                ) : null}
                 <button
                   className="rounded bg-emerald-600 px-3 py-2 text-sm font-semibold text-zinc-950 disabled:opacity-60"
                   disabled={!!busy || !uploadName.trim()}

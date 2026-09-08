@@ -995,6 +995,15 @@ export type Database = {
           reservation_id: string;
         }[];
       };
+      admin_create_mp3_upload_reservation: {
+        Args: { p_scene_id: string };
+        Returns: {
+          bucket: string;
+          expires_at: string;
+          object_path: string;
+          reservation_id: string;
+        }[];
+      };
       admin_discard_upload_reservation: {
         Args: { p_reservation_id: string };
         Returns: {

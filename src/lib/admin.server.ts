@@ -4,6 +4,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Database } from "@/integrations/supabase/types";
 import { ambienceProcessing, type AmbienceRole } from "./ambience-processing";
+import { ambienceMp3, validateAmbienceMp3 } from "./mp3-audio";
 
 const serviceAdmin = supabaseAdmin;
 
@@ -820,32 +821,6 @@ export async function deactivateAmbienceStem(stemId: string) {
   });
 }
 
-function inspectPlaybackWav(data: Buffer, role: AmbienceRole) {
-  const decoded = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
-  const view = new DataView(decoded);
-  if (
-    data.length < 44 ||
-    data.toString("ascii", 0, 4) !== "RIFF" ||
-    data.toString("ascii", 8, 12) !== "WAVE"
-  )
-    throw new Error("Prepared audio is not WAV");
-  if (
-    view.getUint16(20, true) !== 1 ||
-    view.getUint16(22, true) !== 1 ||
-    view.getUint32(24, true) !== ambienceProcessing.sampleRate ||
-    view.getUint16(34, true) !== 16
-  )
-    throw new Error("Prepared audio must be 32 kHz mono PCM16 WAV");
-  const duration = view.getUint32(40, true) / (ambienceProcessing.sampleRate * 2);
-  if (
-    duration <= 0 ||
-    duration > ambienceProcessing.maxDurationSeconds[role] + 0.01 ||
-    data.length > ambienceProcessing.maxPlaybackBytes
-  )
-    throw new Error("Prepared audio exceeds the role limit");
-  return duration;
-}
-
 export async function reserveAmbienceUpload(sceneSlug: string) {
   await requireAdmin();
   await consumeAdminRateLimit("upload.reserve", 30, 3600);
@@ -857,8 +832,8 @@ export async function reserveAmbienceUpload(sceneSlug: string) {
     .single();
   if (sceneError || !scene) throw new Error("Jagah not found");
   const { data: rows, error: reservationError } = await admin.rpc(
-    "admin_create_upload_reservation",
-    { p_scene_id: scene.id, p_purpose: "ambience" },
+    "admin_create_mp3_upload_reservation",
+    { p_scene_id: scene.id },
   );
   const reservation = rows?.[0];
   if (reservationError || !reservation)
@@ -1061,7 +1036,7 @@ export async function finalizeAmbienceUpload(input: {
   let removeUploadedObject = false;
   try {
     const pathMatch = input.path.match(
-      /^rooms\/([a-z0-9-]+)\/ambience\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.wav$/i,
+      /^rooms\/([a-z0-9-]+)\/ambience\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.mp3$/i,
     );
     if (!pathMatch) throw new Error("Invalid upload path");
     const { data: validReservation } = await admin.rpc("admin_check_upload_reservation", {
@@ -1091,15 +1066,18 @@ export async function finalizeAmbienceUpload(input: {
     if (downloadError || !object)
       throw new Error(downloadError?.message ?? "Uploaded audio is missing");
     const bytes = Buffer.from(await object.arrayBuffer());
-    const duration = inspectPlaybackWav(bytes, input.role);
+    const inspection = validateAmbienceMp3(
+      bytes,
+      ambienceProcessing.maxDurationSeconds[input.role],
+    );
     const hash = createHash("sha256").update(bytes).digest("hex").toUpperCase();
     const { data: asset, error: assetError } = await admin
       .from("ambience_assets")
       .insert({
         storage_path: input.path,
-        mime_type: "audio/wav",
+        mime_type: ambienceMp3.mimeType,
         byte_size: bytes.length,
-        duration_seconds: duration,
+        duration_seconds: inspection.durationSeconds,
         sha256: hash,
         is_active: true,
       })

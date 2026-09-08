@@ -106,39 +106,6 @@ export function RoomExperience({
   }, [scene.id]);
 
   useEffect(() => {
-    const refresh = () => {
-      void getRoomPresentation({ data: { sceneId: scene.id } })
-        .then((next) => {
-          if (next) setPresentation(next);
-        })
-        .catch(() => undefined);
-    };
-    const channel = supabase
-      .channel(`room-presentation:${scene.id}`)
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "scenes", filter: `id=eq.${scene.id}` },
-        refresh,
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "oneliners",
-        },
-        (payload) => {
-          const record = payload.eventType === "DELETE" ? payload.old : payload.new;
-          if (record["scene_id"] === scene.id) refresh();
-        },
-      )
-      .subscribe();
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [scene.id]);
-
-  useEffect(() => {
     const video = sceneVideoRef.current;
     if (!video || !sceneVideo) return;
 

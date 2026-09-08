@@ -6,9 +6,9 @@ import { getPlayerDisplay } from "@/lib/player-display";
 import { physicalCassetteLabels } from "@/lib/physical-cassette";
 import { usePlayer } from "@/lib/player";
 
-const CASSETTE_CUE_URL = "/local-audio/cassette-tape.wav";
+const CASSETTE_CUE_URL = "/local-audio/cassette-tape.mp3";
 const CASSETTE_CUE_DURATION_MS = 1200;
-const CASSETTE_REWIND_URL = "/local-audio/cassette-rewind.wav";
+const CASSETTE_REWIND_URL = "/local-audio/cassette-rewind.mp3";
 const CASSETTE_REWIND_DURATION_MS = 3000;
 const CASSETTE_REWIND_PLAYBACK_RATE = 4.992 / 3;
 
