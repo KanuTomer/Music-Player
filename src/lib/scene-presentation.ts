@@ -67,9 +67,7 @@ export function sceneTextShadow(color: string) {
 
 /** Returns inline-style properties for `-webkit-text-stroke` outline. */
 export function sceneTextStroke(color: string) {
-  const strokeColor = isLightTextColor(color)
-    ? "rgba(0,0,0,0.65)"
-    : "rgba(255,248,232,0.65)";
+  const strokeColor = isLightTextColor(color) ? "rgba(0,0,0,0.65)" : "rgba(255,248,232,0.65)";
   return {
     WebkitTextStroke: `1.5px ${strokeColor}`,
     paintOrder: "stroke fill" as const,

@@ -64,8 +64,9 @@ function Cover({
 }) {
   return (
     <span
-      className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-md sm:rounded-lg border border-white/15 bg-black/40 shadow-xs ring-1 ring-white/10 ${compact ? "size-8" : "size-8.5 sm:size-9.5"
-        }`}
+      className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-md sm:rounded-lg border border-white/15 bg-black/40 shadow-xs ring-1 ring-white/10 ${
+        compact ? "size-8" : "size-8.5 sm:size-9.5"
+      }`}
     >
       {coverId ? (
         <img
@@ -98,8 +99,9 @@ function LiveEqualizer({ isPlaying, status }: { isPlaying: boolean; status: stri
         </div>
       ) : (
         <span
-          className={`inline-block size-1.5 rounded-full bg-amber-400 ${status === "loading" ? "animate-ping" : "opacity-90"
-            }`}
+          className={`inline-block size-1.5 rounded-full bg-amber-400 ${
+            status === "loading" ? "animate-ping" : "opacity-90"
+          }`}
           aria-hidden
         />
       )}
@@ -129,6 +131,7 @@ function SeekBar({ compact = false }: { compact?: boolean }) {
           if (duration <= 0) return;
           const rect = event.currentTarget.getBoundingClientRect();
           player.seek(((event.clientX - rect.left) / rect.width) * duration);
+          event.currentTarget.blur();
         }}
         className="group relative flex h-4 min-w-8 flex-1 cursor-pointer items-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ember"
       >
@@ -168,10 +171,14 @@ function TransportButton({
       type="button"
       variant="ghost"
       size="icon"
-      onClick={action}
+      onClick={(e) => {
+        action();
+        e.currentTarget.blur();
+      }}
       aria-label={label}
-      className={`${compact ? "size-7.5" : "size-7.5 sm:size-8"
-        } shrink-0 rounded-full border border-white/20 bg-white/10 text-white shadow-xs transition-all hover:scale-105 hover:border-white/40 hover:bg-white/20 hover:text-white active:scale-95`}
+      className={`${
+        compact ? "size-7.5" : "size-7.5 sm:size-8"
+      } shrink-0 rounded-full border border-white/20 bg-white/10 text-white shadow-xs transition-all hover:scale-105 hover:border-white/40 hover:bg-white/20 hover:text-white active:scale-95`}
     >
       {children}
     </Button>
@@ -183,11 +190,15 @@ function PlayButton({ compact = false }: { compact?: boolean }) {
   return (
     <Button
       type="button"
-      onClick={player.toggle}
+      onClick={(e) => {
+        player.toggle();
+        e.currentTarget.blur();
+      }}
       aria-label={player.isPlaying ? "Pause" : "Play"}
       size="icon"
-      className={`${compact ? "size-8.5" : "size-9 sm:size-10"
-        } shrink-0 rounded-full border-0 bg-gradient-to-br from-[#f27a42] via-[#e2612a] to-[#c74c1a] text-charcoal shadow-[0_2px_10px_rgba(240,126,70,0.45),inset_0_1px_1px_rgba(255,255,255,0.45)] ring-1 ring-ember/40 transition-all hover:scale-105 hover:shadow-[0_3px_16px_rgba(240,126,70,0.65)] hover:brightness-110 active:scale-95`}
+      className={`${
+        compact ? "size-8.5" : "size-9 sm:size-10"
+      } shrink-0 rounded-full border-0 bg-gradient-to-br from-[#f27a42] via-[#e2612a] to-[#c74c1a] text-charcoal shadow-[0_2px_10px_rgba(240,126,70,0.45),inset_0_1px_1px_rgba(255,255,255,0.45)] ring-1 ring-ember/40 transition-all hover:scale-105 hover:shadow-[0_3px_16px_rgba(240,126,70,0.65)] hover:brightness-110 active:scale-95`}
     >
       {player.isPlaying ? (
         <Pause
@@ -251,13 +262,14 @@ export function FullCassettePlayer() {
               type="button"
               variant="ghost"
               size="icon"
-              onClick={() =>
+              onClick={(e) => {
                 shareCurrentSong(
                   player.room?.scene.slug ?? "sainik-dhaba",
                   player.track,
                   player.room?.scene.title_en,
-                )
-              }
+                );
+                e.currentTarget.blur();
+              }}
               aria-label="Share this song"
               title="Share this song"
               className="size-7 sm:size-7.5 rounded-full border border-white/15 bg-white/5 text-cream/75 transition-all hover:bg-white/20 hover:text-amber-300 hover:border-amber-400/50 hover:scale-105 active:scale-95 cursor-pointer"
@@ -290,13 +302,17 @@ export function FullCassettePlayer() {
             type="button"
             variant="ghost"
             size="icon"
-            onClick={() => setShowVolume((current) => !current)}
+            onClick={(e) => {
+              setShowVolume((current) => !current);
+              e.currentTarget.blur();
+            }}
             aria-expanded={showVolume}
             aria-label="Music volume"
-            className={`size-7.5 sm:size-8 rounded-full border border-white/15 bg-white/5 text-cream/80 transition-all hover:bg-white/15 hover:text-cream hover:border-white/30 active:scale-95 ${showVolume
+            className={`size-7.5 sm:size-8 rounded-full border border-white/15 bg-white/5 text-cream/80 transition-all hover:bg-white/15 hover:text-cream hover:border-white/30 active:scale-95 ${
+              showVolume
                 ? "bg-ember text-charcoal shadow-[0_0_8px_rgba(240,126,70,0.5)] border-ember/60 font-semibold"
                 : ""
-              }`}
+            }`}
           >
             {player.musicVolume === 0 ? (
               <VolumeX className="size-3.5" aria-hidden />
@@ -342,6 +358,23 @@ export function FullCassettePlayer() {
             step={1}
             aria-label="Music volume"
             onValueChange={(value) => player.setMusicVolume((value[0] ?? 0) / 100)}
+            onPointerUp={() => {
+              if (document.activeElement instanceof HTMLElement) {
+                document.activeElement.blur();
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+                e.preventDefault();
+                const currentTime = player.nowPlaying.position;
+                const duration = player.nowPlaying.duration;
+                if (e.key === "ArrowLeft") {
+                  player.seek(Math.max(0, currentTime - 5));
+                } else {
+                  player.seek(Math.min(duration > 0 ? duration : currentTime + 5, currentTime + 5));
+                }
+              }
+            }}
             className="flex-1"
           />
           <span className="w-8 text-right font-mono text-[11px] tabular-nums text-cream/70 font-semibold">
@@ -402,13 +435,14 @@ export function CompactCassettePlayer({ className = "" }: { className?: string }
               type="button"
               variant="ghost"
               size="icon"
-              onClick={() =>
+              onClick={(e) => {
                 shareCurrentSong(
                   player.room?.scene.slug ?? "sainik-dhaba",
                   player.track,
                   player.room?.scene.title_en,
-                )
-              }
+                );
+                e.currentTarget.blur();
+              }}
               aria-label="Share this song"
               title="Share this song"
               className="size-7.5 rounded-full border border-white/15 bg-white/5 text-cream/75 transition-all hover:bg-white/20 hover:text-amber-300 hover:border-amber-400/50 hover:scale-105 active:scale-95 cursor-pointer"

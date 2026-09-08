@@ -827,7 +827,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       if (
         target instanceof Element &&
         target.closest(
-          'input, textarea, select, button, a, [contenteditable]:not([contenteditable="false"]), [role="button"], [role="link"], [role="slider"], [role="textbox"]',
+          'input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]), textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="searchbox"]',
         )
       ) {
         return;

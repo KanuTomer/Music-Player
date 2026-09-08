@@ -215,10 +215,11 @@ export function RoomExperience({
         {!isCorporate && (
           <>
             <div
-              className={`pointer-events-none absolute inset-x-0 top-0 z-10 h-48 bg-gradient-to-b sm:h-56 ${isLightTextColor(presentation.foreground_text_color)
+              className={`pointer-events-none absolute inset-x-0 top-0 z-10 h-48 bg-gradient-to-b sm:h-56 ${
+                isLightTextColor(presentation.foreground_text_color)
                   ? "from-black/75 via-black/35 to-transparent"
                   : "from-white/55 via-white/20 to-transparent"
-                }`}
+              }`}
               aria-hidden
             />
             <div
