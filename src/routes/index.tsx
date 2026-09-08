@@ -14,11 +14,13 @@ import { useJagahNavigation } from "@/hooks/useJagahNavigation";
 import { isAllowedSlug } from "@/lib/theme-data";
 import { useSupportAutoPrompt } from "@/hooks/useSupportPrompt";
 import { useLiveScenes } from "@/hooks/useLiveScenes";
-import { buildSeoMeta } from "@/lib/seo";
+import { buildSeoMeta, getCanonicalUrl } from "@/lib/seo";
 
-const TITLE = "Sainik Dhaba 📻";
+const TITLE = "Sainik Dhaba 📻 — Ambient Rooms from Everyday India | Retro Hindi Music";
 const DESC =
-  "Sit inside a highway dhaba, a deluxe salon, a chai ki tapri or a night bus. Hindi film songs, moving scenes and in-character chatter — no signup.";
+  "Step inside hyper-specific Indian spaces — a highway dhaba, a salon, a chai ki tapri, or a night bus. Stream continuous retro Hindi film songs and authentic ambient soundscapes.";
+const KEYWORDS =
+  "Sainik Dhaba, ambient Indian music, retro Hindi songs, 90s Bollywood radio, highway dhaba ambience, chai tapri sounds, Indian nostalgia, lo-fi radio India, salon radio, night bus Hindi songs";
 
 export const Route = createFileRoute("/")({
   beforeLoad: () => {
@@ -36,9 +38,12 @@ export const Route = createFileRoute("/")({
     return { room, scenes };
   },
   head: () => ({
+    links: [{ rel: "canonical", href: getCanonicalUrl("/") }],
     meta: buildSeoMeta({
       title: TITLE,
       description: DESC,
+      keywords: KEYWORDS,
+      canonicalUrl: getCanonicalUrl("/"),
     }),
   }),
   component: Home,
