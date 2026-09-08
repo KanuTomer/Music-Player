@@ -114,6 +114,11 @@ export function PlayerDetailsSheet({
                   step={1}
                   aria-label="Music volume"
                   onValueChange={(value) => player.setMusicVolume((value[0] ?? 0) / 100)}
+                  onPointerUp={() => {
+                    if (document.activeElement instanceof HTMLElement) {
+                      document.activeElement.blur();
+                    }
+                  }}
                   className="mt-4"
                 />
               </section>

@@ -115,7 +115,10 @@ function DeckControl({
   return (
     <button
       type="button"
-      onClick={action}
+      onClick={(e) => {
+        action();
+        e.currentTarget.blur();
+      }}
       disabled={disabled}
       aria-label={label}
       className={`grid size-11 cursor-pointer place-items-center rounded-lg border shadow-[inset_0_1px_rgba(255,255,255,0.22),0_2px_3px_rgba(0,0,0,0.36)] transition-[transform,background-color,box-shadow] hover:-translate-y-px active:translate-y-[1px] active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember sm:size-[3.75rem] ${

@@ -23,7 +23,7 @@ import { AmbienceEventButton } from "@/components/room/AmbienceEventButton";
 import { useSupportAutoPrompt } from "@/hooks/useSupportPrompt";
 import { useRoomAnalytics } from "@/hooks/useRoomAnalytics";
 import { supabase } from "@/integrations/supabase/client";
-import { isLightTextColor, sceneTextShadow } from "@/lib/scene-presentation";
+import { isLightTextColor, sceneTextShadow, sceneTextStroke } from "@/lib/scene-presentation";
 import { useLiveScenes } from "@/hooks/useLiveScenes";
 
 export function RoomExperience({
@@ -188,6 +188,7 @@ export function RoomExperience({
   const active = player.isPlaying;
   const isCorporate = scene.slug === "corporate-majdoor";
   const foregroundTextShadow = sceneTextShadow(presentation.foreground_text_color);
+  const foregroundTextStroke = sceneTextStroke(presentation.foreground_text_color);
   // Scenes that are night-bound or specifically unshaded by nature keep their own light.
   const gradeless = scene.slug === "raat-ki-bus" || isCorporate;
   const gradeClass = gradeless ? "" : `grade-${player.daypart}`;
@@ -324,6 +325,7 @@ export function RoomExperience({
             style={{
               color: presentation.foreground_text_color,
               textShadow: foregroundTextShadow,
+              ...foregroundTextStroke,
             }}
           >
             {scene.title_hi}
@@ -337,6 +339,7 @@ export function RoomExperience({
             style={{
               color: presentation.foreground_text_color,
               textShadow: foregroundTextShadow,
+              ...foregroundTextStroke,
             }}
           >
             {scene.title_en}
