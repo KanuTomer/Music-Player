@@ -522,6 +522,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         });
         if (
           intendPlayRef.current &&
+          document.visibilityState === "visible" &&
           data?.video_id === expectedVideoIdRef.current &&
           ![1, 3].includes(player.getPlayerState())
         )
@@ -532,6 +533,130 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }, 500);
     return () => window.clearInterval(timer);
   }, []);
+
+  // ── Mobile tab-switch / browser-return resume ──
+  // On mobile, switching tabs or minimising the browser causes the OS to pause
+  // the YouTube IFrame player.  The Web-Audio-API ambience engine resumes on
+  // its own (AudioContext.resume()), so users hear ambient sound but no music.
+  //
+  // Strategy:
+  //   HIDE  → Remember we intended to play. Set isPlaying false so the UI
+  //           (cassette reel, equalizer, ambience) correctly reflects "paused".
+  //   SHOW  → If we intended to play, aggressively re-issue playVideo() with
+  //           staggered retries (mobile browsers often swallow the first one).
+  //           Once confirmed playing, restore isPlaying so the reel spins again.
+  useEffect(() => {
+    let retryTimers: number[] = [];
+    // Whether we were intending to play before the tab was hidden
+    const wasPlayingRef = { current: false };
+
+    const clearRetries = () => {
+      for (const t of retryTimers) window.clearTimeout(t);
+      retryTimers = [];
+    };
+
+    const resumePlayback = () => {
+      // Only act if we actually intended to play before hiding
+      if (!wasPlayingRef.current && !intendPlayRef.current) return;
+
+      const player = playerRef.current;
+      if (!player || !readyRef.current) return;
+
+      // Restore intent — it may have been cleared by onStateChange(2) during hide
+      intendPlayRef.current = true;
+
+      // Resume the ambience AudioContext (may need a "gesture" unblock)
+      void resumeAmbienceFromGesture();
+
+      // Restore volume that may have been ramped to 0
+      const target = effectiveMusicVolume(
+        volumeRef.current,
+        ambienceActiveRef.current,
+        musicDuckRatioRef.current,
+      );
+      rampMusicOutput(target, 300);
+
+      clearRetries();
+
+      // Attempt playback immediately + staggered retries at increasing delays
+      const retryDelays = [0, 150, 400, 800, 1600];
+      for (let i = 0; i < retryDelays.length; i++) {
+        const timer = window.setTimeout(() => {
+          const p = playerRef.current;
+          if (!p || !readyRef.current || !intendPlayRef.current) return;
+
+          try {
+            const state = p.getPlayerState();
+
+            // Already playing? Update state and stop retrying
+            if (state === 1) {
+              setIsPlaying(true);
+              clearRetries();
+              return;
+            }
+
+            // Player lost its video (unstarted / cued) — reload it
+            if (state === -1 || state === 5) {
+              const videoId = expectedVideoIdRef.current;
+              if (videoId) {
+                p.loadVideoById(videoId);
+                // loadVideoById auto-plays; set state optimistically
+                setIsPlaying(true);
+              }
+              return;
+            }
+
+            // Paused or buffering — poke it
+            p.playVideo();
+
+            // On the last retry, optimistically set playing state so the UI
+            // (reel, equalizer) reflects "playing" even if the onStateChange
+            // hasn't fired yet
+            if (i === retryDelays.length - 1) {
+              setIsPlaying(true);
+            }
+          } catch {
+            /* player iframe not responsive yet */
+          }
+        }, retryDelays[i]);
+        retryTimers.push(timer);
+      }
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        // ── TAB HIDDEN ──
+        // Remember whether music was playing so we can restore on return
+        wasPlayingRef.current = intendPlayRef.current;
+        if (wasPlayingRef.current) {
+          // Mark UI as paused so the reel stops, equalizer shows paused, etc.
+          setIsPlaying(false);
+        }
+      } else {
+        // ── TAB VISIBLE ──
+        resumePlayback();
+      }
+    };
+
+    // `pageshow` covers iOS Safari's BFCache / app-switcher return
+    const onPageShow = () => {
+      // pageshow always means we are visible again
+      resumePlayback();
+    };
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("pageshow", onPageShow);
+    // `focus` covers edge-cases on some Android browsers / PWAs
+    window.addEventListener("focus", resumePlayback);
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("pageshow", onPageShow);
+      window.removeEventListener("focus", resumePlayback);
+      clearRetries();
+    };
+  }, [resumeAmbienceFromGesture, rampMusicOutput]);
+
   useEffect(() => {
     if (!room || !apiReady) return;
     const player = playerRef.current;
@@ -702,7 +827,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       if (
         target instanceof Element &&
         target.closest(
-          'input, textarea, select, button, a, [contenteditable]:not([contenteditable="false"]), [role="button"], [role="link"], [role="slider"], [role="textbox"]',
+          'input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]), textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="searchbox"]',
         )
       ) {
         return;

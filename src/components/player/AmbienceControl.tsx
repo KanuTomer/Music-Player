@@ -18,7 +18,10 @@ export function AmbienceControl({
   return (
     <button
       type="button"
-      onClick={onToggle}
+      onClick={(e) => {
+        onToggle();
+        e.currentTarget.blur();
+      }}
       disabled={!available}
       aria-pressed={available ? enabled : undefined}
       aria-label={

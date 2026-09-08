@@ -131,6 +131,7 @@ function SeekBar({ compact = false }: { compact?: boolean }) {
           if (duration <= 0) return;
           const rect = event.currentTarget.getBoundingClientRect();
           player.seek(((event.clientX - rect.left) / rect.width) * duration);
+          event.currentTarget.blur();
         }}
         className="group relative flex h-4 min-w-8 flex-1 cursor-pointer items-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ember"
       >
@@ -170,7 +171,10 @@ function TransportButton({
       type="button"
       variant="ghost"
       size="icon"
-      onClick={action}
+      onClick={(e) => {
+        action();
+        e.currentTarget.blur();
+      }}
       aria-label={label}
       className={`${
         compact ? "size-7.5" : "size-7.5 sm:size-8"
@@ -186,7 +190,10 @@ function PlayButton({ compact = false }: { compact?: boolean }) {
   return (
     <Button
       type="button"
-      onClick={player.toggle}
+      onClick={(e) => {
+        player.toggle();
+        e.currentTarget.blur();
+      }}
       aria-label={player.isPlaying ? "Pause" : "Play"}
       size="icon"
       className={`${
@@ -255,13 +262,14 @@ export function FullCassettePlayer() {
               type="button"
               variant="ghost"
               size="icon"
-              onClick={() =>
+              onClick={(e) => {
                 shareCurrentSong(
                   player.room?.scene.slug ?? "sainik-dhaba",
                   player.track,
                   player.room?.scene.title_en,
-                )
-              }
+                );
+                e.currentTarget.blur();
+              }}
               aria-label="Share this song"
               title="Share this song"
               className="size-7 sm:size-7.5 rounded-full border border-white/15 bg-white/5 text-cream/75 transition-all hover:bg-white/20 hover:text-amber-300 hover:border-amber-400/50 hover:scale-105 active:scale-95 cursor-pointer"
@@ -294,7 +302,10 @@ export function FullCassettePlayer() {
             type="button"
             variant="ghost"
             size="icon"
-            onClick={() => setShowVolume((current) => !current)}
+            onClick={(e) => {
+              setShowVolume((current) => !current);
+              e.currentTarget.blur();
+            }}
             aria-expanded={showVolume}
             aria-label="Music volume"
             className={`size-7.5 sm:size-8 rounded-full border border-white/15 bg-white/5 text-cream/80 transition-all hover:bg-white/15 hover:text-cream hover:border-white/30 active:scale-95 ${
@@ -347,6 +358,23 @@ export function FullCassettePlayer() {
             step={1}
             aria-label="Music volume"
             onValueChange={(value) => player.setMusicVolume((value[0] ?? 0) / 100)}
+            onPointerUp={() => {
+              if (document.activeElement instanceof HTMLElement) {
+                document.activeElement.blur();
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+                e.preventDefault();
+                const currentTime = player.nowPlaying.position;
+                const duration = player.nowPlaying.duration;
+                if (e.key === "ArrowLeft") {
+                  player.seek(Math.max(0, currentTime - 5));
+                } else {
+                  player.seek(Math.min(duration > 0 ? duration : currentTime + 5, currentTime + 5));
+                }
+              }
+            }}
             className="flex-1"
           />
           <span className="w-8 text-right font-mono text-[11px] tabular-nums text-cream/70 font-semibold">
@@ -407,13 +435,14 @@ export function CompactCassettePlayer({ className = "" }: { className?: string }
               type="button"
               variant="ghost"
               size="icon"
-              onClick={() =>
+              onClick={(e) => {
                 shareCurrentSong(
                   player.room?.scene.slug ?? "sainik-dhaba",
                   player.track,
                   player.room?.scene.title_en,
-                )
-              }
+                );
+                e.currentTarget.blur();
+              }}
               aria-label="Share this song"
               title="Share this song"
               className="size-7.5 rounded-full border border-white/15 bg-white/5 text-cream/75 transition-all hover:bg-white/20 hover:text-amber-300 hover:border-amber-400/50 hover:scale-105 active:scale-95 cursor-pointer"
