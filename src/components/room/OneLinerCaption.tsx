@@ -18,6 +18,7 @@ export function OneLinerCaption({
   const [current, setCurrent] = useState<OneLiner | null>(null);
   const [visible, setVisible] = useState(false);
   const lastIndex = useRef(-1);
+  const currentRef = useRef<OneLiner | null>(null);
 
   useEffect(() => {
     const timeouts = new Set<number>();
@@ -34,29 +35,47 @@ export function OneLinerCaption({
       return timer;
     };
 
-    const fadeOut = () => {
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const fadeDuration = reducedMotion ? 0 : 900;
+
+    const clearCurrent = () => {
+      currentRef.current = null;
+      setCurrent(null);
+    };
+
+    const fadeOut = (after?: () => void) => {
       setVisible(false);
-      schedule(() => setCurrent(null), 900);
+      schedule(() => {
+        clearCurrent();
+        after?.();
+      }, fadeDuration + 20);
     };
 
     const showNext = () => {
       let index = Math.floor(Math.random() * lines.length);
       if (lines.length > 1 && index === lastIndex.current) index = (index + 1) % lines.length;
       lastIndex.current = index;
-      setCurrent(lines[index] ?? null);
+      const next = lines[index] ?? null;
+      currentRef.current = next;
+      setCurrent(next);
       setVisible(false);
-      const frame = window.requestAnimationFrame(() => {
-        frames.delete(frame);
-        if (!disposed) setVisible(true);
+      const firstFrame = window.requestAnimationFrame(() => {
+        frames.delete(firstFrame);
+        const secondFrame = window.requestAnimationFrame(() => {
+          frames.delete(secondFrame);
+          if (!disposed) setVisible(true);
+        });
+        frames.add(secondFrame);
       });
-      frames.add(frame);
+      frames.add(firstFrame);
       schedule(fadeOut, 15000);
     };
 
     if (!active || lines.length === 0) {
-      fadeOut();
+      if (currentRef.current) fadeOut();
     } else {
-      schedule(showNext, 600);
+      if (currentRef.current) fadeOut(() => schedule(showNext, 600));
+      else schedule(showNext, 600);
       idleTimer = window.setInterval(showNext, 45000);
     }
 
@@ -76,9 +95,7 @@ export function OneLinerCaption({
       className="pointer-events-none w-full px-2 text-center flex justify-center"
     >
       <div
-        className={`max-w-[21ch] transition-[opacity,transform] duration-[900ms] ease-in-out motion-reduce:transition-none sm:max-w-none ${
-          visible ? "scale-100 translate-y-0 opacity-100" : "scale-[0.98] translate-y-1 opacity-0"
-        }`}
+        className={`max-w-[21ch] transition-opacity duration-[900ms] ease-in-out motion-reduce:transition-none sm:max-w-none ${visible ? "opacity-100" : "opacity-0"}`}
       >
         <p
           lang="hi"

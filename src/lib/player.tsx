@@ -32,9 +32,17 @@ import {
   type AmbienceStatus,
 } from "./ambience";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  PLAYBACK_CHECKPOINT_KEY,
+  clampPlaybackPosition,
+  findCheckpointQueueIndex,
+  isRoomPlaybackPath,
+  readPlaybackCheckpoint,
+  type PlaybackCheckpoint,
+} from "./player-checkpoint";
 
 type YTPlayer = {
-  loadVideoById: (id: string) => void;
+  loadVideoById: (id: string | { videoId: string; startSeconds?: number }) => void;
   playVideo: () => void;
   pauseVideo: () => void;
   stopVideo: () => void;
@@ -160,6 +168,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const failedSourcesRef = useRef<Set<string>>(new Set());
   const failedItemsRef = useRef<Set<string>>(new Set());
   const sessionSeedRef = useRef<string | null>(null);
+  const pendingRestoreRef = useRef<{
+    queueItemId: string;
+    positionSeconds: number;
+  } | null>(null);
   const shuffledQueuesRef = useRef<Map<string, QueueItem[]>>(new Map());
   const ambienceSuppressedRef = useRef(false);
   const musicDuckRatioRef = useRef(1);
@@ -292,6 +304,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const cueCurrent = useCallback(
     (player: YTPlayer, autoplay: boolean) => {
       const source = queueRef.current[indexRef.current]?.sources[sourceIndexRef.current];
+      const queueItem = queueRef.current[indexRef.current];
       if (!source) {
         setMusicBlocked(true);
         return false;
@@ -301,7 +314,17 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       setMusicReady(false);
       setMusicBlocked(false);
       setNowPlaying(emptyNowPlaying(indexRef.current, queueRef.current.length));
-      player.loadVideoById(source.provider_item_id);
+      const pendingRestore = pendingRestoreRef.current;
+      const restorePosition =
+        pendingRestore && queueItem?.id === pendingRestore.queueItemId
+          ? clampPlaybackPosition(pendingRestore.positionSeconds)
+          : 0;
+      pendingRestoreRef.current = null;
+      player.loadVideoById(
+        restorePosition > 0
+          ? { videoId: source.provider_item_id, startSeconds: restorePosition }
+          : source.provider_item_id,
+      );
       const target = effectiveMusicVolume(
         volumeRef.current,
         ambienceActiveRef.current,
@@ -661,7 +684,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (!room || !apiReady) return;
     const player = playerRef.current;
     if (!player) {
-      buildPlayer(true);
+      buildPlayer(intendPlayRef.current);
       return;
     }
     if (!readyRef.current) return;
@@ -690,13 +713,28 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         }
         return;
       }
-      ambienceSuppressedRef.current = false;
-      intendPlayRef.current = true;
+      let checkpoint: PlaybackCheckpoint | null = null;
+      if (
+        !initialTrackId &&
+        typeof window !== "undefined" &&
+        isRoomPlaybackPath(window.location.pathname, nextRoom.scene.slug)
+      ) {
+        checkpoint = readPlaybackCheckpoint(window.sessionStorage, nextRoom.scene.slug);
+      }
+      if (checkpoint) sessionSeedRef.current = checkpoint.queueShuffleSeed;
+      ambienceSuppressedRef.current = checkpoint ? !checkpoint.ambienceEnabled : false;
+      intendPlayRef.current = checkpoint?.intendsToPlay ?? true;
       setIsPlaying(false);
       setMusicReady(false);
       setMusicBlocked(false);
-      setAmbienceEnabled(Boolean(nextRoom.ambience));
-      if (nextRoom.ambience) void resumeAmbienceFromGesture();
+      const shouldEnableAmbience = Boolean(nextRoom.ambience) && (checkpoint?.ambienceEnabled ?? true);
+      setAmbienceEnabled(shouldEnableAmbience);
+      if (shouldEnableAmbience && intendPlayRef.current) void resumeAmbienceFromGesture();
+      if (checkpoint) {
+        volumeRef.current = checkpoint.musicVolume;
+        outputVolumeRef.current = checkpoint.musicVolume;
+        setMusicVol(checkpoint.musicVolume);
+      }
       if (!sessionSeedRef.current && typeof window !== "undefined") {
         sessionSeedRef.current = createQueueSessionSeed();
       }
@@ -707,14 +745,18 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           nextRoom.curatedSet.shuffle_start && sessionSeedRef.current
             ? shuffleQueueForSession(eligible, sessionSeedRef.current, nextRoom.scene.slug)
             : eligible;
-        if (typeof window !== "undefined" && snapshot.length) {
+        if (typeof window !== "undefined" && snapshot.length && !checkpoint) {
           const firstTrackKey = `sd.queue-first.v1:${nextRoom.scene.slug}`;
-          snapshot = avoidRepeatedFirst(
-            snapshot,
-            window.sessionStorage.getItem(firstTrackKey),
-            (item) => item.id,
-          );
-          window.sessionStorage.setItem(firstTrackKey, snapshot[0]?.id ?? "");
+          try {
+            snapshot = avoidRepeatedFirst(
+              snapshot,
+              window.sessionStorage.getItem(firstTrackKey),
+              (item) => item.id,
+            );
+            window.sessionStorage.setItem(firstTrackKey, snapshot[0]?.id ?? "");
+          } catch {
+            // A blocked sessionStorage must not prevent room initialization.
+          }
         }
         shuffledQueuesRef.current.set(nextRoom.scene.slug, snapshot);
       }
@@ -742,12 +784,38 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           targetIndex = found;
         }
       }
+      const checkpointIndex = findCheckpointQueueIndex(snapshot, checkpoint, initialTrackId);
+      if (checkpoint && checkpointIndex === null) {
+        const matchingQueueItem = nextRoom.queue.find(
+          (item) => item.id === checkpoint.queueItemId,
+        ) ?? nextRoom.queue.find(
+          (item) => item.track.id === checkpoint.trackId,
+        );
+        if (matchingQueueItem) {
+          snapshot = [
+            matchingQueueItem,
+            ...snapshot.filter((item) => item.id !== matchingQueueItem.id),
+          ];
+          shuffledQueuesRef.current.set(nextRoom.scene.slug, snapshot);
+          targetIndex = 0;
+        }
+      } else if (checkpointIndex !== null) {
+        targetIndex = checkpointIndex;
+      }
 
       queueRef.current = snapshot;
       failedSourcesRef.current.clear();
       failedItemsRef.current.clear();
       setPlaylist(snapshot);
       setIndex(targetIndex);
+      const restoredItem = snapshot[targetIndex];
+      pendingRestoreRef.current =
+        checkpoint && restoredItem
+          ? {
+              queueItemId: restoredItem.id,
+              positionSeconds: checkpoint.positionSeconds,
+            }
+          : null;
       setRoom(nextRoom);
     },
     [cueCurrent, resumeAmbienceFromGesture, room, setIndex],
@@ -806,6 +874,50 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     },
     [rampMusicOutput],
   );
+  const savePlaybackCheckpoint = useCallback(() => {
+    if (
+      !room ||
+      typeof window === "undefined" ||
+      !sessionSeedRef.current ||
+      !isRoomPlaybackPath(window.location.pathname, room.scene.slug)
+    ) {
+      return;
+    }
+    const queueItem = queueRef.current[indexRef.current];
+    const player = playerRef.current;
+    if (!queueItem || !player || !readyRef.current) return;
+    try {
+      const positionSeconds = clampPlaybackPosition(
+        player.getCurrentTime() || 0,
+        player.getDuration(),
+      );
+      const checkpoint: PlaybackCheckpoint = {
+        version: 1,
+        sceneSlug: room.scene.slug,
+        queueItemId: queueItem.id,
+        trackId: queueItem.track.id,
+        positionSeconds,
+        intendsToPlay: intendPlayRef.current,
+        musicVolume: volumeRef.current,
+        ambienceEnabled,
+        queueShuffleSeed: sessionSeedRef.current,
+        updatedAt: Date.now(),
+      };
+      window.sessionStorage.setItem(PLAYBACK_CHECKPOINT_KEY, JSON.stringify(checkpoint));
+    } catch {
+      // Playback must remain usable when browser storage is unavailable.
+    }
+  }, [ambienceEnabled, room]);
+
+  useEffect(() => {
+    if (!room) return;
+    const timer = window.setInterval(savePlaybackCheckpoint, 2_000);
+    window.addEventListener("pagehide", savePlaybackCheckpoint);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("pagehide", savePlaybackCheckpoint);
+    };
+  }, [room, savePlaybackCheckpoint]);
   useEffect(() => {
     if (!room) return;
 
@@ -916,6 +1028,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setRoom(null);
     setPlaylist([]);
     queueRef.current = [];
+    pendingRestoreRef.current = null;
+    if (typeof window !== "undefined") {
+      try {
+        window.sessionStorage.removeItem(PLAYBACK_CHECKPOINT_KEY);
+      } catch {
+        // Storage can be blocked without affecting playback cleanup.
+      }
+    }
     shuffledQueuesRef.current.clear();
     expectedVideoIdRef.current = null;
     setIsPlaying(false);

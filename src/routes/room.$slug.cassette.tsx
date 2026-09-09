@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { SecretCassetteExperience } from "@/components/room/SecretCassetteExperience";
 import { loadRoomRoute } from "@/lib/room-route";
 import { buildSeoMeta } from "@/lib/seo";
+import { RoomRouteError } from "@/components/room/RoomRouteError";
 
 export const Route = createFileRoute("/room/$slug/cassette")({
   loader: ({ params }) => loadRoomRoute(params.slug, true),
@@ -15,6 +16,7 @@ export const Route = createFileRoute("/room/$slug/cassette")({
     }),
   }),
   component: CassettePage,
+  errorComponent: RoomRouteError,
 });
 
 function CassettePage() {

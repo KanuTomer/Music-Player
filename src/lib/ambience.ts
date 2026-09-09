@@ -86,9 +86,9 @@ export class AmbienceEngine {
   private level = 50;
   private sources = new Set<AudioBufferSourceNode>();
   private loopTimers = new Set<number>();
-  private eventTimer: number | null = null;
   private manualEventSource: AudioBufferSourceNode | null = null;
-  private cache = new Map<string, BufferedStem[]>();
+  private cache = new Map<string, Map<string, AudioBuffer>>();
+  private pendingLoads = new Set<AbortController>();
   private currentKey: string | null = null;
   private previousKey: string | null = null;
   private onStatus: (status: AmbienceStatus) => void = () => undefined;
@@ -129,7 +129,8 @@ export class AmbienceEngine {
   }
 
   async setProfile(key: string, profile: AmbienceProfile | null) {
-    const generation = ++this.generation;
+    ++this.generation;
+    this.abortPendingLoads();
     this.stopSources(this.profile?.fade_out_ms ?? ambienceTiming.defaultSwitchOutMs);
     this.profile = profile;
     this.previousKey = this.currentKey;
@@ -140,35 +141,10 @@ export class AmbienceEngine {
       this.onStatus("unavailable");
       return;
     }
-    this.onStatus("loading");
-    const cached = this.cache.get(key);
-    if (cached) {
-      this.buffers = cached;
-    } else {
-      const context = this.ensureContext();
-      const settled = await Promise.allSettled(
-        profile.stems.map(async (stem) => {
-          const response = await fetch(stem.url);
-          if (!response.ok) throw new Error(`Ambience asset ${response.status}`);
-          return { stem, buffer: await context.decodeAudioData(await response.arrayBuffer()) };
-        }),
-      );
-      if (generation !== this.generation) return;
-      this.buffers = settled.flatMap((result) =>
-        result.status === "fulfilled" ? [result.value] : [],
-      );
-      this.cache.set(key, this.buffers);
-      for (const cacheKey of [...this.cache.keys()]) {
-        if (cacheKey !== this.currentKey && cacheKey !== this.previousKey)
-          this.cache.delete(cacheKey);
-      }
-    }
-    if (generation !== this.generation) return;
-    const status = ambienceLoadStatus(this.buffers.length, profile.stems.length, false);
-    this.onEventReady(this.buffers.some(({ stem }) => stem.role === "event"));
-    this.onStatus(status);
-    if (status === "unavailable") return;
-    if (this.playing) this.startSources(profile.fade_in_ms);
+    this.restoreCachedBuffers();
+    this.onEventReady(profile.stems.some(({ role }) => role === "event"));
+    this.onStatus("idle");
+    if (this.playing) void this.loadAndStart(profile.fade_in_ms, this.generation);
   }
 
   setLevel(level: number) {
@@ -179,8 +155,75 @@ export class AmbienceEngine {
   setPlaying(playing: boolean) {
     if (this.playing === playing) return;
     this.playing = playing;
-    if (playing) this.startSources(ambienceTiming.resumeFadeMs);
-    else this.stopSources(ambienceTiming.pauseFadeMs);
+    if (playing) void this.loadAndStart(ambienceTiming.resumeFadeMs, this.generation);
+    else {
+      this.abortPendingLoads();
+      this.stopSources(ambienceTiming.pauseFadeMs);
+      if (this.profile) this.onStatus("idle");
+    }
+  }
+
+  private async loadAndStart(fadeInMilliseconds: number, generation: number) {
+    const profile = this.profile;
+    if (!profile || !this.playing || generation !== this.generation) return;
+    const loopStems = profile.stems.filter(({ role }) => role !== "event");
+    if (loopStems.length) {
+      this.onStatus("loading");
+      await this.ensureStems(loopStems, generation);
+    }
+    if (!this.playing || generation !== this.generation || profile !== this.profile) return;
+    const loadedLoops = this.buffers.filter(({ stem }) => stem.role !== "event");
+    if (loopStems.length && !loadedLoops.length) {
+      this.onStatus("unavailable");
+      return;
+    }
+    this.startSources(fadeInMilliseconds);
+  }
+
+  private async ensureStems(stems: AmbienceStem[], generation: number) {
+    const key = this.currentKey;
+    if (!key || generation !== this.generation) return;
+    let cached = this.cache.get(key);
+    if (!cached) {
+      cached = new Map();
+      this.cache.set(key, cached);
+    }
+    const context = this.ensureContext();
+    await Promise.allSettled(
+      stems.map(async (stem) => {
+        if (cached!.has(stem.url)) return;
+        const controller = new AbortController();
+        this.pendingLoads.add(controller);
+        try {
+          const response = await fetch(stem.url, { signal: controller.signal });
+          if (!response.ok) throw new Error(`Ambience asset ${response.status}`);
+          const buffer = await context.decodeAudioData(await response.arrayBuffer());
+          if (generation === this.generation && key === this.currentKey)
+            cached!.set(stem.url, buffer);
+        } finally {
+          this.pendingLoads.delete(controller);
+        }
+      }),
+    );
+    if (generation !== this.generation || key !== this.currentKey) return;
+    this.restoreCachedBuffers();
+    for (const cacheKey of [...this.cache.keys()]) {
+      if (cacheKey !== this.currentKey && cacheKey !== this.previousKey) this.cache.delete(cacheKey);
+    }
+  }
+
+  private restoreCachedBuffers() {
+    const cached = this.currentKey ? this.cache.get(this.currentKey) : null;
+    this.buffers =
+      this.profile?.stems.flatMap((stem) => {
+        const buffer = cached?.get(stem.url);
+        return buffer ? [{ stem, buffer }] : [];
+      }) ?? [];
+  }
+
+  private abortPendingLoads() {
+    for (const controller of this.pendingLoads) controller.abort();
+    this.pendingLoads.clear();
   }
 
   private rampMaster(milliseconds: number) {
@@ -194,7 +237,7 @@ export class AmbienceEngine {
   }
 
   private startSources(fadeInMilliseconds: number) {
-    if (!this.context || !this.compressor || !this.profile || !this.buffers.length || !this.playing)
+    if (!this.context || !this.compressor || !this.profile || !this.playing)
       return;
     this.stopSources(0);
     this.playing = true;
@@ -203,22 +246,25 @@ export class AmbienceEngine {
     for (const buffered of this.buffers.filter(({ stem }) => stem.role !== "event")) {
       this.scheduleLoop(buffered, this.context.currentTime + 0.05, generation);
     }
-    for (const buffered of this.buffers.filter(({ stem }) => stem.role === "event"))
-      this.scheduleAutomaticEvent(buffered, generation);
-    this.onStatus(ambienceLoadStatus(this.buffers.length, this.profile.stems.length, true));
+    for (const stem of this.profile.stems.filter(({ role }) => role === "event"))
+      this.scheduleAutomaticEvent(stem, generation);
+    const expected = this.profile.stems.filter(({ role }) => role !== "event").length;
+    const loaded = this.buffers.filter(({ stem }) => stem.role !== "event").length;
+    this.onStatus(expected === 0 ? "playing" : ambienceLoadStatus(loaded, expected, true));
   }
 
-  private scheduleAutomaticEvent(buffered: BufferedStem, generation: number) {
-    const stem = buffered.stem;
+  private scheduleAutomaticEvent(stem: AmbienceStem, generation: number) {
     const minimum = stem.event_min_seconds ?? 35;
     const maximum = stem.event_max_seconds ?? Math.max(minimum, 110);
     const schedule = () => {
       if (generation !== this.generation || !this.playing) return;
       const timer = window.setTimeout(
-        () => {
+        async () => {
           this.loopTimers.delete(timer);
           if (generation !== this.generation || !this.playing) return;
-          this.playAutomaticEvent(buffered, generation);
+          await this.ensureStems([stem], generation);
+          const buffered = this.buffers.find(({ stem: candidate }) => candidate.url === stem.url);
+          if (buffered) this.playAutomaticEvent(buffered, generation);
           schedule();
         },
         randomEventDelayMs(minimum, maximum),
@@ -291,9 +337,20 @@ export class AmbienceEngine {
   }
 
   async triggerEvent() {
-    const buffered = this.buffers.find(({ stem }) => stem.role === "event");
-    if (!buffered || !this.context || !this.compressor || !this.profile) return false;
+    const profile = this.profile;
+    const eventStem = profile?.stems.find(({ role }) => role === "event");
+    if (!eventStem || !profile) return false;
     await this.resumeFromGesture();
+    const generation = this.generation;
+    let buffered = this.buffers.find(({ stem }) => stem.url === eventStem.url);
+    if (!buffered) {
+      this.onEventReady(false);
+      await this.ensureStems([eventStem], generation);
+      if (generation !== this.generation || profile !== this.profile) return false;
+      buffered = this.buffers.find(({ stem }) => stem.url === eventStem.url);
+      this.onEventReady(true);
+    }
+    if (!buffered || !this.context || !this.compressor) return false;
     if (this.manualEventSource) {
       const outgoing = this.manualEventSource;
       this.manualEventSource = null;
@@ -306,7 +363,6 @@ export class AmbienceEngine {
       }
       outgoing.disconnect();
     }
-    const generation = this.generation;
     const source = this.context.createBufferSource();
     const gain = this.context.createGain();
     const now = this.context.currentTime;
@@ -355,8 +411,6 @@ export class AmbienceEngine {
   private stopSources(milliseconds: number) {
     for (const timer of this.loopTimers) window.clearTimeout(timer);
     this.loopTimers.clear();
-    if (this.eventTimer != null) window.clearTimeout(this.eventTimer);
-    this.eventTimer = null;
     this.manualEventSource = null;
     this.onEventPlaying(false);
     if (this.context && this.master) {
@@ -405,6 +459,7 @@ export class AmbienceEngine {
   destroy() {
     this.generation += 1;
     this.playing = false;
+    this.abortPendingLoads();
     this.stopSources(0);
     this.onEventReady(false);
     void this.context?.close();

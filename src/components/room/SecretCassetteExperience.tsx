@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { AmbienceControl } from "@/components/player/AmbienceControl";
 import { PhysicalCassettePlayer } from "@/components/player/PhysicalCassettePlayer";
 import { useLiveScenes } from "@/hooks/useLiveScenes";
+import { useRoomPresenceTracker } from "@/hooks/useRoomPresence";
 import { backgroundFor } from "@/lib/scene-art";
 import { isLightTextColor } from "@/lib/scene-presentation";
 import { usePlayer } from "@/lib/player";
@@ -15,6 +16,7 @@ export function SecretCassetteExperience({ room, scenes }: { room: RoomPayload; 
   const liveScenes = useLiveScenes(scenes);
   const scene = liveScenes.find((item) => item.id === room.scene.id) ?? room.scene;
   const lightText = isLightTextColor(scene.foreground_text_color);
+  useRoomPresenceTracker(scene.slug);
 
   useEffect(() => {
     openRoom(room);

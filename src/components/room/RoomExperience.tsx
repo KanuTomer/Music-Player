@@ -54,7 +54,7 @@ export function RoomExperience({
   };
   const player = usePlayer();
   useRoomAnalytics(scene.slug, player.isPlaying);
-  const social = useRoomSocial(`scene:${scene.slug}`);
+  const social = useRoomSocial(scene.slug);
   const sceneVideo = presentation.background_url ? null : videoForScene(scene.slug);
   const sceneVideoRef = useRef<HTMLVideoElement | null>(null);
   const explorerTriggerRef = useRef<HTMLButtonElement | null>(null);
