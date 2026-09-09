@@ -1,15 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import {
-  CHAT_LINK_BLOCKED_MESSAGE,
-  hasChatLink,
+  CHAT_CONTACT_BLOCKED_MESSAGE,
+  hasProhibitedChatContent,
   isAllowedChatMessageText,
   validateChatMessageText,
 } from "./chat-message";
 
 describe("live chat message validation", () => {
-  test("accepts ordinary messages and email addresses", () => {
+  test("accepts ordinary messages", () => {
     expect(validateChatMessageText("Aaj ka ambience mast hai!")).toBeNull();
-    expect(validateChatMessageText("Email me at hello@example.com")).toBeNull();
     expect(validateChatMessageText("a".repeat(300))).toBeNull();
     expect(isAllowedChatMessageText("Namaste dosto")).toBe(true);
   });
@@ -22,9 +21,11 @@ describe("live chat message validation", () => {
     "[room rules](/rules)",
     "Visit example.com for details",
     "(example.co.in), please avoid this",
-  ])("rejects a link: %s", (text) => {
-    expect(hasChatLink(text)).toBe(true);
-    expect(validateChatMessageText(text)).toBe(CHAT_LINK_BLOCKED_MESSAGE);
+    "Email me at hello@example.com",
+    "ADMIN@EXAMPLE.CO.IN",
+  ])("rejects prohibited contact-sharing content: %s", (text) => {
+    expect(hasProhibitedChatContent(text)).toBe(true);
+    expect(validateChatMessageText(text)).toBe(CHAT_CONTACT_BLOCKED_MESSAGE);
     expect(isAllowedChatMessageText(text)).toBe(false);
   });
 
