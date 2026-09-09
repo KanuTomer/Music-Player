@@ -4,6 +4,7 @@ import { MessageCircle, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { sendChatMessage } from "@/lib/rooms.functions";
+import { isAllowedChatMessageText, validateChatMessageText } from "@/lib/chat-message";
 import { randomDesiName } from "@/hooks/useRoomSocial";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -156,6 +157,8 @@ export function LiveChat({ roomKey, roomName, inlineLauncher = false }: LiveChat
         },
         (payload) => {
           const newMsg = payload.new as ChatMessage;
+          if (!isAllowedChatMessageText(newMsg.text)) return;
+
           setMessages((prev) => {
             // 1. Check if ID already exists (e.g. optimistic or broadcast already added it)
             const existingIndex = prev.findIndex((m) => m.id === newMsg.id);
@@ -185,6 +188,8 @@ export function LiveChat({ roomKey, roomName, inlineLauncher = false }: LiveChat
       )
       .on("broadcast", { event: "chat_message" }, ({ payload }) => {
         const newMsg = payload as ChatMessage;
+        if (!isAllowedChatMessageText(newMsg.text)) return;
+
         setMessages((prev) => {
           // Guard against existing ID
           if (prev.some((m) => m.id === newMsg.id)) return prev;
@@ -221,12 +226,20 @@ export function LiveChat({ roomKey, roomName, inlineLauncher = false }: LiveChat
     const senderName = nameToUse || displayName;
     if (!senderName) return;
 
+    const textError = validateChatMessageText(text);
+    if (textError) {
+      toast.error(textError);
+      return;
+    }
+
+    const messageText = text.trim();
+
     const tempId = crypto.randomUUID();
     const tempMsg: ChatMessage = {
       id: tempId,
       room_key: roomKey,
       session_display_name: senderName,
-      text,
+      text: messageText,
       is_ai_host: false,
       created_at: new Date().toISOString(),
       expires_at: new Date(Date.now() + 45 * 60 * 1000).toISOString(),
@@ -255,7 +268,7 @@ export function LiveChat({ roomKey, roomName, inlineLauncher = false }: LiveChat
         data: {
           roomKey,
           displayName: senderName,
-          text,
+          text: messageText,
           id: tempId,
         },
       });
@@ -267,6 +280,12 @@ export function LiveChat({ roomKey, roomName, inlineLauncher = false }: LiveChat
   const handleMessageSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!typedMessage.trim()) return;
+
+    const textError = validateChatMessageText(typedMessage);
+    if (textError) {
+      toast.error(textError);
+      return;
+    }
 
     if (!displayName) {
       setNameInput(randomDesiName());

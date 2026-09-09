@@ -8,6 +8,7 @@ import {
   recordSourceFailure,
 } from "./rooms.server";
 import { recordListening, registerRoomVisit } from "./admin.server";
+import { validateChatMessageText } from "./chat-message";
 
 export type Scene = {
   id: string;
@@ -182,8 +183,8 @@ export const sendChatMessage = createServerFn({ method: "POST" })
 
     if (!roomKey) throw new Error("Room key is required");
     if (!displayName || displayName.length > 50) throw new Error("Invalid display name");
-    if (!text || text.length > 300)
-      throw new Error("Message text must be between 1 and 300 characters");
+    const textError = validateChatMessageText(text);
+    if (textError) throw new Error(textError);
 
     return { roomKey, displayName, text, id };
   })
