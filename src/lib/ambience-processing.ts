@@ -8,6 +8,13 @@ export const ambienceProcessing = {
 };
 
 export type DecodedWav = { samples: Float32Array; sampleRate: number; durationSeconds: number };
+export type PreparedAmbiencePcm = {
+  samples: Float32Array;
+  sampleRate: number;
+  durationSeconds: number;
+  selectedStartSeconds: number;
+  selectedDurationSeconds: number;
+};
 export type PreparedAmbience = {
   blob: Blob;
   durationSeconds: number;
@@ -146,6 +153,19 @@ export function prepareAmbienceWav(
   startSeconds: number,
   durationSeconds: number,
 ): PreparedAmbience {
+  const prepared = prepareAmbiencePcm(decoded, role, startSeconds, durationSeconds);
+  const blob = encodeWav(prepared.samples);
+  if (blob.size > ambienceProcessing.maxPlaybackBytes)
+    throw new Error("The prepared playback file exceeds 12 MiB.");
+  return { ...prepared, blob };
+}
+
+export function prepareAmbiencePcm(
+  decoded: DecodedWav,
+  role: AmbienceRole,
+  startSeconds: number,
+  durationSeconds: number,
+): PreparedAmbiencePcm {
   const maximum = ambienceProcessing.maxDurationSeconds[role];
   const start = Math.max(0, Math.min(startSeconds, decoded.durationSeconds - 0.1));
   const duration = Math.max(
@@ -154,13 +174,13 @@ export function prepareAmbienceWav(
   );
   const first = Math.floor(start * decoded.sampleRate);
   const last = Math.min(decoded.samples.length, Math.ceil((start + duration) * decoded.sampleRate));
-  const blob = encodeWav(
-    fadeAndNormalize(resample(decoded.samples.slice(first, last), decoded.sampleRate), role),
+  const samples = fadeAndNormalize(
+    resample(decoded.samples.slice(first, last), decoded.sampleRate),
+    role,
   );
-  if (blob.size > ambienceProcessing.maxPlaybackBytes)
-    throw new Error("The prepared playback file exceeds 12 MiB.");
   return {
-    blob,
+    samples,
+    sampleRate: ambienceProcessing.sampleRate,
     durationSeconds: (last - first) / decoded.sampleRate,
     selectedStartSeconds: start,
     selectedDurationSeconds: duration,

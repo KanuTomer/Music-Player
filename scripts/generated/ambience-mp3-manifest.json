@@ -1,0 +1,185 @@
+{
+  "format": "MP3 CBR 64 kbps, mono, 32000 Hz",
+  "assets": [
+    {
+      "oldStoragePath": "rooms/bartan-time/ambience/base.wav",
+      "newStoragePath": "rooms/bartan-time/ambience/base-6d3a53de81f1250e.mp3",
+      "role": "base",
+      "bytes": 263124,
+      "durationSeconds": 32.868,
+      "sha256": "6D3A53DE81F1250EF15EBF3D36D37792282942DE8BF00A61397AE764CF5170A8",
+      "outputFile": "../milestone-assets/milestone-5-mp3/rooms/bartan-time/ambience/base-6d3a53de81f1250e.mp3"
+    },
+    {
+      "oldStoragePath": "rooms/bartan-time/ambience/event.wav",
+      "newStoragePath": "rooms/bartan-time/ambience/event-71c165facb711dac.mp3",
+      "role": "event",
+      "bytes": 96660,
+      "durationSeconds": 12.06,
+      "sha256": "71C165FACB711DAC42338EAD679E10BEB334912AEDBF6F36AA125ECB4C9E87EC",
+      "outputFile": "../milestone-assets/milestone-5-mp3/rooms/bartan-time/ambience/event-71c165facb711dac.mp3"
+    },
+    {
+      "oldStoragePath": "rooms/bartan-time/ambience/texture.wav",
+      "newStoragePath": "rooms/bartan-time/ambience/texture-6152bfef2a16e1bd.mp3",
+      "role": "texture",
+      "bytes": 480564,
+      "durationSeconds": 60.048,
+      "sha256": "6152BFEF2A16E1BD31DE15BA7E3A0FADC7FAA05CF4D1E87C4526FDF40DF54D51",
+      "outputFile": "../milestone-assets/milestone-5-mp3/rooms/bartan-time/ambience/texture-6152bfef2a16e1bd.mp3"
+    },
+    {
+      "oldStoragePath": "rooms/bus-driver/ambience/base.wav",
+      "newStoragePath": "rooms/bus-driver/ambience/base-2d04e20a436d7eaa.mp3",
+      "role": "base",
+      "bytes": 720468,
+      "durationSeconds": 90.036,
+      "sha256": "2D04E20A436D7EAA511C1653E44432182EED4E695A88B945D14F7CEF756DBB6E",
+      "outputFile": "../milestone-assets/milestone-5-mp3/rooms/bus-driver/ambience/base-2d04e20a436d7eaa.mp3"
+    },
+    {
+      "oldStoragePath": "rooms/bus-driver/ambience/event.wav",
+      "newStoragePath": "rooms/bus-driver/ambience/event-348ad9a607982d4a.mp3",
+      "role": "event",
+      "bytes": 36180,
+      "durationSeconds": 4.5,
+      "sha256": "348AD9A607982D4A83A287FBF1A7DD7F6F0E18C82F764B3676FC9458CC663446",
+      "outputFile": "../milestone-assets/milestone-5-mp3/rooms/bus-driver/ambience/event-348ad9a607982d4a.mp3"
+    },
+    {
+      "oldStoragePath": "rooms/corporate-majdoor/ambience/base.wav",
+      "newStoragePath": "rooms/corporate-majdoor/ambience/base-304d53750faf5206.mp3",
+      "role": "base",
+      "bytes": 448020,
+      "durationSeconds": 55.98,
+      "sha256": "304D53750FAF5206080CF74DE5B6E5BE5AEA8E5D7A712C1C3C4FB956864D652C",
+      "outputFile": "../milestone-assets/milestone-5-mp3/rooms/corporate-majdoor/ambience/base-304d53750faf5206.mp3"
+    },
+    {
+      "oldStoragePath": "rooms/corporate-majdoor/ambience/event.wav",
+      "newStoragePath": "rooms/corporate-majdoor/ambience/event-2275dc4dc9e80cf3.mp3",
+      "role": "event",
+      "bytes": 96660,
+      "durationSeconds": 12.06,
+      "sha256": "2275DC4DC9E80CF3D7F9AF4BAD718946C048D7142E98F2F161396C826CDF856F",
+      "outputFile": "../milestone-assets/milestone-5-mp3/rooms/corporate-majdoor/ambience/event-2275dc4dc9e80cf3.mp3"
+    },
+    {
+      "oldStoragePath": "rooms/corporate-majdoor/ambience/texture.wav",
+      "newStoragePath": "rooms/corporate-majdoor/ambience/texture-6d885609de92bfeb.mp3",
+      "role": "texture",
+      "bytes": 47124,
+      "durationSeconds": 5.868,
+      "sha256": "6D885609DE92BFEBF08994A0BDC8C8D7B73DDB9F0CB54FFCABCD06377B549136",
+      "outputFile": "../milestone-assets/milestone-5-mp3/rooms/corporate-majdoor/ambience/texture-6d885609de92bfeb.mp3"
+    },
+    {
+      "oldStoragePath": "rooms/nai-ki-dukaan/ambience/base.wav",
+      "newStoragePath": "rooms/nai-ki-dukaan/ambience/base-1cf3ba7c6db25983.mp3",
+      "role": "base",
+      "bytes": 720468,
+      "durationSeconds": 90.036,
+      "sha256": "1CF3BA7C6DB259836CA9C4BA55700E520D3B5CE8497BC8906614B07D0E4FCBCE",
+      "outputFile": "../milestone-assets/milestone-5-mp3/rooms/nai-ki-dukaan/ambience/base-1cf3ba7c6db25983.mp3"
+    },
+    {
+      "oldStoragePath": "rooms/nai-ki-dukaan/ambience/event.wav",
+      "newStoragePath": "rooms/nai-ki-dukaan/ambience/event-e1d1abd83b8047fb.mp3",
+      "role": "event",
+      "bytes": 96660,
+      "durationSeconds": 12.06,
+      "sha256": "E1D1ABD83B8047FB2691584129F1651E2D0C0E35258E060F8E9542A195393733",
+      "outputFile": "../milestone-assets/milestone-5-mp3/rooms/nai-ki-dukaan/ambience/event-e1d1abd83b8047fb.mp3"
+    },
+    {
+      "oldStoragePath": "rooms/nai-ki-dukaan/ambience/texture.wav",
+      "newStoragePath": "rooms/nai-ki-dukaan/ambience/texture-65d76d0c241ee5e6.mp3",
+      "role": "texture",
+      "bytes": 317268,
+      "durationSeconds": 39.636,
+      "sha256": "65D76D0C241EE5E60533062C50DEDDA70C788406198EFA93B2F5F7A4A14C44DB",
+      "outputFile": "../milestone-assets/milestone-5-mp3/rooms/nai-ki-dukaan/ambience/texture-65d76d0c241ee5e6.mp3"
+    },
+    {
+      "oldStoragePath": "rooms/papa-ke-gaane/ambience/base.wav",
+      "newStoragePath": "rooms/papa-ke-gaane/ambience/base-586b4f9e0f47a66a.mp3",
+      "role": "base",
+      "bytes": 128628,
+      "durationSeconds": 16.056,
+      "sha256": "586B4F9E0F47A66A77AD6D1A4A57F3A9A2A71E2061E0A31B460A25CEF21839D9",
+      "outputFile": "../milestone-assets/milestone-5-mp3/rooms/papa-ke-gaane/ambience/base-586b4f9e0f47a66a.mp3"
+    },
+    {
+      "oldStoragePath": "rooms/papa-ke-gaane/ambience/event.wav",
+      "newStoragePath": "rooms/papa-ke-gaane/ambience/event-261d27fca2add927.mp3",
+      "role": "event",
+      "bytes": 36180,
+      "durationSeconds": 4.5,
+      "sha256": "261D27FCA2ADD927F3C3514AA8F83652B03B0BC35EFB2226568B88AA17D6A5A2",
+      "outputFile": "../milestone-assets/milestone-5-mp3/rooms/papa-ke-gaane/ambience/event-261d27fca2add927.mp3"
+    },
+    {
+      "oldStoragePath": "rooms/papa-ke-gaane/ambience/texture.wav",
+      "newStoragePath": "rooms/papa-ke-gaane/ambience/texture-905f6020a8431ce1.mp3",
+      "role": "texture",
+      "bytes": 56340,
+      "durationSeconds": 7.02,
+      "sha256": "905F6020A8431CE1F88C455025DEC3B7E73C23131A6D4ABDD9AFD2651893AFC2",
+      "outputFile": "../milestone-assets/milestone-5-mp3/rooms/papa-ke-gaane/ambience/texture-905f6020a8431ce1.mp3"
+    },
+    {
+      "oldStoragePath": "rooms/raj-mistri/ambience/base.wav",
+      "newStoragePath": "rooms/raj-mistri/ambience/base-9478ff96013cbad7.mp3",
+      "role": "base",
+      "bytes": 720468,
+      "durationSeconds": 90.036,
+      "sha256": "9478FF96013CBAD72962FBD008AA79A9863D12920FA6D0EB6F97FF0E39902E12",
+      "outputFile": "../milestone-assets/milestone-5-mp3/rooms/raj-mistri/ambience/base-9478ff96013cbad7.mp3"
+    },
+    {
+      "oldStoragePath": "rooms/raj-mistri/ambience/event.wav",
+      "newStoragePath": "rooms/raj-mistri/ambience/event-06e6cb11f6c5ac10.mp3",
+      "role": "event",
+      "bytes": 120564,
+      "durationSeconds": 15.048,
+      "sha256": "06E6CB11F6C5AC100A216BF66906AD7ACE3C894D6BDC7376994C4C6F767D5181",
+      "outputFile": "../milestone-assets/milestone-5-mp3/rooms/raj-mistri/ambience/event-06e6cb11f6c5ac10.mp3"
+    },
+    {
+      "oldStoragePath": "rooms/raj-mistri/ambience/texture.wav",
+      "newStoragePath": "rooms/raj-mistri/ambience/texture-625b6904c64f6d8b.mp3",
+      "role": "texture",
+      "bytes": 480564,
+      "durationSeconds": 60.048,
+      "sha256": "625B6904C64F6D8B2498A3C0F3C23EE119D59058F3318D82BF010A5208B97A72",
+      "outputFile": "../milestone-assets/milestone-5-mp3/rooms/raj-mistri/ambience/texture-625b6904c64f6d8b.mp3"
+    },
+    {
+      "oldStoragePath": "rooms/sainik-dhaba/ambience/event.wav",
+      "newStoragePath": "rooms/sainik-dhaba/ambience/event-9a46839c916c6e91.mp3",
+      "role": "event",
+      "bytes": 112500,
+      "durationSeconds": 14.04,
+      "sha256": "9A46839C916C6E916311F80F236CF2B6619BE1D20240084E9101F653FC14869C",
+      "outputFile": "../milestone-assets/milestone-5-mp3/rooms/sainik-dhaba/ambience/event-9a46839c916c6e91.mp3"
+    },
+    {
+      "oldStoragePath": "rooms/sainik-dhaba/ambience/texture.wav",
+      "newStoragePath": "rooms/sainik-dhaba/ambience/texture-ced4a41a2008f0af.mp3",
+      "role": "texture",
+      "bytes": 480564,
+      "durationSeconds": 60.048,
+      "sha256": "CED4A41A2008F0AF9E92C92CDA2A54DCCDE0AEF889EE37BD66E8D3D1E71BBC3F",
+      "outputFile": "../milestone-assets/milestone-5-mp3/rooms/sainik-dhaba/ambience/texture-ced4a41a2008f0af.mp3"
+    },
+    {
+      "oldStoragePath": "shared/indian-highway.wav",
+      "newStoragePath": "shared/indian-highway-91754718fdd39c5d.mp3",
+      "role": "base",
+      "bytes": 720468,
+      "durationSeconds": 90.036,
+      "sha256": "91754718FDD39C5DE3D67752DE046B5E8562D6E1871FE72E336FD8EBD0590938",
+      "outputFile": "../milestone-assets/milestone-5-mp3/shared/indian-highway-91754718fdd39c5d.mp3"
+    }
+  ]
+}

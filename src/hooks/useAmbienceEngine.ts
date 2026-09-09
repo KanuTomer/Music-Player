@@ -45,7 +45,7 @@ export function useAmbienceEngine(room: RoomPayload | null, enabled: boolean, le
     eventPulse,
     eventReady,
     eventPlaying,
-    active: enabled && level > 0 && status !== "unavailable",
+    active: enabled && level > 0 && (status === "playing" || status === "partial"),
     resumeFromGesture,
     triggerEvent,
   };
