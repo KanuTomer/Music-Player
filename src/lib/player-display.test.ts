@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   getPlayerDisplay,
+  getLiveEqualizerPresentation,
   nextAmbienceToggle,
   normalizeAmbienceLevel,
   readableTitle,
@@ -39,6 +40,18 @@ describe("player display", () => {
       coverId: "abc",
       status: "unavailable",
     });
+  });
+});
+
+describe("live player status", () => {
+  test("uses distinct widths for loading, paused, and playing states", () => {
+    expect(getLiveEqualizerPresentation(false, "loading")).toEqual({
+      mode: "loading",
+      label: "ट्यून",
+      width: "4.25rem",
+    });
+    expect(getLiveEqualizerPresentation(false, "ready").width).toBe("5.4rem");
+    expect(getLiveEqualizerPresentation(true, "ready").width).toBe("6rem");
   });
 });
 

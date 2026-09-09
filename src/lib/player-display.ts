@@ -51,6 +51,21 @@ export function nextAmbienceToggle(enabled: boolean, level: number) {
   };
 }
 
+export type LiveEqualizerPresentation = {
+  label: string;
+  mode: "loading" | "paused" | "playing";
+  width: "4.25rem" | "5.4rem" | "6rem";
+};
+
+export function getLiveEqualizerPresentation(
+  isPlaying: boolean,
+  status: string,
+): LiveEqualizerPresentation {
+  if (status === "loading") return { mode: "loading", label: "ट्यून", width: "4.25rem" };
+  if (isPlaying) return { mode: "playing", label: "बज रहा है", width: "6rem" };
+  return { mode: "paused", label: "रोक दिया", width: "5.4rem" };
+}
+
 export type PlayerDisplay = {
   title: string;
   subtitle: string;
