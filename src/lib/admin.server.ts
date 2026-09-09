@@ -1,25 +1,41 @@
 import { getRequest } from "@tanstack/react-start/server";
-import { createHash, randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import type { Database } from "@/integrations/supabase/types";
 import { ambienceProcessing, type AmbienceRole } from "./ambience-processing";
+import { ambienceMp3, validateAmbienceMp3 } from "./mp3-audio";
 
-type AdminClient = {
-  // These admin-only tables and RPCs are introduced by the migration in this
-  // change and are not present in the checked-in generated Supabase types yet.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  from: (table: string) => any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  rpc: (name: string, args?: Record<string, unknown>) => any;
-  auth: {
-    getUser: (
-      token: string,
-    ) => Promise<{ data: { user: { id: string; email?: string } | null }; error: Error | null }>;
-  };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  storage: any;
-};
+const serviceAdmin = supabaseAdmin;
 
-const admin = supabaseAdmin as unknown as AdminClient;
+function requestAccessToken() {
+  const authorization = getRequest()?.headers.get("authorization");
+  return authorization?.match(/^Bearer\s+(.+)$/i)?.[1] ?? null;
+}
+
+function requestAdminClient(): SupabaseClient<Database> {
+  const token = requestAccessToken();
+  if (!token) throw new Error("Sign in is required");
+  const url = process.env["SUPABASE_URL"];
+  const key = process.env["SUPABASE_PUBLISHABLE_KEY"];
+  if (!url || !key) throw new Error("Admin authentication is unavailable");
+  return createClient<Database>(url, key, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+    auth: { persistSession: false, autoRefreshToken: false, storage: undefined },
+  });
+}
+
+// All database work in an admin request uses the caller's JWT, so grants and RLS
+// remain the final authorization boundary. Storage signing and inspection are the
+// only capabilities that continue to use the server-only secret client.
+const admin = new Proxy({} as SupabaseClient<Database>, {
+  get(_target, property) {
+    if (property === "storage") return serviceAdmin.storage;
+    const client = requestAdminClient() as unknown as Record<PropertyKey, unknown>;
+    const value = client[property];
+    return typeof value === "function" ? value.bind(client) : value;
+  },
+});
 const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
 
 export type AdminTrack = {
@@ -171,19 +187,31 @@ export function countTrackUses(rows: Array<{ track_id: string }>) {
 }
 
 export async function requireAdmin(): Promise<{ id: string; email?: string }> {
-  const request = getRequest();
-  const authorization = request?.headers.get("authorization");
-  const token = authorization?.match(/^Bearer\s+(.+)$/i)?.[1];
+  const token = requestAccessToken();
   if (!token) throw new Error("Sign in is required");
-  const { data, error } = await admin.auth.getUser(token);
-  if (error || !data.user) throw new Error("Your sign-in session is invalid");
-  const { data: role, error: roleError } = await admin
-    .from("app_admins")
-    .select("user_id")
-    .eq("user_id", data.user.id)
-    .maybeSingle();
-  if (roleError || !role) throw new Error("Administrator access is required");
-  return data.user;
+  const { data, error } = await admin.auth.getClaims(token);
+  if (error || !data.claims?.sub) throw new Error("Your sign-in session is invalid");
+  const { data: status, error: statusError } = await admin.rpc("admin_onboarding_status");
+  if (statusError) throw new Error("Unable to verify administrator access");
+  if (status === "not_authorized") throw new Error("Administrator access is required");
+  if (status !== "ready") throw new Error("Administrator MFA verification is required");
+  return {
+    id: data.claims.sub,
+    ...(typeof data.claims.email === "string" ? { email: data.claims.email } : {}),
+  };
+}
+
+export type AdminOnboardingStatus =
+  "not_authorized" | "mfa_enrollment_required" | "mfa_challenge_required" | "ready";
+
+export async function getAdminOnboardingStatus(): Promise<AdminOnboardingStatus> {
+  const token = requestAccessToken();
+  if (!token) throw new Error("Sign in is required");
+  const { data: userData, error: userError } = await admin.auth.getClaims(token);
+  if (userError || !userData.claims?.sub) throw new Error("Your sign-in session is invalid");
+  const { data, error } = await admin.rpc("admin_onboarding_status");
+  if (error) throw new Error("Unable to verify administrator access");
+  return data as AdminOnboardingStatus;
 }
 
 async function activeScenes(): Promise<AdminScene[]> {
@@ -473,7 +501,7 @@ export async function getAdminAnalytics(since?: string): Promise<AnalyticsRow[]>
   await requireAdmin();
   const [sceneResult, visitResult] = await Promise.all([
     admin.from("scenes").select("id, slug, title_en").eq("is_live", true).order("sort_order"),
-    admin.rpc("admin_room_analytics", { p_since: since ?? null }),
+    admin.rpc("admin_secured_room_analytics", { p_since: since ?? null }),
   ]);
   if (sceneResult.error) throw new Error(sceneResult.error.message);
   if (visitResult.error) throw new Error(visitResult.error.message);
@@ -501,10 +529,9 @@ export async function getAdminAnalytics(since?: string): Promise<AnalyticsRow[]>
 
 export async function getAdminAmbience(sceneId: string): Promise<{
   ambience: AdminAmbience | null;
-  assets: AdminAsset[];
 }> {
   await requireAdmin();
-  const [profileResult, stemResult, assetResult] = await Promise.all([
+  const [profileResult, stemResult] = await Promise.all([
     admin
       .from("ambience_profiles")
       .select(
@@ -520,15 +547,9 @@ export async function getAdminAmbience(sceneId: string): Promise<{
       .eq("scene_id", sceneId)
       .not("asset_id", "is", null)
       .order("sort_order"),
-    admin
-      .from("ambience_assets")
-      .select("id, storage_path, byte_size, duration_seconds")
-      .eq("is_active", true)
-      .order("created_at", { ascending: false }),
   ]);
   if (profileResult.error) throw new Error(profileResult.error.message);
   if (stemResult.error) throw new Error(stemResult.error.message);
-  if (assetResult.error) throw new Error(assetResult.error.message);
   const profile = profileResult.data;
   return {
     ambience: profile
@@ -558,14 +579,24 @@ export async function getAdminAmbience(sceneId: string): Promise<{
           })),
         }
       : null,
-    assets: (assetResult.data ?? []).map((asset: RawAmbienceAsset) => ({
-      id: asset.id,
-      storagePath: asset.storage_path,
-      byteSize: Number(asset.byte_size),
-      durationSeconds: Number(asset.duration_seconds),
-      publicUrl: publicStorageUrl("ambience-audio", asset.storage_path) ?? "",
-    })),
   };
+}
+
+export async function getAdminAmbienceAssets(): Promise<AdminAsset[]> {
+  await requireAdmin();
+  const { data, error } = await admin
+    .from("ambience_assets")
+    .select("id, storage_path, byte_size, duration_seconds")
+    .eq("is_active", true)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((asset: RawAmbienceAsset) => ({
+    id: asset.id,
+    storagePath: asset.storage_path,
+    byteSize: Number(asset.byte_size),
+    durationSeconds: Number(asset.duration_seconds),
+    publicUrl: publicStorageUrl("ambience-audio", asset.storage_path) ?? "",
+  }));
 }
 
 export async function getAdminBackground(sceneId: string): Promise<AdminBackground> {
@@ -663,18 +694,15 @@ export async function saveAmbienceProfile(input: {
   audioTheme: unknown;
 }) {
   await requireAdmin();
-  const payload = {
-    scene_id: String(input.sceneId),
-    enabled: Boolean(input.enabled),
-    max_master_gain: numberInRange(input.maxMasterGain, 0, 1, "master volume"),
-    music_duck_ratio: numberInRange(input.musicDuckRatio, 0, 1, "music volume"),
-    fade_in_ms: Math.round(numberInRange(input.fadeInMs, 0, 10000, "fade in")),
-    fade_out_ms: Math.round(numberInRange(input.fadeOutMs, 0, 10000, "fade out")),
-    audio_theme: normalizeTheme(input.audioTheme),
-  };
-  const { error } = await admin
-    .from("ambience_profiles")
-    .upsert(payload, { onConflict: "scene_id" });
+  const { error } = await admin.rpc("admin_secured_save_ambience_profile", {
+    p_scene_id: String(input.sceneId),
+    p_enabled: Boolean(input.enabled),
+    p_max_master_gain: numberInRange(input.maxMasterGain, 0, 1, "master volume"),
+    p_music_duck_ratio: numberInRange(input.musicDuckRatio, 0, 1, "music volume"),
+    p_fade_in_ms: Math.round(numberInRange(input.fadeInMs, 0, 10000, "fade in")),
+    p_fade_out_ms: Math.round(numberInRange(input.fadeOutMs, 0, 10000, "fade out")),
+    p_audio_theme: normalizeTheme(input.audioTheme),
+  });
   if (error) throw new Error(error.message);
 }
 
@@ -714,74 +742,59 @@ export async function saveAmbienceStem(input: {
     input.role === "event" && input.eventMaxSeconds != null
       ? Math.round(numberInRange(input.eventMaxSeconds, eventMin ?? 5, 3600, "effect delay"))
       : null;
-  const payload = {
-    scene_id: input.sceneId,
-    name: input.name.trim(),
-    role: input.role,
-    asset_id: input.assetId,
-    is_active: Boolean(input.isActive),
-    sort_order: Math.max(0, Math.round(Number(input.sortOrder) || 0)),
-    default_volume: defaultVolume,
-    min_gain: minGain,
-    max_gain: maxGain,
-    crossfade_ms: Math.round(numberInRange(input.crossfadeMs, 0, 10000, "crossfade")),
-    loop_start_seconds: loopStart,
-    loop_end_seconds: loopEnd,
-    event_min_seconds: eventMin,
-    event_max_seconds: eventMax,
-    category: "ambient",
-    synth_key: "sample",
-  };
-  const query = input.id
-    ? admin.from("sound_stems").update(payload).eq("id", input.id)
-    : admin.from("sound_stems").insert(payload);
-  const { error } = await query;
+  const { error } = await admin.rpc("admin_secured_save_ambience_stem", {
+    p_id: input.id ?? null,
+    p_scene_id: input.sceneId,
+    p_name: input.name.trim(),
+    p_role: input.role,
+    p_asset_id: input.assetId,
+    p_is_active: Boolean(input.isActive),
+    p_sort_order: Math.max(0, Math.round(Number(input.sortOrder) || 0)),
+    p_default_volume: defaultVolume,
+    p_min_gain: minGain,
+    p_max_gain: maxGain,
+    p_crossfade_ms: Math.round(numberInRange(input.crossfadeMs, 0, 10000, "crossfade")),
+    p_loop_start_seconds: loopStart,
+    p_loop_end_seconds: loopEnd,
+    p_event_min_seconds: eventMin,
+    p_event_max_seconds: eventMax,
+  });
   if (error) throw new Error(error.message);
 }
 
 export async function deactivateAmbienceStem(stemId: string) {
   await requireAdmin();
-  const { error } = await admin
-    .from("sound_stems")
-    .update({ is_active: false })
-    .eq("id", String(stemId));
+  const { error } = await admin.rpc("admin_secured_deactivate_ambience_stem", {
+    p_stem_id: String(stemId),
+  });
   if (error) throw new Error(error.message);
-}
-
-function inspectPlaybackWav(data: Buffer, role: AmbienceRole) {
-  const decoded = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
-  const view = new DataView(decoded);
-  if (
-    data.length < 44 ||
-    data.toString("ascii", 0, 4) !== "RIFF" ||
-    data.toString("ascii", 8, 12) !== "WAVE"
-  )
-    throw new Error("Prepared audio is not WAV");
-  if (
-    view.getUint16(20, true) !== 1 ||
-    view.getUint16(22, true) !== 1 ||
-    view.getUint32(24, true) !== ambienceProcessing.sampleRate ||
-    view.getUint16(34, true) !== 16
-  )
-    throw new Error("Prepared audio must be 32 kHz mono PCM16 WAV");
-  const duration = view.getUint32(40, true) / (ambienceProcessing.sampleRate * 2);
-  if (
-    duration <= 0 ||
-    duration > ambienceProcessing.maxDurationSeconds[role] + 0.01 ||
-    data.length > ambienceProcessing.maxPlaybackBytes
-  )
-    throw new Error("Prepared audio exceeds the role limit");
-  return duration;
 }
 
 export async function reserveAmbienceUpload(sceneSlug: string) {
   await requireAdmin();
-  const safeSlug = String(sceneSlug).replace(/[^a-z0-9-]/gi, "");
-  if (!safeSlug) throw new Error("Invalid Jagah");
-  const path = `rooms/${safeSlug}/ambience/${randomUUID()}.wav`;
-  const { data, error } = await admin.storage.from("ambience-audio").createSignedUploadUrl(path);
+  const { data: scene, error: sceneError } = await admin
+    .from("scenes")
+    .select("id")
+    .eq("slug", String(sceneSlug))
+    .eq("is_live", true)
+    .single();
+  if (sceneError || !scene) throw new Error("Jagah not found");
+  const { data: rows, error: reservationError } = await admin.rpc(
+    "admin_create_mp3_upload_reservation",
+    { p_scene_id: scene.id },
+  );
+  const reservation = rows?.[0];
+  if (reservationError || !reservation)
+    throw new Error(reservationError?.message ?? "Unable to reserve audio upload");
+  const { data, error } = await serviceAdmin.storage
+    .from("ambience-audio")
+    .createSignedUploadUrl(reservation.object_path);
   if (error || !data) throw new Error(error?.message ?? "Unable to reserve audio upload");
-  return { path, token: data.token };
+  return {
+    reservationId: reservation.reservation_id as string,
+    path: reservation.object_path as string,
+    token: data.token,
+  };
 }
 
 const BACKGROUND_MAX_BYTES = 5 * 1024 * 1024;
@@ -790,26 +803,42 @@ const BACKGROUND_PATH =
 
 export async function reserveBackgroundUpload(sceneId: string) {
   await requireAdmin();
-  const { data: scene, error: sceneError } = await admin
-    .from("scenes")
-    .select("slug")
-    .eq("id", sceneId)
-    .eq("is_live", true)
-    .single();
-  if (sceneError || !scene) throw new Error(sceneError?.message ?? "Jagah not found");
-  const path = `rooms/${scene.slug}/background/${randomUUID()}.webp`;
-  const { data, error } = await admin.storage.from("scene-media").createSignedUploadUrl(path);
+  const { data: rows, error: reservationError } = await admin.rpc(
+    "admin_create_upload_reservation",
+    { p_scene_id: sceneId, p_purpose: "background" },
+  );
+  const reservation = rows?.[0];
+  if (reservationError || !reservation)
+    throw new Error(reservationError?.message ?? "Unable to reserve background upload");
+  const { data, error } = await serviceAdmin.storage
+    .from("scene-media")
+    .createSignedUploadUrl(reservation.object_path);
   if (error || !data) throw new Error(error?.message ?? "Unable to reserve background upload");
-  return { path, token: data.token };
+  return {
+    reservationId: reservation.reservation_id as string,
+    path: reservation.object_path as string,
+    token: data.token,
+  };
 }
 
-export async function discardBackgroundUpload(sceneId: string, path: string) {
+export async function discardBackgroundUpload(
+  sceneId: string,
+  path: string,
+  reservationId: string,
+) {
   await requireAdmin();
-  const match = path.match(BACKGROUND_PATH);
-  const { data: scene } = await admin.from("scenes").select("slug").eq("id", sceneId).maybeSingle();
-  if (!match || !scene || match[1] !== scene.slug)
-    throw new Error("Invalid background upload path");
-  const { error } = await admin.storage.from("scene-media").remove([path]);
+  const { data: valid } = await admin.rpc("admin_check_upload_reservation", {
+    p_reservation_id: reservationId,
+    p_scene_id: sceneId,
+    p_purpose: "background",
+    p_object_path: path,
+  });
+  if (!valid) throw new Error("Invalid background upload reservation");
+  const { error: discardError } = await admin.rpc("admin_secured_discard_upload_reservation", {
+    p_reservation_id: reservationId,
+  });
+  if (discardError) throw new Error(discardError.message);
+  const { error } = await serviceAdmin.storage.from("scene-media").remove([path]);
   if (error) throw new Error(error.message);
 }
 
@@ -850,6 +879,7 @@ function inspectPlaybackWebp(data: Buffer) {
 export async function saveScenePresentation(input: {
   sceneId: string;
   backgroundStoragePath: string | null;
+  uploadReservationId?: string;
   foregroundTextColor: string;
   gagLabel: string;
   oneliners: Array<{
@@ -869,18 +899,27 @@ export async function saveScenePresentation(input: {
   const previousPath = scene.background_storage_path as string | null;
   const nextPath = input.backgroundStoragePath || null;
   const isNewUpload = Boolean(nextPath && nextPath !== previousPath);
+  let presentationSaved = false;
   try {
     if (isNewUpload && nextPath) {
+      if (!input.uploadReservationId) throw new Error("Background upload reservation is missing");
       const match = nextPath.match(BACKGROUND_PATH);
       if (!match || match[1] !== scene.slug) throw new Error("Invalid background upload path");
-      const { data: object, error: downloadError } = await admin.storage
+      const { data: validReservation } = await admin.rpc("admin_check_upload_reservation", {
+        p_reservation_id: input.uploadReservationId,
+        p_scene_id: input.sceneId,
+        p_purpose: "background",
+        p_object_path: nextPath,
+      });
+      if (!validReservation) throw new Error("Background upload reservation is invalid or expired");
+      const { data: object, error: downloadError } = await serviceAdmin.storage
         .from("scene-media")
         .download(nextPath);
       if (downloadError || !object)
         throw new Error(downloadError?.message ?? "Uploaded background is missing");
       inspectPlaybackWebp(Buffer.from(await object.arrayBuffer()));
     }
-    const { error } = await admin.rpc("admin_save_scene_presentation", {
+    const { error } = await admin.rpc("admin_secured_save_scene_presentation_v2", {
       p_scene_id: input.sceneId,
       p_background_storage_path: nextPath,
       p_foreground_text_color: input.foregroundTextColor,
@@ -890,20 +929,27 @@ export async function saveScenePresentation(input: {
         text: line.text,
         daypart: line.daypart,
       })),
+      p_upload_reservation_id: isNewUpload ? (input.uploadReservationId ?? null) : null,
     });
     if (error) throw new Error(error.message);
+    presentationSaved = true;
   } catch (error) {
-    if (isNewUpload && nextPath) await admin.storage.from("scene-media").remove([nextPath]);
+    if (isNewUpload && nextPath && !presentationSaved) {
+      if (input.uploadReservationId) {
+        await admin.rpc("admin_secured_discard_upload_reservation", {
+          p_reservation_id: input.uploadReservationId,
+        });
+      }
+      await serviceAdmin.storage.from("scene-media").remove([nextPath]);
+    }
     throw error;
-  }
-  if (previousPath && previousPath !== nextPath && BACKGROUND_PATH.test(previousPath)) {
-    await admin.storage.from("scene-media").remove([previousPath]);
   }
   return getAdminBackground(input.sceneId);
 }
 
 export async function finalizeAmbienceUpload(input: {
   sceneId: string;
+  reservationId: string;
   path: string;
   name: string;
   role: AmbienceRole;
@@ -916,84 +962,63 @@ export async function finalizeAmbienceUpload(input: {
   selectedDurationSeconds: number;
 }) {
   await requireAdmin();
-  let assetId: string | null = null;
   let removeUploadedObject = false;
   try {
     const pathMatch = input.path.match(
-      /^rooms\/([a-z0-9-]+)\/ambience\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.wav$/i,
+      /^rooms\/([a-z0-9-]+)\/ambience\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.mp3$/i,
     );
     if (!pathMatch) throw new Error("Invalid upload path");
+    const { data: validReservation } = await admin.rpc("admin_check_upload_reservation", {
+      p_reservation_id: input.reservationId,
+      p_scene_id: input.sceneId,
+      p_purpose: "ambience",
+      p_object_path: input.path,
+    });
+    if (!validReservation) throw new Error("Audio upload reservation is invalid or expired");
     const { data: scene, error: sceneError } = await admin
       .from("scenes")
       .select("slug")
       .eq("id", input.sceneId)
       .single();
     if (sceneError || !scene || scene.slug !== pathMatch[1]) throw new Error("Invalid upload path");
-    const { data: existingAsset, error: existingError } = await admin
-      .from("ambience_assets")
-      .select("id")
-      .eq("storage_path", input.path)
-      .maybeSingle();
-    if (existingError) throw new Error(existingError.message);
-    if (existingAsset) throw new Error("This upload has already been finalized");
     removeUploadedObject = true;
-    const { data: object, error: downloadError } = await admin.storage
+    const { data: object, error: downloadError } = await serviceAdmin.storage
       .from("ambience-audio")
       .download(input.path);
     if (downloadError || !object)
       throw new Error(downloadError?.message ?? "Uploaded audio is missing");
     const bytes = Buffer.from(await object.arrayBuffer());
-    const duration = inspectPlaybackWav(bytes, input.role);
+    const inspection = validateAmbienceMp3(
+      bytes,
+      ambienceProcessing.maxDurationSeconds[input.role],
+    );
     const hash = createHash("sha256").update(bytes).digest("hex").toUpperCase();
-    const { data: asset, error: assetError } = await admin
-      .from("ambience_assets")
-      .insert({
-        storage_path: input.path,
-        mime_type: "audio/wav",
-        byte_size: bytes.length,
-        duration_seconds: duration,
-        sha256: hash,
-        is_active: true,
-      })
-      .select("id")
-      .single();
-    if (assetError || !asset) throw new Error(assetError?.message ?? "Unable to save audio asset");
-    assetId = asset.id;
-    const { error: sourceError } = await admin.from("ambience_asset_sources").insert({
-      asset_id: asset.id,
-      source_order: 1,
-      source_url: input.sourceUrl?.trim() || null,
-      source_title: input.sourceFilename.trim() || input.name.trim(),
-      source_sha256: String(input.sourceSha256).toUpperCase(),
-      original_filename: input.sourceFilename,
-      original_byte_size: Math.round(Number(input.sourceByteSize)),
-      original_duration_seconds: Number(input.sourceDurationSeconds),
-      selected_start_seconds: Number(input.selectedStartSeconds),
-      selected_duration_seconds: Number(input.selectedDurationSeconds),
+    const { error: finalizeError } = await admin.rpc("admin_secured_finalize_ambience_asset", {
+      p_scene_id: input.sceneId,
+      p_reservation_id: input.reservationId,
+      p_storage_path: input.path,
+      p_name: input.name,
+      p_role: input.role,
+      p_mime_type: ambienceMp3.mimeType,
+      p_byte_size: bytes.length,
+      p_duration_seconds: inspection.durationSeconds,
+      p_sha256: hash,
+      p_source_url: input.sourceUrl?.trim() || null,
+      p_source_title: input.sourceFilename.trim() || input.name.trim(),
+      p_source_sha256: String(input.sourceSha256).toUpperCase(),
+      p_original_filename: input.sourceFilename,
+      p_original_byte_size: Math.round(Number(input.sourceByteSize)),
+      p_original_duration_seconds: Number(input.sourceDurationSeconds),
+      p_selected_start_seconds: Number(input.selectedStartSeconds),
+      p_selected_duration_seconds: Number(input.selectedDurationSeconds),
     });
-    if (sourceError) throw new Error(sourceError.message);
-    await saveAmbienceStem({
-      sceneId: input.sceneId,
-      name: input.name,
-      role: input.role,
-      assetId: asset.id,
-      isActive: true,
-      sortOrder: 99,
-      defaultVolume: input.role === "base" ? 0.9 : input.role === "texture" ? 0.6 : 0.35,
-      minGain: input.role === "base" ? 0.82 : input.role === "texture" ? 0.52 : 0.22,
-      maxGain: input.role === "base" ? 0.96 : input.role === "texture" ? 0.68 : 0.48,
-      crossfadeMs: input.role === "event" ? 0 : 2500,
-      loopStartSeconds: 0,
-      loopEndSeconds: null,
-      eventMinSeconds: input.role === "event" ? 35 : null,
-      eventMaxSeconds: input.role === "event" ? 110 : null,
-    });
+    if (finalizeError) throw new Error(finalizeError.message);
   } catch (error) {
-    if (assetId) {
-      await admin.from("sound_stems").delete().eq("asset_id", assetId);
-      await admin.from("ambience_assets").delete().eq("id", assetId);
-    }
-    if (removeUploadedObject) await admin.storage.from("ambience-audio").remove([input.path]);
+    await admin.rpc("admin_secured_discard_upload_reservation", {
+      p_reservation_id: input.reservationId,
+    });
+    if (removeUploadedObject)
+      await serviceAdmin.storage.from("ambience-audio").remove([input.path]);
     throw error;
   }
 }
@@ -1009,37 +1034,51 @@ export type SongDraft = {
 
 export async function previewSongs(inputs: string[]): Promise<SongDraft[]> {
   await requireAdmin();
+  const { error: rateError } = await admin.rpc("admin_secured_consume_song_preview");
+  if (rateError) throw new Error(rateError.message);
   if (inputs.length < 1 || inputs.length > 50)
     throw new Error("Paste between 1 and 50 YouTube links");
-  return Promise.all(
-    inputs.map(async (input) => {
-      const videoId = youtubeVideoId(input);
-      if (!videoId) throw new Error(`Invalid YouTube link: ${input}`);
-      let providerTitle = "";
-      let providerChannel = "";
-      try {
-        const response = await fetch(
-          `https://www.youtube.com/oembed?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${videoId}`)}&format=json`,
-          { signal: AbortSignal.timeout(5000) },
-        );
-        if (response.ok) {
-          const payload = (await response.json()) as { title?: string; author_name?: string };
-          providerTitle = payload.title?.trim() ?? "";
-          providerChannel = payload.author_name?.trim() ?? "";
+  const unique = new Map<string, string>();
+  for (const input of inputs) {
+    const videoId = youtubeVideoId(input);
+    if (!videoId) throw new Error(`Invalid YouTube link: ${input}`);
+    if (!unique.has(videoId)) unique.set(videoId, input);
+  }
+  const entries = [...unique.entries()];
+  const output = new Array<SongDraft>(entries.length);
+  let cursor = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(5, entries.length) }, async () => {
+      while (cursor < entries.length) {
+        const index = cursor++;
+        const [videoId] = entries[index]!;
+        let providerTitle = "";
+        let providerChannel = "";
+        try {
+          const response = await fetch(
+            `https://www.youtube.com/oembed?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${videoId}`)}&format=json`,
+            { signal: AbortSignal.timeout(5000) },
+          );
+          if (response.ok) {
+            const payload = (await response.json()) as { title?: string; author_name?: string };
+            providerTitle = payload.title?.trim() ?? "";
+            providerChannel = payload.author_name?.trim() ?? "";
+          }
+        } catch {
+          // Manual metadata entry remains available when the provider is unavailable.
         }
-      } catch {
-        // Manual metadata entry remains available when the provider is unavailable.
+        output[index] = {
+          input: `https://www.youtube.com/watch?v=${videoId}`,
+          title: providerTitle,
+          artist: providerChannel,
+          year: null,
+          providerTitle,
+          providerChannel,
+        };
       }
-      return {
-        input: `https://www.youtube.com/watch?v=${videoId}`,
-        title: providerTitle,
-        artist: providerChannel,
-        year: null,
-        providerTitle,
-        providerChannel,
-      };
     }),
   );
+  return output;
 }
 
 export async function addSongs(queueId: string, songs: SongDraft[]): Promise<void> {
@@ -1058,7 +1097,7 @@ export async function addSongs(queueId: string, songs: SongDraft[]): Promise<voi
       provider_channel: song.providerChannel,
     };
   });
-  const { error } = await admin.rpc("admin_append_queue_tracks", {
+  const { error } = await admin.rpc("admin_secured_append_queue_tracks", {
     p_curated_set_id: queueId,
     p_tracks: payload,
   });
@@ -1067,7 +1106,7 @@ export async function addSongs(queueId: string, songs: SongDraft[]): Promise<voi
 
 export async function removeSongs(queueId: string, membershipIds: string[]): Promise<void> {
   await requireAdmin();
-  const { error } = await admin.rpc("admin_remove_queue_tracks", {
+  const { error } = await admin.rpc("admin_secured_remove_queue_tracks", {
     p_curated_set_id: queueId,
     p_membership_ids: membershipIds,
   });
@@ -1085,7 +1124,7 @@ export async function updateSong(input: {
   await requireAdmin();
   const videoId = youtubeVideoId(input.source);
   if (!videoId) throw new Error("Enter a valid YouTube link or video ID");
-  const { error } = await admin.rpc("admin_update_queue_track", {
+  const { error } = await admin.rpc("admin_secured_update_queue_track", {
     p_membership_id: input.membershipId,
     p_title: input.title,
     p_artist: input.artist,
@@ -1097,14 +1136,14 @@ export async function updateSong(input: {
 }
 
 export async function registerRoomVisit(visitId: string, sceneSlug: string): Promise<void> {
-  const { data: scene, error: sceneError } = await admin
+  const { data: scene, error: sceneError } = await serviceAdmin
     .from("scenes")
     .select("id")
     .eq("slug", sceneSlug)
     .eq("is_live", true)
     .maybeSingle();
   if (sceneError || !scene) return;
-  const { error } = await admin
+  const { error } = await serviceAdmin
     .from("room_visits")
     .upsert({ id: visitId, scene_id: scene.id }, { onConflict: "id", ignoreDuplicates: true });
   if (error) throw new Error(error.message);
@@ -1115,7 +1154,7 @@ export async function recordListening(
   sceneSlug: string,
   seconds: number,
 ): Promise<void> {
-  const { data: scene } = await admin
+  const { data: scene } = await serviceAdmin
     .from("scenes")
     .select("id")
     .eq("slug", sceneSlug)
@@ -1123,7 +1162,7 @@ export async function recordListening(
     .maybeSingle();
   if (!scene) return;
   if (!Number.isFinite(seconds)) return;
-  const { error } = await admin.rpc("record_room_heartbeat", {
+  const { error } = await serviceAdmin.rpc("record_room_heartbeat", {
     p_visit_id: visitId,
     p_scene_id: scene.id,
     p_seconds: Math.min(60, Math.max(1, Math.floor(seconds))),

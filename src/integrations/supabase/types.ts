@@ -8,6 +8,151 @@ export type Database = {
   };
   public: {
     Tables: {
+      admin_audit_log: {
+        Row: {
+          action: string;
+          actor_id: string;
+          affected_count: number;
+          created_at: string;
+          id: number;
+          request_id: string;
+          scene_id: string | null;
+          target_id: string | null;
+        };
+        Insert: {
+          action: string;
+          actor_id: string;
+          affected_count?: number;
+          created_at?: string;
+          id?: never;
+          request_id: string;
+          scene_id?: string | null;
+          target_id?: string | null;
+        };
+        Update: {
+          action?: string;
+          actor_id?: string;
+          affected_count?: number;
+          created_at?: string;
+          id?: never;
+          request_id?: string;
+          scene_id?: string | null;
+          target_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "admin_audit_log_scene_id_fkey";
+            columns: ["scene_id"];
+            isOneToOne: false;
+            referencedRelation: "scenes";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      admin_rate_limits: {
+        Row: {
+          actor_id: string;
+          bucket: string;
+          request_count: number;
+          window_started_at: string;
+        };
+        Insert: {
+          actor_id: string;
+          bucket: string;
+          request_count: number;
+          window_started_at: string;
+        };
+        Update: {
+          actor_id?: string;
+          bucket?: string;
+          request_count?: number;
+          window_started_at?: string;
+        };
+        Relationships: [];
+      };
+      admin_storage_cleanup_queue: {
+        Row: {
+          attempts: number;
+          available_at: string;
+          bucket: string;
+          completed_at: string | null;
+          created_at: string;
+          id: string;
+          last_error: string | null;
+          object_path: string;
+          reason: string;
+        };
+        Insert: {
+          attempts?: number;
+          available_at?: string;
+          bucket: string;
+          completed_at?: string | null;
+          created_at?: string;
+          id?: string;
+          last_error?: string | null;
+          object_path: string;
+          reason: string;
+        };
+        Update: {
+          attempts?: number;
+          available_at?: string;
+          bucket?: string;
+          completed_at?: string | null;
+          created_at?: string;
+          id?: string;
+          last_error?: string | null;
+          object_path?: string;
+          reason?: string;
+        };
+        Relationships: [];
+      };
+      admin_upload_reservations: {
+        Row: {
+          actor_id: string;
+          bucket: string;
+          created_at: string;
+          discarded_at: string | null;
+          expires_at: string;
+          finalized_at: string | null;
+          id: string;
+          object_path: string;
+          purpose: string;
+          scene_id: string;
+        };
+        Insert: {
+          actor_id: string;
+          bucket: string;
+          created_at?: string;
+          discarded_at?: string | null;
+          expires_at?: string;
+          finalized_at?: string | null;
+          id?: string;
+          object_path: string;
+          purpose: string;
+          scene_id: string;
+        };
+        Update: {
+          actor_id?: string;
+          bucket?: string;
+          created_at?: string;
+          discarded_at?: string | null;
+          expires_at?: string;
+          finalized_at?: string | null;
+          id?: string;
+          object_path?: string;
+          purpose?: string;
+          scene_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "admin_upload_reservations_scene_id_fkey";
+            columns: ["scene_id"];
+            isOneToOne: false;
+            referencedRelation: "scenes";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       ambience_asset_sources: {
         Row: {
           asset_id: string;
@@ -137,6 +282,21 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      app_admins: {
+        Row: {
+          created_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
       };
       chat_messages: {
         Row: {
@@ -481,6 +641,41 @@ export type Database = {
         };
         Relationships: [];
       };
+      room_visits: {
+        Row: {
+          first_played_at: string | null;
+          id: string;
+          last_heartbeat_at: string | null;
+          listening_seconds: number;
+          scene_id: string;
+          started_at: string;
+        };
+        Insert: {
+          first_played_at?: string | null;
+          id: string;
+          last_heartbeat_at?: string | null;
+          listening_seconds?: number;
+          scene_id: string;
+          started_at?: string;
+        };
+        Update: {
+          first_played_at?: string | null;
+          id?: string;
+          last_heartbeat_at?: string | null;
+          listening_seconds?: number;
+          scene_id?: string;
+          started_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "room_visits_scene_id_fkey";
+            columns: ["scene_id"];
+            isOneToOne: false;
+            referencedRelation: "scenes";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       saved_rooms: {
         Row: {
           created_at: string;
@@ -769,475 +964,241 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      admin_append_queue_tracks: {
+        Args: { p_curated_set_id: string; p_tracks: Json };
+        Returns: undefined;
+      };
+      admin_assert_ready: { Args: never; Returns: undefined };
+      admin_check_upload_reservation: {
+        Args: {
+          p_object_path: string;
+          p_purpose: string;
+          p_reservation_id: string;
+          p_scene_id: string;
+        };
+        Returns: boolean;
+      };
+      admin_complete_upload_reservation: {
+        Args: { p_reservation_id: string };
+        Returns: undefined;
+      };
+      admin_consume_rate_limit: {
+        Args: { p_bucket: string; p_limit: number; p_window_seconds: number };
+        Returns: number;
+      };
+      admin_create_upload_reservation: {
+        Args: { p_purpose: string; p_scene_id: string };
+        Returns: {
+          bucket: string;
+          expires_at: string;
+          object_path: string;
+          reservation_id: string;
+        }[];
+      };
+      admin_create_mp3_upload_reservation: {
+        Args: { p_scene_id: string };
+        Returns: {
+          bucket: string;
+          expires_at: string;
+          object_path: string;
+          reservation_id: string;
+        }[];
+      };
+      admin_discard_upload_reservation: {
+        Args: { p_reservation_id: string };
+        Returns: {
+          bucket: string;
+          object_path: string;
+        }[];
+      };
+      admin_onboarding_status: { Args: never; Returns: string };
+      admin_queue_storage_cleanup: {
+        Args: { p_bucket: string; p_object_path: string; p_reason: string };
+        Returns: undefined;
+      };
+      admin_record_audit: {
+        Args: {
+          p_action: string;
+          p_affected_count?: number;
+          p_request_id?: string;
+          p_scene_id?: string;
+          p_target_id?: string;
+        };
+        Returns: undefined;
+      };
+      admin_remove_queue_tracks: {
+        Args: { p_curated_set_id: string; p_membership_ids: string[] };
+        Returns: undefined;
+      };
+      admin_room_analytics: {
+        Args: { p_since?: string };
+        Returns: {
+          listening_seconds: number;
+          played_visits: number;
+          scene_id: string;
+          visits: number;
+        }[];
+      };
+      admin_run_retention: {
+        Args: never;
+        Returns: {
+          deleted_audit_rows: number;
+          deleted_rate_rows: number;
+          expired_reservations: number;
+        }[];
+      };
+      admin_save_scene_presentation: {
+        Args: {
+          p_background_storage_path: string;
+          p_foreground_text_color: string;
+          p_gag_label: string;
+          p_oneliners: Json;
+          p_scene_id: string;
+        };
+        Returns: undefined;
+      };
+      admin_secured_append_queue_tracks: {
+        Args: { p_curated_set_id: string; p_tracks: Json };
+        Returns: undefined;
+      };
+      admin_secured_consume_song_preview: { Args: never; Returns: undefined };
+      admin_secured_deactivate_ambience_stem: {
+        Args: { p_stem_id: string };
+        Returns: undefined;
+      };
+      admin_secured_discard_upload_reservation: {
+        Args: { p_reservation_id: string };
+        Returns: {
+          bucket: string;
+          object_path: string;
+        }[];
+      };
+      admin_secured_finalize_ambience_asset: {
+        Args: {
+          p_byte_size: number;
+          p_duration_seconds: number;
+          p_mime_type: string;
+          p_name: string;
+          p_original_byte_size: number;
+          p_original_duration_seconds: number;
+          p_original_filename: string;
+          p_reservation_id: string;
+          p_role: string;
+          p_scene_id: string;
+          p_selected_duration_seconds: number;
+          p_selected_start_seconds: number;
+          p_sha256: string;
+          p_source_sha256: string;
+          p_source_title: string;
+          p_source_url: string | null;
+          p_storage_path: string;
+        };
+        Returns: string;
+      };
+      admin_secured_remove_queue_tracks: {
+        Args: { p_curated_set_id: string; p_membership_ids: string[] };
+        Returns: undefined;
+      };
+      admin_secured_room_analytics: {
+        Args: { p_since?: string };
+        Returns: {
+          listening_seconds: number;
+          played_visits: number;
+          scene_id: string;
+          visits: number;
+        }[];
+      };
+      admin_secured_save_scene_presentation: {
+        Args: {
+          p_background_storage_path: string;
+          p_foreground_text_color: string;
+          p_gag_label: string;
+          p_oneliners: Json;
+          p_scene_id: string;
+        };
+        Returns: undefined;
+      };
+      admin_secured_save_scene_presentation_v2: {
+        Args: {
+          p_background_storage_path: string | null;
+          p_foreground_text_color: string;
+          p_gag_label: string | null;
+          p_oneliners: Json;
+          p_scene_id: string;
+          p_upload_reservation_id?: string | null;
+        };
+        Returns: undefined;
+      };
+      admin_secured_save_ambience_profile: {
+        Args: {
+          p_audio_theme: Json;
+          p_enabled: boolean;
+          p_fade_in_ms: number;
+          p_fade_out_ms: number;
+          p_max_master_gain: number;
+          p_music_duck_ratio: number;
+          p_scene_id: string;
+        };
+        Returns: undefined;
+      };
+      admin_secured_save_ambience_stem: {
+        Args: {
+          p_asset_id: string;
+          p_crossfade_ms: number;
+          p_default_volume: number;
+          p_event_max_seconds: number | null;
+          p_event_min_seconds: number | null;
+          p_id: string | null;
+          p_is_active: boolean;
+          p_loop_end_seconds: number | null;
+          p_loop_start_seconds: number;
+          p_max_gain: number;
+          p_min_gain: number;
+          p_name: string;
+          p_role: string;
+          p_scene_id: string;
+          p_sort_order: number;
+        };
+        Returns: string;
+      };
+      admin_secured_update_queue_track: {
+        Args: {
+          p_artist: string;
+          p_membership_id: string;
+          p_scope: string;
+          p_title: string;
+          p_video_id: string;
+          p_year: number;
+        };
+        Returns: undefined;
+      };
+      admin_session_ready: { Args: never; Returns: boolean };
+      admin_storage_object_is_referenced: {
+        Args: { p_bucket: string; p_object_path: string };
+        Returns: boolean;
+      };
+      admin_update_queue_track: {
+        Args: {
+          p_artist: string;
+          p_membership_id: string;
+          p_scope: string;
+          p_title: string;
+          p_video_id: string;
+          p_year: number;
+        };
+        Returns: undefined;
+      };
       record_playback_source_failure: {
         Args: { p_error_code: number; p_source_id: string };
         Returns: undefined;
       };
-    };
-    Enums: {
-      [_ in never]: never;
-    };
-    CompositeTypes: {
-      [_ in never]: never;
-    };
-  };
-  storage: {
-    Tables: {
-      buckets: {
-        Row: {
-          allowed_mime_types: string[] | null;
-          avif_autodetection: boolean | null;
-          created_at: string | null;
-          file_size_limit: number | null;
-          id: string;
-          name: string;
-          owner: string | null;
-          owner_id: string | null;
-          public: boolean | null;
-          type: Database["storage"]["Enums"]["buckettype"];
-          updated_at: string | null;
-          versioning_status: string;
-        };
-        Insert: {
-          allowed_mime_types?: string[] | null;
-          avif_autodetection?: boolean | null;
-          created_at?: string | null;
-          file_size_limit?: number | null;
-          id: string;
-          name: string;
-          owner?: string | null;
-          owner_id?: string | null;
-          public?: boolean | null;
-          type?: Database["storage"]["Enums"]["buckettype"];
-          updated_at?: string | null;
-          versioning_status?: string;
-        };
-        Update: {
-          allowed_mime_types?: string[] | null;
-          avif_autodetection?: boolean | null;
-          created_at?: string | null;
-          file_size_limit?: number | null;
-          id?: string;
-          name?: string;
-          owner?: string | null;
-          owner_id?: string | null;
-          public?: boolean | null;
-          type?: Database["storage"]["Enums"]["buckettype"];
-          updated_at?: string | null;
-          versioning_status?: string;
-        };
-        Relationships: [];
-      };
-      buckets_analytics: {
-        Row: {
-          created_at: string;
-          deleted_at: string | null;
-          format: string;
-          id: string;
-          name: string;
-          type: Database["storage"]["Enums"]["buckettype"];
-          updated_at: string;
-        };
-        Insert: {
-          created_at?: string;
-          deleted_at?: string | null;
-          format?: string;
-          id?: string;
-          name: string;
-          type?: Database["storage"]["Enums"]["buckettype"];
-          updated_at?: string;
-        };
-        Update: {
-          created_at?: string;
-          deleted_at?: string | null;
-          format?: string;
-          id?: string;
-          name?: string;
-          type?: Database["storage"]["Enums"]["buckettype"];
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-      buckets_vectors: {
-        Row: {
-          created_at: string;
-          id: string;
-          type: Database["storage"]["Enums"]["buckettype"];
-          updated_at: string;
-        };
-        Insert: {
-          created_at?: string;
-          id: string;
-          type?: Database["storage"]["Enums"]["buckettype"];
-          updated_at?: string;
-        };
-        Update: {
-          created_at?: string;
-          id?: string;
-          type?: Database["storage"]["Enums"]["buckettype"];
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-      migrations: {
-        Row: {
-          executed_at: string | null;
-          hash: string;
-          id: number;
-          name: string;
-        };
-        Insert: {
-          executed_at?: string | null;
-          hash: string;
-          id: number;
-          name: string;
-        };
-        Update: {
-          executed_at?: string | null;
-          hash?: string;
-          id?: number;
-          name?: string;
-        };
-        Relationships: [];
-      };
-      objects: {
-        Row: {
-          archived_at: string | null;
-          bucket_id: string | null;
-          created_at: string | null;
-          id: string;
-          is_delete_marker: boolean;
-          is_versioned: boolean;
-          last_accessed_at: string | null;
-          metadata: Json | null;
-          name: string | null;
-          owner: string | null;
-          owner_id: string | null;
-          path_tokens: string[] | null;
-          updated_at: string | null;
-          user_metadata: Json | null;
-          version: string | null;
-        };
-        Insert: {
-          archived_at?: string | null;
-          bucket_id?: string | null;
-          created_at?: string | null;
-          id?: string;
-          is_delete_marker?: boolean;
-          is_versioned?: boolean;
-          last_accessed_at?: string | null;
-          metadata?: Json | null;
-          name?: string | null;
-          owner?: string | null;
-          owner_id?: string | null;
-          path_tokens?: string[] | null;
-          updated_at?: string | null;
-          user_metadata?: Json | null;
-          version?: string | null;
-        };
-        Update: {
-          archived_at?: string | null;
-          bucket_id?: string | null;
-          created_at?: string | null;
-          id?: string;
-          is_delete_marker?: boolean;
-          is_versioned?: boolean;
-          last_accessed_at?: string | null;
-          metadata?: Json | null;
-          name?: string | null;
-          owner?: string | null;
-          owner_id?: string | null;
-          path_tokens?: string[] | null;
-          updated_at?: string | null;
-          user_metadata?: Json | null;
-          version?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "objects_bucketId_fkey";
-            columns: ["bucket_id"];
-            isOneToOne: false;
-            referencedRelation: "buckets";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      s3_multipart_uploads: {
-        Row: {
-          bucket_id: string;
-          created_at: string;
-          id: string;
-          in_progress_size: number;
-          key: string;
-          metadata: Json | null;
-          owner_id: string | null;
-          upload_signature: string;
-          user_metadata: Json | null;
-          version: string;
-        };
-        Insert: {
-          bucket_id: string;
-          created_at?: string;
-          id: string;
-          in_progress_size?: number;
-          key: string;
-          metadata?: Json | null;
-          owner_id?: string | null;
-          upload_signature: string;
-          user_metadata?: Json | null;
-          version: string;
-        };
-        Update: {
-          bucket_id?: string;
-          created_at?: string;
-          id?: string;
-          in_progress_size?: number;
-          key?: string;
-          metadata?: Json | null;
-          owner_id?: string | null;
-          upload_signature?: string;
-          user_metadata?: Json | null;
-          version?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "s3_multipart_uploads_bucket_id_fkey";
-            columns: ["bucket_id"];
-            isOneToOne: false;
-            referencedRelation: "buckets";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      s3_multipart_uploads_parts: {
-        Row: {
-          bucket_id: string;
-          created_at: string;
-          etag: string;
-          id: string;
-          key: string;
-          owner_id: string | null;
-          part_number: number;
-          size: number;
-          upload_id: string;
-          version: string;
-        };
-        Insert: {
-          bucket_id: string;
-          created_at?: string;
-          etag: string;
-          id?: string;
-          key: string;
-          owner_id?: string | null;
-          part_number: number;
-          size?: number;
-          upload_id: string;
-          version: string;
-        };
-        Update: {
-          bucket_id?: string;
-          created_at?: string;
-          etag?: string;
-          id?: string;
-          key?: string;
-          owner_id?: string | null;
-          part_number?: number;
-          size?: number;
-          upload_id?: string;
-          version?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "s3_multipart_uploads_parts_bucket_id_fkey";
-            columns: ["bucket_id"];
-            isOneToOne: false;
-            referencedRelation: "buckets";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "s3_multipart_uploads_parts_upload_id_fkey";
-            columns: ["upload_id"];
-            isOneToOne: false;
-            referencedRelation: "s3_multipart_uploads";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      vector_indexes: {
-        Row: {
-          bucket_id: string;
-          created_at: string;
-          data_type: string;
-          dimension: number;
-          distance_metric: string;
-          id: string;
-          metadata_configuration: Json | null;
-          name: string;
-          updated_at: string;
-        };
-        Insert: {
-          bucket_id: string;
-          created_at?: string;
-          data_type: string;
-          dimension: number;
-          distance_metric: string;
-          id?: string;
-          metadata_configuration?: Json | null;
-          name: string;
-          updated_at?: string;
-        };
-        Update: {
-          bucket_id?: string;
-          created_at?: string;
-          data_type?: string;
-          dimension?: number;
-          distance_metric?: string;
-          id?: string;
-          metadata_configuration?: Json | null;
-          name?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "vector_indexes_bucket_id_fkey";
-            columns: ["bucket_id"];
-            isOneToOne: false;
-            referencedRelation: "buckets_vectors";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-    };
-    Views: {
-      [_ in never]: never;
-    };
-    Functions: {
-      allow_any_operation: {
-        Args: { expected_operations: string[] };
-        Returns: boolean;
-      };
-      allow_only_operation: {
-        Args: { expected_operation: string };
-        Returns: boolean;
-      };
-      can_insert_object: {
-        Args: { bucketid: string; metadata: Json; name: string; owner: string };
+      record_room_heartbeat: {
+        Args: { p_scene_id: string; p_seconds: number; p_visit_id: string };
         Returns: undefined;
       };
-      extension: { Args: { name: string }; Returns: string };
-      filename: { Args: { name: string }; Returns: string };
-      foldername: { Args: { name: string }; Returns: string[] };
-      get_common_prefix: {
-        Args: { p_delimiter: string; p_key: string; p_prefix: string };
-        Returns: string;
-      };
-      get_size_by_bucket: {
-        Args: never;
-        Returns: {
-          bucket_id: string;
-          size: number;
-        }[];
-      };
-      list_multipart_uploads_with_delimiter: {
-        Args: {
-          bucket_id: string;
-          delimiter_param: string;
-          max_keys?: number;
-          next_key_token?: string;
-          next_upload_token?: string;
-          prefix_param: string;
-        };
-        Returns: {
-          created_at: string;
-          id: string;
-          key: string;
-        }[];
-      };
-      list_objects_with_delimiter: {
-        Args: {
-          _bucket_id: string;
-          delimiter_param: string;
-          max_keys?: number;
-          next_token?: string;
-          prefix_param: string;
-          sort_order?: string;
-          start_after?: string;
-        };
-        Returns: {
-          created_at: string;
-          id: string;
-          last_accessed_at: string;
-          metadata: Json;
-          name: string;
-          updated_at: string;
-        }[];
-      };
-      operation: { Args: never; Returns: string };
-      search: {
-        Args: {
-          bucketname: string;
-          levels?: number;
-          limits?: number;
-          offsets?: number;
-          prefix: string;
-          search?: string;
-          sortcolumn?: string;
-          sortorder?: string;
-        };
-        Returns: {
-          created_at: string;
-          id: string;
-          last_accessed_at: string;
-          metadata: Json;
-          name: string;
-          updated_at: string;
-        }[];
-      };
-      search_by_timestamp: {
-        Args: {
-          p_bucket_id: string;
-          p_level: number;
-          p_limit: number;
-          p_prefix: string;
-          p_sort_column: string;
-          p_sort_column_after: string;
-          p_sort_order: string;
-          p_start_after: string;
-        };
-        Returns: {
-          created_at: string;
-          id: string;
-          key: string;
-          last_accessed_at: string;
-          metadata: Json;
-          name: string;
-          updated_at: string;
-        }[];
-      };
-      search_v2: {
-        Args: {
-          bucket_name: string;
-          levels?: number;
-          limits?: number;
-          prefix: string;
-          sort_column?: string;
-          sort_column_after?: string;
-          sort_order?: string;
-          start_after?: string;
-        };
-        Returns: {
-          created_at: string;
-          id: string;
-          key: string;
-          last_accessed_at: string;
-          metadata: Json;
-          name: string;
-          updated_at: string;
-        }[];
-      };
     };
     Enums: {
-      buckettype: "STANDARD" | "ANALYTICS" | "VECTOR";
+      [_ in never]: never;
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -1359,10 +1320,5 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {},
-  },
-  storage: {
-    Enums: {
-      buckettype: ["STANDARD", "ANALYTICS", "VECTOR"],
-    },
   },
 } as const;

@@ -3,9 +3,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronDown, Loader2, UserRound } from "lucide-react";
 import { DiscardChangesDialog } from "@/components/admin/AdminFormFeedback";
+import { AdminSecurityDialog } from "@/components/admin/AdminSecurityDialog";
 import { AmbienceAudioPanel } from "@/components/admin/AmbienceAudioPanel";
 import { BackgroundPanel } from "@/components/admin/BackgroundPanel";
 import { supabase } from "@/integrations/supabase/client";
+import { useAdminRoomPresence } from "@/hooks/useRoomPresence";
 import {
   retainComparedSceneIds,
   sortComparedAnalytics,
@@ -15,16 +17,23 @@ import {
 import { hasAdminDraftChanges, sameAdminDraft } from "@/lib/admin-drafts";
 import {
   addAdminSongs,
+  getAdminAmbienceAssetsData,
   getAdminAmbienceData,
   getAdminAnalyticsData,
   getAdminBackgroundData,
   getAdminBootstrapData,
+  getAdminOnboarding,
   getAdminSongsData,
   previewAdminSongs,
   removeAdminSongs,
   updateAdminSong,
 } from "@/lib/admin.functions";
 import type { AdminSceneSummary } from "@/lib/admin.server";
+import {
+  CONNECTING_ROOM_PRESENCE,
+  roomPresenceLabel,
+  type RoomPresenceSnapshot,
+} from "@/lib/room-presence";
 
 type Range = "7d" | "30d" | "all";
 type Section = "songs" | "analytics" | "ambience" | "background";
@@ -99,6 +108,7 @@ const seconds = (value: number) => {
 };
 const ADMIN_SIGN_IN_NOTICE_KEY = "sainik-dhaba.admin.sign-in-notice";
 const EMPTY_SCENES: AdminSceneSummary[] = [];
+const ADMIN_CACHE_MS = 5 * 60_000;
 
 export const Route = createFileRoute("/admin/")({ component: AdminPage });
 
@@ -124,6 +134,7 @@ function AdminPage() {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [busyAction, setBusyAction] = useState("");
+  const [securityOpen, setSecurityOpen] = useState(false);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [songPage, setSongPage] = useState(0);
   const allowNextNavigationRef = useRef(false);
@@ -131,36 +142,50 @@ function AdminPage() {
   const bootstrapQuery = useQuery({
     queryKey: ["admin", "bootstrap"],
     queryFn: () => getAdminBootstrapData(),
-    staleTime: 60_000,
+    staleTime: ADMIN_CACHE_MS,
     enabled: clientReady,
   });
   const scenes = bootstrapQuery.data?.scenes ?? EMPTY_SCENES;
+  const livePresence = useAdminRoomPresence(
+    scenes,
+    clientReady && section === "analytics",
+  );
   const identity = bootstrapQuery.data?.identity ?? null;
   const currentSummary = scenes.find((scene) => scene.slug === selectedSlug) ?? scenes[0];
   const songsQuery = useQuery({
     queryKey: ["admin", "songs", currentSummary?.id],
     queryFn: () => getAdminSongsData({ data: { sceneId: currentSummary!.id } }),
     enabled: Boolean(clientReady && currentSummary && section === "songs"),
-    staleTime: 30_000,
+    staleTime: ADMIN_CACHE_MS,
+    placeholderData: (previous) => previous,
   });
   const analyticsQuery = useQuery({
     queryKey: ["admin", "analytics", range],
     queryFn: () => getAdminAnalyticsData({ data: { range } }),
     enabled: clientReady && section === "analytics",
-    staleTime: 30_000,
+    staleTime: ADMIN_CACHE_MS,
     placeholderData: (previous) => previous,
   });
   const ambienceQuery = useQuery({
     queryKey: ["admin", "ambience", currentSummary?.id],
     queryFn: () => getAdminAmbienceData({ data: { sceneId: currentSummary!.id } }),
     enabled: Boolean(clientReady && currentSummary && section === "ambience"),
-    staleTime: 30_000,
+    staleTime: ADMIN_CACHE_MS,
+    placeholderData: (previous) => previous,
+  });
+  const ambienceAssetsQuery = useQuery({
+    queryKey: ["admin", "ambience-assets"],
+    queryFn: () => getAdminAmbienceAssetsData(),
+    enabled: clientReady && section === "ambience",
+    staleTime: ADMIN_CACHE_MS,
+    placeholderData: (previous) => previous,
   });
   const backgroundQuery = useQuery({
     queryKey: ["admin", "background", currentSummary?.id],
     queryFn: () => getAdminBackgroundData({ data: { sceneId: currentSummary!.id } }),
     enabled: Boolean(clientReady && currentSummary && section === "background"),
-    staleTime: 30_000,
+    staleTime: ADMIN_CACHE_MS,
+    placeholderData: (previous) => previous,
   });
   const current: Scene | undefined = currentSummary
     ? {
@@ -171,12 +196,12 @@ function AdminPage() {
       }
     : undefined;
   const analytics = (analyticsQuery.data ?? []) as Analytics[];
-  const assets = (ambienceQuery.data?.assets ?? []) as Asset[];
+  const assets = (ambienceAssetsQuery.data ?? []) as Asset[];
   const sectionLoading =
     bootstrapQuery.isPending ||
     (section === "songs" && songsQuery.isFetching) ||
     (section === "analytics" && analyticsQuery.isFetching) ||
-    (section === "ambience" && ambienceQuery.isFetching) ||
+    (section === "ambience" && (ambienceQuery.isFetching || ambienceAssetsQuery.isFetching)) ||
     (section === "background" && backgroundQuery.isFetching);
   const totalTracks = current?.tracks.length ?? 0;
   const pageCount = Math.max(1, Math.ceil(totalTracks / rowsPerPage));
@@ -261,7 +286,10 @@ function AdminPage() {
 
   const refreshAmbience = useCallback(async () => {
     if (!currentSummary) return;
-    await queryClient.invalidateQueries({ queryKey: ["admin", "ambience", currentSummary.id] });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["admin", "ambience", currentSummary.id] }),
+      queryClient.invalidateQueries({ queryKey: ["admin", "ambience-assets"] }),
+    ]);
   }, [currentSummary, queryClient]);
 
   const refreshBackground = useCallback(async () => {
@@ -277,9 +305,20 @@ function AdminPage() {
   }
 
   useEffect(() => {
-    void supabase.auth.getSession().then(({ data }) => {
-      if (!data.session) void navigate({ to: "/admin/login" });
-      else setClientReady(true);
+    void supabase.auth.getSession().then(async ({ data }) => {
+      if (!data.session) {
+        void navigate({ to: "/admin/login" });
+        return;
+      }
+      try {
+        if ((await getAdminOnboarding()) !== "ready") {
+          void navigate({ to: "/admin/login" });
+          return;
+        }
+        setClientReady(true);
+      } catch {
+        void navigate({ to: "/admin/login" });
+      }
     });
   }, [navigate]);
 
@@ -299,7 +338,7 @@ function AdminPage() {
       void queryClient.prefetchQuery({
         queryKey: ["admin", "songs", first.id],
         queryFn: () => getAdminSongsData({ data: { sceneId: first.id } }),
-        staleTime: 30_000,
+        staleTime: ADMIN_CACHE_MS,
       });
     }
   }, [queryClient, scenes]);
@@ -308,7 +347,7 @@ function AdminPage() {
     const error = bootstrapQuery.error;
     if (!error) return;
     const text = error instanceof Error ? error.message : "Unable to load admin data";
-    if (/sign in|administrator|session/i.test(text)) {
+    if (/sign in|administrator|session|mfa|verification/i.test(text)) {
       window.sessionStorage.setItem(
         ADMIN_SIGN_IN_NOTICE_KEY,
         "Your sign-in session expired. Please sign in again.",
@@ -322,7 +361,7 @@ function AdminPage() {
       songsQuery.error ?? analyticsQuery.error ?? ambienceQuery.error ?? backgroundQuery.error;
     if (!error) return;
     const text = error instanceof Error ? error.message : "Unable to load this section";
-    if (/sign in|administrator|session/i.test(text)) {
+    if (/sign in|administrator|session|mfa|verification/i.test(text)) {
       window.sessionStorage.setItem(
         ADMIN_SIGN_IN_NOTICE_KEY,
         "Your sign-in session expired. Please sign in again.",
@@ -466,6 +505,12 @@ function AdminPage() {
             <p className="mt-2 text-xs text-zinc-400">Administrator account</p>
             <button
               className="mt-3 w-full rounded border border-zinc-600 px-3 py-2 text-sm"
+              onClick={() => setSecurityOpen(true)}
+            >
+              Account security
+            </button>
+            <button
+              className="mt-2 w-full rounded border border-zinc-600 px-3 py-2 text-sm"
               onClick={() =>
                 requestTransition(async () => {
                   await supabase.auth.signOut();
@@ -600,7 +645,7 @@ function AdminPage() {
                     <select
                       className="rounded border border-zinc-600 bg-zinc-900 p-2"
                       value={range}
-                      disabled={busy}
+                      disabled={analyticsQuery.isFetching}
                       onChange={(event) => setRange(event.target.value as Range)}
                     >
                       <option value="7d">Last 7 days</option>
@@ -619,7 +664,7 @@ function AdminPage() {
                       <button
                         type="button"
                         className="rounded border border-zinc-600 px-2 py-1 text-xs"
-                        disabled={busy || !scenes.length}
+                        disabled={!scenes.length}
                         onClick={() =>
                           setComparedSceneIds((ids) =>
                             toggleAllIds(
@@ -642,7 +687,6 @@ function AdminPage() {
                         <input
                           type="checkbox"
                           checked={comparedSceneIds.includes(scene.id)}
-                          disabled={busy}
                           onChange={() => toggleComparedScene(scene.id)}
                         />
                         <span>{scene.title}</span>
@@ -667,11 +711,22 @@ function AdminPage() {
                       ].map(([label, value]) => (
                         <div key={label} className="rounded border border-zinc-700 p-4">
                           <dt className="text-sm text-zinc-400">{label}</dt>
-                          <dd className="mt-2 text-2xl font-semibold">{busy ? "…" : value}</dd>
+                          <dd className="mt-2 text-2xl font-semibold">{value}</dd>
                         </div>
                       ))}
+                      <div className="rounded border border-zinc-700 p-4">
+                        <dt className="text-sm text-zinc-400">Live viewers now</dt>
+                        <dd className="mt-2 text-2xl font-semibold tabular-nums">
+                          <LiveViewerCount
+                            snapshot={
+                              livePresence[singleComparedAnalytics?.sceneId ?? ""] ??
+                              CONNECTING_ROOM_PRESENCE
+                            }
+                          />
+                        </dd>
+                      </div>
                     </dl>
-                    {!busy && !singleComparedAnalytics?.visits ? (
+                    {!singleComparedAnalytics?.visits ? (
                       <p className="mt-2 text-sm text-zinc-400">
                         No visits recorded for this Jagah in the selected period.
                       </p>
@@ -683,6 +738,7 @@ function AdminPage() {
                       <thead className="border-b border-zinc-700 text-zinc-400">
                         <tr>
                           <th className="p-3">Jagah</th>
+                          <th className="p-3">Live now</th>
                           <th className="p-3">Visits</th>
                           <th className="p-3">Played visits</th>
                           <th className="p-3">Total listening</th>
@@ -693,12 +749,17 @@ function AdminPage() {
                         {comparedAnalytics.map((row) => (
                           <tr key={row.sceneId} className="border-b border-zinc-800 last:border-0">
                             <td className="p-3 font-medium">{row.title}</td>
-                            <td className="p-3">{busy ? "…" : row.visits}</td>
-                            <td className="p-3">{busy ? "…" : row.playedVisits}</td>
-                            <td className="p-3">{busy ? "…" : seconds(row.listeningSeconds)}</td>
-                            <td className="p-3">
-                              {busy ? "…" : seconds(row.averageListeningSeconds)}
+                            <td className="p-3 font-semibold tabular-nums">
+                              <LiveViewerCount
+                                snapshot={
+                                  livePresence[row.sceneId] ?? CONNECTING_ROOM_PRESENCE
+                                }
+                              />
                             </td>
+                            <td className="p-3">{row.visits}</td>
+                            <td className="p-3">{row.playedVisits}</td>
+                            <td className="p-3">{seconds(row.listeningSeconds)}</td>
+                            <td className="p-3">{seconds(row.averageListeningSeconds)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -710,6 +771,7 @@ function AdminPage() {
                   </p>
                 )}
                 <p className="mt-4 text-sm text-zinc-400">
+                  Live viewers are connected room tabs and do not depend on the selected period.{" "}
                   Average listening time is calculated across visits that played music.
                 </p>
               </section>
@@ -948,6 +1010,7 @@ function AdminPage() {
           )}
         </div>
       </section>
+      <AdminSecurityDialog open={securityOpen} onClose={() => setSecurityOpen(false)} />
       {edit ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4">
           <form className="w-full max-w-lg space-y-3 rounded bg-zinc-900 p-5" onSubmit={saveEdit}>
@@ -1075,5 +1138,23 @@ function SectionLoading({ label }: { label: string }) {
       <div className="h-40 animate-pulse rounded-lg border border-zinc-800 bg-zinc-900/60" />
       <div className="h-56 animate-pulse rounded-lg border border-zinc-800 bg-zinc-900/60" />
     </div>
+  );
+}
+
+function LiveViewerCount({ snapshot }: { snapshot: RoomPresenceSnapshot }) {
+  const label = roomPresenceLabel(snapshot);
+  return (
+    <span
+      className={snapshot.status === "ready" ? "text-emerald-300" : "text-sm text-zinc-400"}
+      title={
+        snapshot.status === "connecting"
+          ? "Connecting to live viewer counts"
+          : snapshot.status === "unavailable"
+            ? "Live viewer counts are temporarily unavailable"
+            : undefined
+      }
+    >
+      {label}
+    </span>
   );
 }
