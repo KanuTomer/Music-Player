@@ -511,7 +511,7 @@ begin
           and reservation.expires_at > now()
           and reservation.finalized_at is null
           and reservation.discarded_at is null
-      )) then
+      ) then
     raise exception 'Storage object is still referenced';
   end if;
   insert into public.admin_storage_cleanup_queue(bucket, object_path, reason)
