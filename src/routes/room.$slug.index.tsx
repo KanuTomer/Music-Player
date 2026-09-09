@@ -3,6 +3,7 @@ import { DoorClosed } from "lucide-react";
 import { RoomExperience } from "@/components/room/RoomExperience";
 import { buildSeoMeta, getCanonicalUrl } from "@/lib/seo";
 import { loadRoomRoute } from "@/lib/room-route";
+import { RoomRouteError } from "@/components/room/RoomRouteError";
 
 export const Route = createFileRoute("/room/$slug/")({
   validateSearch: (
@@ -52,7 +53,7 @@ export const Route = createFileRoute("/room/$slug/")({
   },
   component: RoomPage,
   notFoundComponent: RoomNotFound,
-  errorComponent: RoomError,
+  errorComponent: RoomRouteError,
 });
 
 function RoomPage() {
@@ -85,24 +86,6 @@ function RoomNotFound() {
       >
         Wapas dhaba
       </Link>
-    </div>
-  );
-}
-
-function RoomError() {
-  return (
-    <div className="flex h-dvh flex-col items-center justify-center gap-3 px-6 text-center">
-      <p className="font-signage text-xl font-bold">Line kat gayi</p>
-      <p className="max-w-sm text-sm text-muted-foreground">
-        Kamra load nahi hua. Ek baar phir koshish karein?
-      </p>
-      <button
-        type="button"
-        onClick={() => window.location.reload()}
-        className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
-      >
-        Retry
-      </button>
     </div>
   );
 }
