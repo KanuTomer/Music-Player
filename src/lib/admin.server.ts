@@ -1,28 +1,18 @@
-import { getRequest } from "@tanstack/react-start/server";
 import { createHash } from "node:crypto";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Database } from "@/integrations/supabase/types";
+import { getRequestAdminAuthorization, requireRequestAdmin } from "./admin-authorization.server";
+import { createRequestSupabaseClient, requestAccessToken } from "./admin-auth.server";
+import type { AdminOnboardingStatus } from "./admin-authorization";
 import { ambienceProcessing, type AmbienceRole } from "./ambience-processing";
 import { ambienceMp3, validateAmbienceMp3 } from "./mp3-audio";
 
 const serviceAdmin = supabaseAdmin;
 
-function requestAccessToken() {
-  const authorization = getRequest()?.headers.get("authorization");
-  return authorization?.match(/^Bearer\s+(.+)$/i)?.[1] ?? null;
-}
-
 function requestAdminClient(): SupabaseClient<Database> {
   const token = requestAccessToken();
-  if (!token) throw new Error("Sign in is required");
-  const url = process.env["SUPABASE_URL"];
-  const key = process.env["SUPABASE_PUBLISHABLE_KEY"];
-  if (!url || !key) throw new Error("Admin authentication is unavailable");
-  return createClient<Database>(url, key, {
-    global: { headers: { Authorization: `Bearer ${token}` } },
-    auth: { persistSession: false, autoRefreshToken: false, storage: undefined },
-  });
+  return createRequestSupabaseClient(token);
 }
 
 // All database work in an admin request uses the caller's JWT, so grants and RLS
@@ -187,31 +177,17 @@ export function countTrackUses(rows: Array<{ track_id: string }>) {
 }
 
 export async function requireAdmin(): Promise<{ id: string; email?: string }> {
-  const token = requestAccessToken();
-  if (!token) throw new Error("Sign in is required");
-  const { data, error } = await admin.auth.getClaims(token);
-  if (error || !data.claims?.sub) throw new Error("Your sign-in session is invalid");
-  const { data: status, error: statusError } = await admin.rpc("admin_onboarding_status");
-  if (statusError) throw new Error("Unable to verify administrator access");
-  if (status === "not_authorized") throw new Error("Administrator access is required");
-  if (status !== "ready") throw new Error("Administrator MFA verification is required");
+  const identity = await requireRequestAdmin();
   return {
-    id: data.claims.sub,
-    ...(typeof data.claims.email === "string" ? { email: data.claims.email } : {}),
+    id: identity.userId,
+    ...(identity.email ? { email: identity.email } : {}),
   };
 }
 
-export type AdminOnboardingStatus =
-  "not_authorized" | "mfa_enrollment_required" | "mfa_challenge_required" | "ready";
+export type { AdminOnboardingStatus } from "./admin-authorization";
 
 export async function getAdminOnboardingStatus(): Promise<AdminOnboardingStatus> {
-  const token = requestAccessToken();
-  if (!token) throw new Error("Sign in is required");
-  const { data: userData, error: userError } = await admin.auth.getClaims(token);
-  if (userError || !userData.claims?.sub) throw new Error("Your sign-in session is invalid");
-  const { data, error } = await admin.rpc("admin_onboarding_status");
-  if (error) throw new Error("Unable to verify administrator access");
-  return data as AdminOnboardingStatus;
+  return (await getRequestAdminAuthorization()).status;
 }
 
 async function activeScenes(): Promise<AdminScene[]> {
@@ -1131,41 +1107,6 @@ export async function updateSong(input: {
     p_year: input.year,
     p_video_id: videoId,
     p_scope: input.scope,
-  });
-  if (error) throw new Error(error.message);
-}
-
-export async function registerRoomVisit(visitId: string, sceneSlug: string): Promise<void> {
-  const { data: scene, error: sceneError } = await serviceAdmin
-    .from("scenes")
-    .select("id")
-    .eq("slug", sceneSlug)
-    .eq("is_live", true)
-    .maybeSingle();
-  if (sceneError || !scene) return;
-  const { error } = await serviceAdmin
-    .from("room_visits")
-    .upsert({ id: visitId, scene_id: scene.id }, { onConflict: "id", ignoreDuplicates: true });
-  if (error) throw new Error(error.message);
-}
-
-export async function recordListening(
-  visitId: string,
-  sceneSlug: string,
-  seconds: number,
-): Promise<void> {
-  const { data: scene } = await serviceAdmin
-    .from("scenes")
-    .select("id")
-    .eq("slug", sceneSlug)
-    .eq("is_live", true)
-    .maybeSingle();
-  if (!scene) return;
-  if (!Number.isFinite(seconds)) return;
-  const { error } = await serviceAdmin.rpc("record_room_heartbeat", {
-    p_visit_id: visitId,
-    p_scene_id: scene.id,
-    p_seconds: Math.min(60, Math.max(1, Math.floor(seconds))),
   });
   if (error) throw new Error(error.message);
 }

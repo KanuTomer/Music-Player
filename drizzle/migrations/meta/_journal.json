@@ -8,6 +8,20 @@
       "when": 1789060526910,
       "tag": "0000_neon_baseline",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789064565181,
+      "tag": "0001_neon_operational_writes",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789068872750,
+      "tag": "0002_neon_admin_authorization",
+      "breakpoints": true
     }
   ]
 }

@@ -5,9 +5,13 @@ import {
   fetchRoomPresentation,
   fetchScenes,
   insertChatMessage,
-  recordSourceFailure,
 } from "./rooms.server";
-import { recordListening, registerRoomVisit } from "./admin.server";
+import { recordListening, recordSourceFailure, registerRoomVisit } from "./rooms.operations.server";
+import {
+  normalizePlaybackSourceFailureInput,
+  normalizeRoomListeningInput,
+  normalizeRoomVisitInput,
+} from "./rooms.operations";
 import { validateChatMessageText } from "./chat-message";
 
 export type Scene = {
@@ -143,17 +147,9 @@ export const listScenes = createServerFn({ method: "GET" }).handler(async () => 
 });
 
 export const reportPlaybackSourceFailure = createServerFn({ method: "POST" })
-  .validator((data: { sourceId: string; errorCode: number }) => {
-    const sourceId = String(data.sourceId);
-    const errorCode = Number(data.errorCode);
-    if (
-      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(sourceId)
-    ) {
-      throw new Error("Invalid source identifier");
-    }
-    if (![2, 5, 100, 101, 150, 153].includes(errorCode)) throw new Error("Invalid player error");
-    return { sourceId, errorCode };
-  })
+  .validator((data: { sourceId: string; errorCode: number }) =>
+    normalizePlaybackSourceFailureInput(data.sourceId, data.errorCode),
+  )
   .handler(async ({ data }) => recordSourceFailure(data.sourceId, data.errorCode));
 
 export const getRoom = createServerFn({ method: "GET" })
@@ -193,16 +189,13 @@ export const sendChatMessage = createServerFn({ method: "POST" })
   );
 
 export const recordRoomVisit = createServerFn({ method: "POST" })
-  .validator((data: { visitId: string; sceneSlug: string }) => ({
-    visitId: String(data.visitId),
-    sceneSlug: String(data.sceneSlug),
-  }))
+  .validator((data: { visitId: string; sceneSlug: string }) =>
+    normalizeRoomVisitInput(data.visitId, data.sceneSlug),
+  )
   .handler(async ({ data }) => registerRoomVisit(data.visitId, data.sceneSlug));
 
 export const recordRoomListening = createServerFn({ method: "POST" })
-  .validator((data: { visitId: string; sceneSlug: string; seconds: number }) => ({
-    visitId: String(data.visitId),
-    sceneSlug: String(data.sceneSlug),
-    seconds: Number(data.seconds),
-  }))
+  .validator((data: { visitId: string; sceneSlug: string; seconds: number }) =>
+    normalizeRoomListeningInput(data.visitId, data.sceneSlug, data.seconds),
+  )
   .handler(async ({ data }) => recordListening(data.visitId, data.sceneSlug, data.seconds));

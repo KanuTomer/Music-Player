@@ -1,7 +1,12 @@
-import { pgTable, index, unique, check, uuid, text, bigint, numeric, boolean, timestamp, foreignKey, integer, jsonb, uniqueIndex } from "drizzle-orm/pg-core"
+import { pgTable, index, unique, check, uuid, text, bigint, numeric, boolean, timestamp, foreignKey, integer, jsonb, uniqueIndex, date, primaryKey } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
 
+
+export const appAdmins = pgTable("app_admins", {
+	userId: uuid("user_id").primaryKey().notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+});
 
 export const ambienceAssets = pgTable("ambience_assets", {
 	id: uuid().defaultRandom().primaryKey().notNull(),
@@ -213,6 +218,43 @@ export const playbackSources = pgTable("playback_sources", {
 		}).onDelete("cascade"),
 	unique("playback_sources_provider_provider_item_id_key").on(table.provider, table.providerItemId),
 	check("playback_sources_provider_check", sql`provider = 'youtube'::text`),
+]);
+
+export const roomVisits = pgTable("room_visits", {
+	id: uuid().primaryKey().notNull(),
+	sceneId: uuid("scene_id").notNull(),
+	startedAt: timestamp("started_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	firstPlayedAt: timestamp("first_played_at", { withTimezone: true, mode: 'string' }),
+	lastHeartbeatAt: timestamp("last_heartbeat_at", { withTimezone: true, mode: 'string' }),
+	listeningSeconds: integer("listening_seconds").default(0).notNull(),
+}, (table) => [
+	index("room_visits_scene_started_idx").using("btree", table.sceneId.asc().nullsLast().op("uuid_ops"), table.startedAt.desc().nullsFirst().op("timestamptz_ops")),
+	index("room_visits_started_idx").using("btree", table.startedAt.desc().nullsFirst().op("timestamptz_ops")),
+	foreignKey({
+		columns: [table.sceneId],
+		foreignColumns: [scenes.id],
+		name: "room_visits_scene_id_fkey"
+	}).onDelete("cascade"),
+	check("room_visits_listening_seconds_check", sql`listening_seconds >= 0`),
+	check("room_visits_last_heartbeat_check", sql`(last_heartbeat_at IS NULL) OR (last_heartbeat_at >= started_at)`),
+]);
+
+export const playbackSourceFailures = pgTable("playback_source_failures", {
+	sourceId: uuid("source_id").notNull(),
+	errorCode: integer("error_code").notNull(),
+	failedOn: date("failed_on", { mode: 'string' }).default(sql`current_date`).notNull(),
+	occurrenceCount: bigint("occurrence_count", { mode: "number" }).default(1).notNull(),
+	firstSeenAt: timestamp("first_seen_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	lastSeenAt: timestamp("last_seen_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	primaryKey({ columns: [table.sourceId, table.errorCode, table.failedOn] }),
+	foreignKey({
+		columns: [table.sourceId],
+		foreignColumns: [playbackSources.id],
+		name: "playback_source_failures_source_id_fkey"
+	}).onDelete("cascade"),
+	check("playback_source_failures_error_code_check", sql`error_code = ANY (ARRAY[2, 5, 100, 101, 150, 153])`),
+	check("playback_source_failures_occurrence_count_check", sql`occurrence_count > 0`),
 ]);
 
 export const sponsors = pgTable("sponsors", {

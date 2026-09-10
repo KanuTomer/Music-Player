@@ -8,6 +8,8 @@ import type {
   RoomPresentation,
   Scene,
 } from "./rooms.functions";
+import { selectRoomReadRepository } from "./rooms.backend.server";
+import { publicStorageUrl } from "./public-storage.server";
 
 function publicClient() {
   const url = process.env["SUPABASE_URL"];
@@ -32,18 +34,13 @@ function publicClient() {
 const SCENE_COLS =
   "id, slug, title_en, title_hi, hook, description, region, category, palette, art_key, background_storage_path, foreground_text_color, is_dark, chat_mode, gag_label, sort_order, tags";
 
-function sceneWithBackground(
-  client: ReturnType<typeof publicClient>,
-  scene: Record<string, unknown>,
-) {
+function sceneWithBackground(scene: Record<string, unknown>) {
   const path =
     typeof scene["background_storage_path"] === "string" ? scene["background_storage_path"] : null;
   return {
     ...scene,
     background_storage_path: path,
-    background_url: path
-      ? client.storage.from("scene-media").getPublicUrl(path).data.publicUrl
-      : null,
+    background_url: publicStorageUrl("scene-media", path),
     foreground_text_color:
       typeof scene["foreground_text_color"] === "string"
         ? scene["foreground_text_color"]
@@ -61,7 +58,7 @@ function normalizeOneLiners(rows: Array<Record<string, unknown>>): OneLiner[] {
   }));
 }
 
-export async function fetchScenes(): Promise<Scene[]> {
+async function fetchScenesFromSupabase(): Promise<Scene[]> {
   const client = publicClient();
   const { data, error } = await client
     .from("scenes")
@@ -69,10 +66,10 @@ export async function fetchScenes(): Promise<Scene[]> {
     .eq("is_live", true)
     .order("sort_order", { ascending: true });
   if (error) throw new Error(error.message);
-  return (data ?? []).map((scene) => sceneWithBackground(client, scene));
+  return (data ?? []).map((scene) => sceneWithBackground(scene));
 }
 
-export async function fetchRoom(slug: string): Promise<RoomPayload | null> {
+async function fetchRoomFromSupabase(slug: string): Promise<RoomPayload | null> {
   const client = publicClient();
   const { data: scene, error } = await client
     .from("scenes")
@@ -122,7 +119,7 @@ export async function fetchRoom(slug: string): Promise<RoomPayload | null> {
   if (memberships.error) throw new Error(memberships.error.message);
 
   return {
-    scene: sceneWithBackground(client, scene),
+    scene: sceneWithBackground(scene),
     curatedSet: curatedSet.data,
     queue: (memberships.data ?? []).map((membership) => {
       const track = membership.tracks;
@@ -149,9 +146,7 @@ export async function fetchRoom(slug: string): Promise<RoomPayload | null> {
               ...visual,
               ...(visual.overlay_path
                 ? {
-                    overlay_url: client.storage
-                      .from("scene-media")
-                      .getPublicUrl(visual.overlay_path).data.publicUrl,
+                    overlay_url: publicStorageUrl("scene-media", visual.overlay_path)!,
                   }
                 : {}),
             };
@@ -162,8 +157,7 @@ export async function fetchRoom(slug: string): Promise<RoomPayload | null> {
               id: stem.id,
               name: stem.name,
               role: stem.role,
-              url: client.storage.from("ambience-audio").getPublicUrl(asset.storage_path).data
-                .publicUrl,
+              url: publicStorageUrl("ambience-audio", asset.storage_path) ?? "",
               default_gain: Number(stem.default_volume),
               min_gain: Number(stem.min_gain),
               max_gain: Number(stem.max_gain),
@@ -183,7 +177,9 @@ export async function fetchRoom(slug: string): Promise<RoomPayload | null> {
   };
 }
 
-export async function fetchRoomPresentation(sceneId: string): Promise<RoomPresentation | null> {
+async function fetchRoomPresentationFromSupabase(
+  sceneId: string,
+): Promise<RoomPresentation | null> {
   const client = publicClient();
   const [sceneResult, lineResult] = await Promise.all([
     client
@@ -201,16 +197,14 @@ export async function fetchRoomPresentation(sceneId: string): Promise<RoomPresen
   return {
     scene_id: sceneResult.data.id,
     background_storage_path: path,
-    background_url: path
-      ? client.storage.from("scene-media").getPublicUrl(path).data.publicUrl
-      : null,
+    background_url: publicStorageUrl("scene-media", path),
     foreground_text_color: sceneResult.data.foreground_text_color,
     gag_label: sceneResult.data.gag_label,
     oneliners: normalizeOneLiners(lineResult.data ?? []),
   };
 }
 
-export async function fetchRoomAmbience(sceneId: string): Promise<AmbienceProfile | null> {
+async function fetchRoomAmbienceFromSupabase(sceneId: string): Promise<AmbienceProfile | null> {
   const client = publicClient();
   const [ambienceProfile, ambienceStems] = await Promise.all([
     client
@@ -245,8 +239,7 @@ export async function fetchRoomAmbience(sceneId: string): Promise<AmbienceProfil
         ...visual,
         ...(visual.overlay_path
           ? {
-              overlay_url: client.storage.from("scene-media").getPublicUrl(visual.overlay_path).data
-                .publicUrl,
+              overlay_url: publicStorageUrl("scene-media", visual.overlay_path)!,
             }
           : {}),
       };
@@ -257,7 +250,7 @@ export async function fetchRoomAmbience(sceneId: string): Promise<AmbienceProfil
         id: stem.id,
         name: stem.name,
         role: stem.role,
-        url: client.storage.from("ambience-audio").getPublicUrl(asset.storage_path).data.publicUrl,
+        url: publicStorageUrl("ambience-audio", asset.storage_path) ?? "",
         default_gain: Number(stem.default_volume),
         min_gain: Number(stem.min_gain),
         max_gain: Number(stem.max_gain),
@@ -272,29 +265,41 @@ export async function fetchRoomAmbience(sceneId: string): Promise<AmbienceProfil
   };
 }
 
-export async function recordSourceFailure(sourceId: string, errorCode: number) {
-  const url = process.env["SUPABASE_URL"];
-  const secret = process.env["SUPABASE_SECRET_KEY"];
-  if (!url || !secret) throw new Error("Failure reporting is unavailable");
-  const client = createClient<Database>(url, secret, {
-    auth: { persistSession: false, autoRefreshToken: false },
-    global: {
-      fetch: (input, init) => {
-        const headers = new Headers(init?.headers);
-        if (secret.startsWith("sb_") && headers.get("Authorization") === `Bearer ${secret}`) {
-          headers.delete("Authorization");
-        }
-        headers.set("apikey", secret);
-        return fetch(input, { ...init, headers });
-      },
-    },
+type RoomReadRepository = {
+  fetchScenes: () => Promise<Scene[]>;
+  fetchRoom: (slug: string) => Promise<RoomPayload | null>;
+  fetchRoomAmbience: (sceneId: string) => Promise<AmbienceProfile | null>;
+  fetchRoomPresentation: (sceneId: string) => Promise<RoomPresentation | null>;
+};
+
+const supabaseRoomReadRepository: RoomReadRepository = {
+  fetchScenes: fetchScenesFromSupabase,
+  fetchRoom: fetchRoomFromSupabase,
+  fetchRoomAmbience: fetchRoomAmbienceFromSupabase,
+  fetchRoomPresentation: fetchRoomPresentationFromSupabase,
+};
+
+async function roomReadRepository() {
+  return selectRoomReadRepository<RoomReadRepository>(supabaseRoomReadRepository, async () => {
+    const { neonRoomReadRepository } = await import("./rooms.neon.server");
+    return neonRoomReadRepository;
   });
-  const { error } = await client.rpc("record_playback_source_failure", {
-    p_source_id: sourceId,
-    p_error_code: errorCode,
-  });
-  if (error) throw new Error(error.message);
-  return { recorded: true };
+}
+
+export async function fetchScenes(): Promise<Scene[]> {
+  return (await roomReadRepository()).fetchScenes();
+}
+
+export async function fetchRoom(slug: string): Promise<RoomPayload | null> {
+  return (await roomReadRepository()).fetchRoom(slug);
+}
+
+export async function fetchRoomAmbience(sceneId: string): Promise<AmbienceProfile | null> {
+  return (await roomReadRepository()).fetchRoomAmbience(sceneId);
+}
+
+export async function fetchRoomPresentation(sceneId: string): Promise<RoomPresentation | null> {
+  return (await roomReadRepository()).fetchRoomPresentation(sceneId);
 }
 
 export async function insertChatMessage(
