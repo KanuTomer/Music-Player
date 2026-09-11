@@ -12,6 +12,16 @@ import type {
   SongDraft,
 } from "./admin.server";
 import type { AmbienceRole } from "./ambience-processing";
+import {
+  ambienceUploadStemDefaults,
+  isAdminStorageBucket,
+  storageBucketFor,
+  validateStoragePath,
+  type AdminStorageBucket,
+  type DiscardResult,
+  type ReservationStatus,
+  type UploadPurpose,
+} from "./admin-storage";
 
 // Database rows are narrowed explicitly while mapping each query result.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -596,7 +606,10 @@ export async function reserveAmbienceUpload(identity: Identity, slug: string) {
     await db.execute(sql`select id from scenes where slug=${slug} and is_live`),
   );
   if (rows.length !== 1) throw new Error("Jagah not found");
-  return reserveUpload(identity, rows[0]!.id, "ambience", slug);
+  return {
+    ...(await reserveUpload(identity, rows[0]!.id, "ambience", slug)),
+    sceneId: rows[0]!.id,
+  };
 }
 export async function reserveBackgroundUpload(identity: Identity, sceneId: string) {
   const rows = resultRows<{ slug: string }>(
@@ -606,25 +619,105 @@ export async function reserveBackgroundUpload(identity: Identity, sceneId: strin
   return reserveUpload(identity, sceneId, "background", rows[0]!.slug);
 }
 
+export async function getUploadReservation(
+  identity: Identity,
+  input: { sceneId: string; purpose: UploadPurpose; path: string; reservationId: string },
+): Promise<ReservationStatus> {
+  const bucket = storageBucketFor(input.purpose);
+  const rows = resultRows<{
+    expires_at: string;
+    finalized_at: string | null;
+    discarded_at: string | null;
+    finalized_reference_exists: boolean;
+  }>(
+    await db.execute(sql`select r.expires_at,r.finalized_at,r.discarded_at,
+      case when r.finalized_at is null then true
+        when r.purpose='ambience' then exists(
+          select 1 from ambience_assets a where a.storage_path=r.object_path)
+        when r.purpose='background' then exists(
+          select 1 from scenes s where s.id=r.scene_id and s.background_storage_path=r.object_path)
+        else false end as finalized_reference_exists
+      from admin_upload_reservations r
+      where r.id=${input.reservationId}::uuid and r.actor_id=${identity.id}::uuid
+        and r.scene_id=${input.sceneId}::uuid and r.purpose=${input.purpose}
+        and r.bucket=${bucket} and r.object_path=${input.path}`),
+  );
+  const reservation = rows[0];
+  if (!reservation || reservation.discarded_at) return "invalid";
+  if (reservation.finalized_at)
+    return reservation.finalized_reference_exists ? "finalized" : "invalid";
+  return new Date(reservation.expires_at).getTime() > Date.now() ? "active" : "invalid";
+}
+
+export async function discardUploadReservation(
+  identity: Identity,
+  input: { sceneId: string; purpose: UploadPurpose; path: string; reservationId: string },
+  queueObject: boolean,
+): Promise<DiscardResult> {
+  const bucket = storageBucketFor(input.purpose);
+  return adminTransaction("compensate upload reservation", async (tx) => {
+    await authorize(tx, identity.id);
+    const rows = resultRows<{ finalized_at: string | null; discarded_at: string | null }>(
+      await tx.execute(sql`select finalized_at,discarded_at from admin_upload_reservations
+        where id=${input.reservationId}::uuid and actor_id=${identity.id}::uuid
+          and scene_id=${input.sceneId}::uuid and purpose=${input.purpose}
+          and bucket=${bucket} and object_path=${input.path} for update`),
+    );
+    const reservation = rows[0];
+    if (!reservation) return "invalid";
+    if (reservation.finalized_at) return "finalized";
+    if (reservation.discarded_at) return "already_discarded";
+    await tx.execute(
+      sql`update admin_upload_reservations set discarded_at=now() where id=${input.reservationId}::uuid`,
+    );
+    if (queueObject)
+      await tx.execute(sql`insert into admin_storage_cleanup_queue(bucket,object_path,reason)
+        values(${bucket},${input.path},'discarded_upload') on conflict(bucket,object_path,reason) do nothing`);
+    return "discarded";
+  });
+}
+
+export async function completeUploadCleanup(bucket: AdminStorageBucket, path: string) {
+  await db.execute(sql`update admin_storage_cleanup_queue set completed_at=now(),last_error=null
+    where bucket=${bucket} and object_path=${path} and reason='discarded_upload' and completed_at is null`);
+}
+
+export async function recordUploadCleanupFailure(
+  bucket: AdminStorageBucket,
+  path: string,
+  message: string,
+) {
+  await db.execute(sql`update admin_storage_cleanup_queue
+    set attempts=attempts+1,last_error=${message.slice(0, 240)}
+    where bucket=${bucket} and object_path=${path} and reason='discarded_upload' and completed_at is null`);
+}
+
 export async function discardReservation(
   identity: Identity,
   sceneId: string,
   path: string,
   reservationId: string,
 ) {
-  await adminTransaction("discard background upload", async (tx) => {
+  return adminTransaction("discard background upload", async (tx) => {
     await authorize(tx, identity.id);
-    await consumeRate(tx, identity.id, "upload.discard");
-    const rows = resultRows(
-      await tx.execute(
-        sql`update admin_upload_reservations set discarded_at=now() where id=${reservationId}::uuid and actor_id=${identity.id}::uuid and scene_id=${sceneId}::uuid and object_path=${path} and purpose='background' and expires_at>now() and finalized_at is null and discarded_at is null returning id`,
-      ),
+    const rows = resultRows<{ finalized_at: string | null; discarded_at: string | null }>(
+      await tx.execute(sql`select finalized_at,discarded_at from admin_upload_reservations
+        where id=${reservationId}::uuid and actor_id=${identity.id}::uuid and scene_id=${sceneId}::uuid
+          and object_path=${path} and purpose='background' and bucket='scene-media' for update`),
     );
-    if (rows.length !== 1) throw new Error("Invalid background upload reservation");
+    const reservation = rows[0];
+    if (!reservation) throw new Error("Invalid background upload reservation");
+    if (reservation.finalized_at) return "finalized" as const;
+    if (reservation.discarded_at) return "already_discarded" as const;
+    await consumeRate(tx, identity.id, "upload.discard");
+    await tx.execute(
+      sql`update admin_upload_reservations set discarded_at=now() where id=${reservationId}::uuid`,
+    );
     await tx.execute(
       sql`insert into admin_storage_cleanup_queue(bucket,object_path,reason) values('scene-media',${path},'discarded_upload') on conflict(bucket,object_path,reason) do nothing`,
     );
     await audit(tx, identity.id, "upload.discard", sceneId, reservationId, 1);
+    return "discarded" as const;
   });
 }
 
@@ -633,18 +726,17 @@ export async function discardAmbienceReservation(
   reservationId: string,
   path: string,
 ) {
-  await adminTransaction("discard ambience upload", async (tx) => {
-    await authorize(tx, identity.id);
-    const rows = resultRows<{ scene_id: string }>(
-      await tx.execute(
-        sql`update admin_upload_reservations set discarded_at=now() where id=${reservationId}::uuid and actor_id=${identity.id}::uuid and object_path=${path} and purpose='ambience' and finalized_at is null and discarded_at is null returning scene_id`,
-      ),
-    );
-    if (rows.length)
-      await tx.execute(
-        sql`insert into admin_storage_cleanup_queue(bucket,object_path,reason) values('ambience-audio',${path},'discarded_upload') on conflict(bucket,object_path,reason) do nothing`,
-      );
-  });
+  const rows = resultRows<{ scene_id: string }>(
+    await db.execute(sql`select scene_id from admin_upload_reservations
+      where id=${reservationId}::uuid and actor_id=${identity.id}::uuid
+        and object_path=${path} and purpose='ambience'`),
+  );
+  if (!rows[0]) return "invalid" as const;
+  return discardUploadReservation(
+    identity,
+    { sceneId: rows[0].scene_id, reservationId, path, purpose: "ambience" },
+    true,
+  );
 }
 
 export async function finalizeAmbienceUpload(
@@ -669,19 +761,35 @@ export async function finalizeAmbienceUpload(
     selectedDurationSeconds: number;
   },
 ) {
-  await adminTransaction("finalize ambience upload", async (tx) => {
+  return adminTransaction("finalize ambience upload", async (tx) => {
     await authorize(tx, identity.id);
-    await consumeRate(tx, identity.id, "upload.finalize");
-    const reservation = resultRows<{ slug: string }>(
+    const reservation = resultRows<{
+      slug: string;
+      expires_at: string;
+      finalized_at: string | null;
+      discarded_at: string | null;
+    }>(
       await tx.execute(
-        sql`select s.slug from admin_upload_reservations r join scenes s on s.id=r.scene_id and s.is_live where r.id=${input.reservationId}::uuid and r.actor_id=${identity.id}::uuid and r.scene_id=${input.sceneId}::uuid and r.purpose='ambience' and r.bucket='ambience-audio' and r.object_path=${input.path} and r.expires_at>now() and r.finalized_at is null and r.discarded_at is null for update`,
+        sql`select s.slug,r.expires_at,r.finalized_at,r.discarded_at
+          from admin_upload_reservations r join scenes s on s.id=r.scene_id and s.is_live
+          where r.id=${input.reservationId}::uuid and r.actor_id=${identity.id}::uuid
+            and r.scene_id=${input.sceneId}::uuid and r.purpose='ambience'
+            and r.bucket='ambience-audio' and r.object_path=${input.path} for update`,
       ),
     );
-    if (
-      reservation.length !== 1 ||
-      !input.path.startsWith(`rooms/${reservation[0]!.slug}/ambience/`)
-    )
+    const current = reservation[0];
+    if (!current) throw new Error("Audio upload reservation is invalid or expired");
+    validateStoragePath("ambience", input.path, current.slug);
+    if (current.finalized_at) {
+      const assets = resultRows(
+        await tx.execute(sql`select id from ambience_assets where storage_path=${input.path}`),
+      );
+      if (assets.length === 1) return "already_finalized" as const;
+      throw new Error("Finalized audio reservation has no matching asset");
+    }
+    if (current.discarded_at || new Date(current.expires_at).getTime() <= Date.now())
       throw new Error("Audio upload reservation is invalid or expired");
+    await consumeRate(tx, identity.id, "upload.finalize");
     const assetId = randomUUID(),
       sourceId = randomUUID(),
       stemId = randomUUID();
@@ -694,13 +802,13 @@ export async function finalizeAmbienceUpload(
     await tx.execute(
       sql`insert into private.ambience_asset_provenance(asset_source_id,source_sha256,original_filename,original_byte_size,original_duration_seconds,selected_start_seconds,selected_duration_seconds) values(${sourceId}::uuid,${input.sourceSha256},${input.originalFilename},${input.originalByteSize},${input.originalDurationSeconds},${input.selectedStartSeconds},${input.selectedDurationSeconds})`,
     );
-    const order = resultRows<{ n: number }>(
-      await tx.execute(
-        sql`select coalesce(max(sort_order),-1)::int+1 n from sound_stems where scene_id=${input.sceneId}::uuid`,
-      ),
-    )[0]!.n;
+    const defaults = ambienceUploadStemDefaults(input.role);
     await tx.execute(
-      sql`insert into sound_stems(id,scene_id,name,asset_id,role,is_active,sort_order) values(${stemId}::uuid,${input.sceneId}::uuid,${input.name},${assetId}::uuid,${input.role},true,${order})`,
+      sql`insert into sound_stems(id,scene_id,name,asset_id,role,is_active,sort_order,
+        default_volume,min_gain,max_gain,crossfade_ms,event_min_seconds,event_max_seconds,category,synth_key)
+        values(${stemId}::uuid,${input.sceneId}::uuid,${input.name},${assetId}::uuid,${input.role},true,${defaults.sortOrder},
+          ${defaults.defaultVolume},${defaults.minGain},${defaults.maxGain},${defaults.crossfadeMs},
+          ${defaults.eventMinSeconds},${defaults.eventMaxSeconds},${defaults.category},${defaults.synthKey})`,
     );
     const done = resultRows(
       await tx.execute(
@@ -709,6 +817,7 @@ export async function finalizeAmbienceUpload(
     );
     if (done.length !== 1) throw new Error("Unable to finalize upload reservation");
     await audit(tx, identity.id, "ambience.asset.finalize", input.sceneId, assetId, 2);
+    return "finalized" as const;
   });
 }
 
@@ -784,9 +893,10 @@ export async function saveScenePresentation(
 }
 
 export async function isStorageObjectReferenced(bucket: string, path: string) {
+  if (!isAdminStorageBucket(bucket)) return true;
   const rows = resultRows(
     await db.execute(
-      sql`select (${bucket}='scene-media' and exists(select 1 from scenes where background_storage_path=${path})) or (${bucket}='ambience-audio' and exists(select 1 from ambience_assets where storage_path=${path} and is_active)) or exists(select 1 from admin_upload_reservations where bucket=${bucket} and object_path=${path} and expires_at>now() and finalized_at is null and discarded_at is null) referenced`,
+      sql`select (${bucket}='scene-media' and exists(select 1 from scenes where background_storage_path=${path})) or (${bucket}='ambience-audio' and exists(select 1 from ambience_assets where storage_path=${path})) or exists(select 1 from admin_upload_reservations where bucket=${bucket} and object_path=${path} and expires_at>now() and finalized_at is null and discarded_at is null) referenced`,
     ),
   );
   return Boolean((rows[0] as { referenced: boolean } | undefined)?.referenced ?? true);

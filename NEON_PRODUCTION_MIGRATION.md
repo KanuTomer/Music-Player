@@ -297,6 +297,8 @@ Completion gate:
 
 Goal: keep existing media in Supabase Storage while Neon owns its metadata and provenance.
 
+Status: **Implementation and automated rehearsal complete; awaiting Kanu's manual acceptance.**
+
 Actions:
 
 1. Keep bucket names, object paths, MIME types, sizes, durations, hashes, and attribution in Neon.
@@ -311,6 +313,19 @@ Completion gate:
 - Invalid/expired reservations fail closed.
 - Referenced Storage objects remain protected.
 - A failed finalization does not leave an active reservation indefinitely.
+
+Implementation record (2026-09-11):
+
+- Added a server-only Supabase Storage gateway for scoped upload signing, downloads, removals, and public URLs without Supabase database access.
+- Added strict UUIDv4 background/audio path validation, WebP limits and dimensions, MP3 validation, provenance normalization, and established role-specific stem defaults.
+- Neon reservation signing now discards an unsigned reservation without queueing cleanup if Supabase signing fails.
+- Background and ambience finalization now perform a read-only reservation preflight before Storage download and retain the locked validation inside the Neon transaction.
+- Neon finalization failures discard unfinished reservations, queue cleanup, check references before removal, complete successful removals, and retain failed removals for Stage 13.
+- Finalized ambience retries return successfully without consuming another rate limit or creating duplicate metadata/audit records; referenced and unknown-bucket objects fail closed against deletion.
+- Rehearsal Supabase bucket settings remain public with their existing MIME and size restrictions. No bucket policy or object was changed by automated verification.
+- Transactional Neon checks passed and rolled back for reservation ownership/expiry, sanitized public provenance, genuine private provenance, role-specific stem defaults, exactly one finalization audit, and reference protection.
+- Focused Storage/media and administrator tests passed; the full Bun suite passed with 155 tests. Targeted Stage 11 lint and the production build passed.
+- Repository-wide lint remains blocked by 95 pre-existing formatting errors (plus 8 warnings). Repository-wide TypeScript remains blocked by the previously recorded UI strictness and missing `bun:test` declaration failures; Stage 11 production files introduce no TypeScript error.
 
 ### Stage 12 — Chat and Realtime
 
@@ -513,8 +528,8 @@ Completion gate:
 
 ## Next Session
 
-Current stage: **Stage 11 — integrate Neon metadata and reservations with Supabase Storage.**
+Current stage: **Stage 11 — manual Storage acceptance.**
 
-Before implementation, inspect the existing signed-upload, Storage validation, compensation, and cleanup boundaries and plan Stage 11 from the completed Stage 10 transaction layer. Stage 11 should perform controlled rehearsal Storage-object testing without changing production or connecting the cleanup route prematurely.
+Kanu should complete the controlled ambience and background upload test against rehearsal Supabase Storage and Neon, without invoking cleanup or manually deleting objects. After Kanu reports success, run read-only CLI verification, mark Stage 11 complete, and make Stage 12 current. Preserve the test audio object and queued replaced background for Stage 13.
 
-Do not begin Stage 11, commit, push, or interact with the company repository without a separate explicit request.
+Do not begin Stage 12, commit, push, or interact with the company repository without a separate explicit request.

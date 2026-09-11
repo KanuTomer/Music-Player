@@ -8,9 +8,47 @@ import type { AdminOnboardingStatus } from "./admin-authorization";
 import { ambienceProcessing, type AmbienceRole } from "./ambience-processing";
 import { ambienceMp3, validateAmbienceMp3 } from "./mp3-audio";
 import { resolveAdminDataBackend } from "./admin-data";
+import {
+  compensateUploadedObject,
+  createSignedUploadWithCompensation,
+  storageBucketFor,
+  validateAmbienceFinalization,
+  validateBackgroundWebp,
+  validateStoragePath,
+  type AdminStorageBucket,
+  type UploadPurpose,
+} from "./admin-storage";
+import { adminStorage } from "./admin-storage.server";
 
 async function neonAdminData() {
   return resolveAdminDataBackend() === "neon" ? import("./admin.neon.server") : null;
+}
+
+type NeonAdminData = NonNullable<Awaited<ReturnType<typeof neonAdminData>>>;
+type AdminIdentity = { id: string; email?: string };
+
+function uploadCompensation(
+  neon: NeonAdminData,
+  identity: AdminIdentity,
+  input: { sceneId: string; reservationId: string; path: string; purpose: UploadPurpose },
+) {
+  const bucket = storageBucketFor(input.purpose);
+  return {
+    discard: (queueObject: boolean) => neon.discardUploadReservation(identity, input, queueObject),
+    referenceStatus: async () => {
+      try {
+        return (await neon.isStorageObjectReferenced(bucket, input.path))
+          ? ("referenced" as const)
+          : ("unreferenced" as const);
+      } catch {
+        return "unavailable" as const;
+      }
+    },
+    remove: () => adminStorage.remove(bucket, input.path),
+    completeCleanup: () => neon.completeUploadCleanup(bucket, input.path),
+    recordRemovalFailure: (message: string) =>
+      neon.recordUploadCleanupFailure(bucket, input.path, message),
+  };
 }
 
 const serviceAdmin = supabaseAdmin;
@@ -363,8 +401,8 @@ export async function getAdminDashboard(since?: string): Promise<{
   };
 }
 
-function publicStorageUrl(bucket: string, path: string | null) {
-  return path ? admin.storage.from(bucket).getPublicUrl(path).data.publicUrl : null;
+function publicStorageUrl(bucket: AdminStorageBucket, path: string | null) {
+  return adminStorage.publicUrl(bucket, path);
 }
 
 export async function getAdminBootstrap(): Promise<{
@@ -799,11 +837,20 @@ export async function reserveAmbienceUpload(sceneSlug: string) {
   const neon = await neonAdminData();
   if (neon) {
     const reservation = await neon.reserveAmbienceUpload(user, String(sceneSlug));
-    const { data, error } = await serviceAdmin.storage
-      .from("ambience-audio")
-      .createSignedUploadUrl(reservation.path);
-    if (error || !data) throw new Error(error?.message ?? "Unable to reserve audio upload");
-    return { ...reservation, token: data.token };
+    const signed = await createSignedUploadWithCompensation(
+      () => adminStorage.createSignedUploadUrl("ambience-audio", reservation.path),
+      uploadCompensation(neon, user, {
+        sceneId: reservation.sceneId,
+        reservationId: reservation.reservationId,
+        path: reservation.path,
+        purpose: "ambience",
+      }),
+    );
+    return {
+      reservationId: reservation.reservationId,
+      path: reservation.path,
+      token: signed.token,
+    };
   }
   const { data: scene, error: sceneError } = await admin
     .from("scenes")
@@ -830,7 +877,6 @@ export async function reserveAmbienceUpload(sceneSlug: string) {
   };
 }
 
-const BACKGROUND_MAX_BYTES = 5 * 1024 * 1024;
 const BACKGROUND_PATH =
   /^rooms\/([a-z0-9-]+)\/background\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.webp$/i;
 
@@ -839,11 +885,16 @@ export async function reserveBackgroundUpload(sceneId: string) {
   const neon = await neonAdminData();
   if (neon) {
     const reservation = await neon.reserveBackgroundUpload(user, String(sceneId));
-    const { data, error } = await serviceAdmin.storage
-      .from("scene-media")
-      .createSignedUploadUrl(reservation.path);
-    if (error || !data) throw new Error(error?.message ?? "Unable to reserve background upload");
-    return { ...reservation, token: data.token };
+    const signed = await createSignedUploadWithCompensation(
+      () => adminStorage.createSignedUploadUrl("scene-media", reservation.path),
+      uploadCompensation(neon, user, {
+        sceneId: String(sceneId),
+        reservationId: reservation.reservationId,
+        path: reservation.path,
+        purpose: "background",
+      }),
+    );
+    return { ...reservation, token: signed.token };
   }
   const { data: rows, error: reservationError } = await admin.rpc(
     "admin_create_upload_reservation",
@@ -871,9 +922,22 @@ export async function discardBackgroundUpload(
   const user = await requireAdmin();
   const neon = await neonAdminData();
   if (neon) {
-    await neon.discardReservation(user, String(sceneId), String(path), String(reservationId));
-    const { error } = await serviceAdmin.storage.from("scene-media").remove([path]);
-    if (error) throw new Error(error.message);
+    validateStoragePath("background", String(path));
+    const discarded = await neon.discardReservation(
+      user,
+      String(sceneId),
+      String(path),
+      String(reservationId),
+    );
+    await compensateUploadedObject({
+      ...uploadCompensation(neon, user, {
+        sceneId: String(sceneId),
+        reservationId: String(reservationId),
+        path: String(path),
+        purpose: "background",
+      }),
+      discard: async () => discarded,
+    });
     return;
   }
   const { data: valid } = await admin.rpc("admin_check_upload_reservation", {
@@ -889,40 +953,6 @@ export async function discardBackgroundUpload(
   if (discardError) throw new Error(discardError.message);
   const { error } = await serviceAdmin.storage.from("scene-media").remove([path]);
   if (error) throw new Error(error.message);
-}
-
-function inspectPlaybackWebp(data: Buffer) {
-  if (
-    data.length < 16 ||
-    data.length > BACKGROUND_MAX_BYTES ||
-    data.toString("ascii", 0, 4) !== "RIFF" ||
-    data.toString("ascii", 8, 12) !== "WEBP"
-  ) {
-    throw new Error("Prepared background must be a WebP image no larger than 5 MiB");
-  }
-  const chunk = data.toString("ascii", 12, 16);
-  let width = 0;
-  let height = 0;
-  if (chunk === "VP8X" && data.length >= 30) {
-    width = 1 + data.readUIntLE(24, 3);
-    height = 1 + data.readUIntLE(27, 3);
-  } else if (
-    chunk === "VP8 " &&
-    data.length >= 30 &&
-    data[23] === 0x9d &&
-    data[24] === 0x01 &&
-    data[25] === 0x2a
-  ) {
-    width = data.readUInt16LE(26) & 0x3fff;
-    height = data.readUInt16LE(28) & 0x3fff;
-  } else if (chunk === "VP8L" && data.length >= 25 && data[20] === 0x2f) {
-    const bits = data.readUInt32LE(21);
-    width = 1 + (bits & 0x3fff);
-    height = 1 + ((bits >>> 14) & 0x3fff);
-  }
-  if (!width || !height || Math.max(width, height) > 2560) {
-    throw new Error("Prepared background is invalid or exceeds the 2560-pixel edge limit");
-  }
 }
 
 export async function saveScenePresentation(input: {
@@ -952,18 +982,38 @@ export async function saveScenePresentation(input: {
   }
   const neon = await neonAdminData();
   if (neon) {
-    if (input.backgroundStoragePath && input.uploadReservationId) {
-      const { data: object, error } = await serviceAdmin.storage
-        .from("scene-media")
-        .download(input.backgroundStoragePath);
-      if (error || !object) throw new Error(error?.message ?? "Uploaded background is missing");
-      inspectPlaybackWebp(Buffer.from(await object.arrayBuffer()));
+    const nextPath = input.backgroundStoragePath || null;
+    const compensationInput =
+      nextPath && input.uploadReservationId
+        ? {
+            sceneId: input.sceneId,
+            reservationId: input.uploadReservationId,
+            path: nextPath,
+            purpose: "background" as const,
+          }
+        : null;
+    try {
+      if (compensationInput) {
+        validateStoragePath("background", compensationInput.path);
+        const reservation = await neon.getUploadReservation(user, compensationInput);
+        if (reservation === "invalid")
+          throw new Error("Background upload reservation is invalid or expired");
+        if (reservation === "active") {
+          const bytes = await adminStorage.download("scene-media", compensationInput.path);
+          validateBackgroundWebp(bytes);
+        }
+      }
+      await neon.saveScenePresentation(user, {
+        ...input,
+        backgroundStoragePath: nextPath,
+        oneliners: input.oneliners.map((line) => ({ ...line, text: line.text.trim() })),
+      });
+      return neon.getAdminBackground(user, input.sceneId);
+    } catch (error) {
+      if (compensationInput)
+        await compensateUploadedObject(uploadCompensation(neon, user, compensationInput));
+      throw error;
     }
-    await neon.saveScenePresentation(user, {
-      ...input,
-      oneliners: input.oneliners.map((line) => ({ ...line, text: line.text.trim() })),
-    });
-    return neon.getAdminBackground(user, input.sceneId);
   }
   const { data: scene, error: sceneError } = await admin
     .from("scenes")
@@ -993,7 +1043,7 @@ export async function saveScenePresentation(input: {
         .download(nextPath);
       if (downloadError || !object)
         throw new Error(downloadError?.message ?? "Uploaded background is missing");
-      inspectPlaybackWebp(Buffer.from(await object.arrayBuffer()));
+      validateBackgroundWebp(Buffer.from(await object.arrayBuffer()));
     }
     const { error } = await admin.rpc("admin_secured_save_scene_presentation_v2", {
       p_scene_id: input.sceneId,
@@ -1039,90 +1089,100 @@ export async function finalizeAmbienceUpload(input: {
 }) {
   const user = await requireAdmin();
   const neon = await neonAdminData();
-  let removeUploadedObject = false;
-  try {
-    const pathMatch = input.path.match(
-      /^rooms\/([a-z0-9-]+)\/ambience\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.mp3$/i,
-    );
-    if (!pathMatch) throw new Error("Invalid upload path");
-    if (!neon) {
-      const { data: validReservation } = await admin.rpc("admin_check_upload_reservation", {
-        p_reservation_id: input.reservationId,
-        p_scene_id: input.sceneId,
-        p_purpose: "ambience",
-        p_object_path: input.path,
-      });
-      if (!validReservation) throw new Error("Audio upload reservation is invalid or expired");
-      const { data: scene, error: sceneError } = await admin
-        .from("scenes")
-        .select("slug")
-        .eq("id", input.sceneId)
-        .single();
-      if (sceneError || !scene || scene.slug !== pathMatch[1])
-        throw new Error("Invalid upload path");
-    }
-    removeUploadedObject = true;
-    const { data: object, error: downloadError } = await serviceAdmin.storage
-      .from("ambience-audio")
-      .download(input.path);
-    if (downloadError || !object)
-      throw new Error(downloadError?.message ?? "Uploaded audio is missing");
-    const bytes = Buffer.from(await object.arrayBuffer());
-    const inspection = validateAmbienceMp3(
-      bytes,
-      ambienceProcessing.maxDurationSeconds[input.role],
-    );
-    const hash = createHash("sha256").update(bytes).digest("hex").toUpperCase();
-    if (neon) {
+  if (neon) {
+    const compensationInput = {
+      sceneId: String(input.sceneId),
+      reservationId: String(input.reservationId),
+      path: String(input.path),
+      purpose: "ambience" as const,
+    };
+    try {
+      const validated = validateAmbienceFinalization(input);
+      const reservation = await neon.getUploadReservation(user, compensationInput);
+      if (reservation === "finalized") return;
+      if (reservation === "invalid")
+        throw new Error("Audio upload reservation is invalid or expired");
+      const bytes = await adminStorage.download("ambience-audio", validated.path);
+      const inspection = validateAmbienceMp3(
+        bytes,
+        ambienceProcessing.maxDurationSeconds[validated.role],
+      );
+      const hash = createHash("sha256").update(bytes).digest("hex").toUpperCase();
       await neon.finalizeAmbienceUpload(user, {
-        sceneId: input.sceneId,
-        reservationId: input.reservationId,
-        path: input.path,
-        name: input.name.trim(),
-        role: input.role,
+        sceneId: validated.sceneId,
+        reservationId: validated.reservationId,
+        path: validated.path,
+        name: validated.name,
+        role: validated.role,
         mimeType: ambienceMp3.mimeType,
         byteSize: bytes.length,
         durationSeconds: inspection.durationSeconds,
         sha256: hash,
-        sourceUrl: input.sourceUrl?.trim() || null,
-        sourceTitle: input.sourceFilename.trim() || input.name.trim(),
-        sourceSha256: String(input.sourceSha256).toUpperCase(),
-        originalFilename: input.sourceFilename,
-        originalByteSize: Math.round(Number(input.sourceByteSize)),
-        originalDurationSeconds: Number(input.sourceDurationSeconds),
-        selectedStartSeconds: Number(input.selectedStartSeconds),
-        selectedDurationSeconds: Number(input.selectedDurationSeconds),
+        sourceUrl: validated.sourceUrl,
+        sourceTitle: validated.sourceFilename || validated.name,
+        sourceSha256: validated.sourceSha256,
+        originalFilename: validated.sourceFilename,
+        originalByteSize: validated.sourceByteSize,
+        originalDurationSeconds: validated.sourceDurationSeconds,
+        selectedStartSeconds: validated.selectedStartSeconds,
+        selectedDurationSeconds: validated.selectedDurationSeconds,
       });
       return;
+    } catch (error) {
+      await compensateUploadedObject(uploadCompensation(neon, user, compensationInput));
+      throw error;
     }
+  }
+
+  let removeUploadedObject = false;
+  try {
+    const validated = validateAmbienceFinalization(input);
+    const pathSlug = validateStoragePath("ambience", validated.path);
+    const { data: validReservation } = await admin.rpc("admin_check_upload_reservation", {
+      p_reservation_id: validated.reservationId,
+      p_scene_id: validated.sceneId,
+      p_purpose: "ambience",
+      p_object_path: validated.path,
+    });
+    if (!validReservation) throw new Error("Audio upload reservation is invalid or expired");
+    const { data: scene, error: sceneError } = await admin
+      .from("scenes")
+      .select("slug")
+      .eq("id", validated.sceneId)
+      .single();
+    if (sceneError || !scene || scene.slug !== pathSlug) throw new Error("Invalid upload path");
+    removeUploadedObject = true;
+    const bytes = await adminStorage.download("ambience-audio", validated.path);
+    const inspection = validateAmbienceMp3(
+      bytes,
+      ambienceProcessing.maxDurationSeconds[validated.role],
+    );
+    const hash = createHash("sha256").update(bytes).digest("hex").toUpperCase();
     const { error: finalizeError } = await admin.rpc("admin_secured_finalize_ambience_asset", {
-      p_scene_id: input.sceneId,
-      p_reservation_id: input.reservationId,
-      p_storage_path: input.path,
-      p_name: input.name,
-      p_role: input.role,
+      p_scene_id: validated.sceneId,
+      p_reservation_id: validated.reservationId,
+      p_storage_path: validated.path,
+      p_name: validated.name,
+      p_role: validated.role,
       p_mime_type: ambienceMp3.mimeType,
       p_byte_size: bytes.length,
       p_duration_seconds: inspection.durationSeconds,
       p_sha256: hash,
-      p_source_url: input.sourceUrl?.trim() || null,
-      p_source_title: input.sourceFilename.trim() || input.name.trim(),
-      p_source_sha256: String(input.sourceSha256).toUpperCase(),
-      p_original_filename: input.sourceFilename,
-      p_original_byte_size: Math.round(Number(input.sourceByteSize)),
-      p_original_duration_seconds: Number(input.sourceDurationSeconds),
-      p_selected_start_seconds: Number(input.selectedStartSeconds),
-      p_selected_duration_seconds: Number(input.selectedDurationSeconds),
+      p_source_url: validated.sourceUrl,
+      p_source_title: validated.sourceFilename || validated.name,
+      p_source_sha256: validated.sourceSha256,
+      p_original_filename: validated.sourceFilename,
+      p_original_byte_size: validated.sourceByteSize,
+      p_original_duration_seconds: validated.sourceDurationSeconds,
+      p_selected_start_seconds: validated.selectedStartSeconds,
+      p_selected_duration_seconds: validated.selectedDurationSeconds,
     });
     if (finalizeError) throw new Error(finalizeError.message);
   } catch (error) {
-    if (neon) await neon.discardAmbienceReservation(user, input.reservationId, input.path);
-    else
-      await admin.rpc("admin_secured_discard_upload_reservation", {
-        p_reservation_id: input.reservationId,
-      });
-    if (removeUploadedObject)
-      await serviceAdmin.storage.from("ambience-audio").remove([input.path]);
+    await admin.rpc("admin_secured_discard_upload_reservation", {
+      p_reservation_id: input.reservationId,
+    });
+    if (removeUploadedObject) await adminStorage.remove("ambience-audio", input.path);
     throw error;
   }
 }
