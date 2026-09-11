@@ -47,8 +47,8 @@ The first production release is intentionally hybrid:
 - [x] Stage 7 — Port public room reads to Neon behind a backend switch.
 - [x] Stage 8 — Port low-risk operational writes.
 - [x] Stage 9 — Reuse Supabase JWT authentication for Neon-backed routes.
-- [ ] Stage 10 — Port administrator RPC behavior to atomic Neon transactions. **Current stage**
-- [ ] Stage 11 — Integrate Neon records with Supabase Storage.
+- [x] Stage 10 — Port administrator RPC behavior to atomic Neon transactions.
+- [ ] Stage 11 — Integrate Neon records with Supabase Storage. **Current stage**
 - [ ] Stage 12 — Preserve chat and Realtime behavior.
 - [ ] Stage 13 — Port cleanup and retention safely across both providers.
 - [ ] Stage 14 — Complete personal Vercel preview UAT.
@@ -243,6 +243,37 @@ Completion gate:
 ### Stage 10 — Port administrator mutations
 
 Goal: replace Supabase RPC mutations with server-side Neon transactions without weakening the hardening guarantees.
+
+Status: **Completed and manually accepted on 2026-09-11.**
+
+Implementation recorded on 2026-09-11:
+
+- Added independent, exact and case-sensitive `ADMIN_DATA_BACKEND` routing with a safe Supabase default and lazy Neon repository loading.
+- Added and applied `0003_neon_admin_transactions.sql` only to the temporary rehearsal database.
+- Added portable profiles, audit, rate-limit, upload-reservation, cleanup-queue, and private provenance tables. Supabase Auth UUID relationships now target Neon `app_admins`; no Supabase roles, RLS, grants, triggers, or RPC history were copied.
+- Copied the two rehearsal audit rows and two rate-limit rows. One historical scene relationship was reconciled by matching its scene slug because the manually populated Neon catalogue used a different scene UUID; audit IDs, request IDs, actors, actions, counts, and timestamps were preserved.
+- Added Neon administrator reads and atomic transaction implementations for ambience, queues, presentation, reservations, finalization metadata/provenance, retention, and reference checks.
+- Kept Supabase Auth, MFA, Storage URL/signing/object access, Realtime, chat, and cleanup-route execution unchanged.
+- Existing public provenance remains sanitized; no private provenance was invented for the imported assets. New finalizations write genuine values to the private Neon table.
+
+Automated verification recorded:
+
+- Generated migration reviewed and applied transactionally; required constraints, indexes, relationships, and empty operational tables were inspected.
+- Transactional rehearsal fixtures passed and rolled back for audit cardinality, rate rows, reservation state, provenance privacy, and database constraints.
+- Neon administrator read smoke checks passed for 7 live scenes and their song/ambience payloads, 7 analytics rows, 40 active assets, Storage URL mapping, and JWT email identity mapping.
+- Read parity checks matched the 7 live scenes, 40 active assets, and ambience profiles by stable scene slug. Four ambience profiles contained earlier rehearsal-test drift and were transactionally realigned from rehearsal Supabase before the final parity check.
+- Focused Stage 10 and existing administrator tests passed; the full Bun suite passed with 145 tests. Targeted Stage 10 lint and the production build passed.
+- Repository-wide lint remains blocked by 95 pre-existing formatting errors outside the Stage 10 files (plus 8 warnings); no Stage 10 lint finding remains.
+- Repository-wide TypeScript failures remain the previously recorded unrelated UI strictness and missing `bun:test` declaration failures; Stage 10 files introduce no TypeScript errors.
+- Manual acceptance initially exposed invalid UUID-array SQL while adding an oneliner. The Neon transaction rolled back cleanly. The oneliner keep-list and queue-removal list were changed to explicit parameterized UUID lists; a disposable add/remove reproduction then passed and restored the original presentation.
+
+Manual acceptance completed by Kanu on 2026-09-11:
+
+- Neon-backed administrator dashboard reads and controlled reversible mutation tests passed.
+- The corrected Neon oneliner add/remove flow passed after a fresh server restart.
+- The Supabase administrator-data fallback passed.
+- Read-only Neon verification found one audit record per accepted mutation and matching rate-limit consumption. The three presentation entries comprise the automated diagnostic add/restore pair and Kanu's accepted retry.
+- No audit row had an unknown administrator actor or missing request ID.
 
 Port in this order:
 
@@ -482,8 +513,8 @@ Completion gate:
 
 ## Next Session
 
-Current stage: **Stage 10 — port administrator RPC behavior to atomic Neon transactions.**
+Current stage: **Stage 11 — integrate Neon metadata and reservations with Supabase Storage.**
 
-Do not begin implementation before planning Stage 10 from the existing hardened Supabase RPCs. Start with a targeted inspection of administrator reads and mutations, audit insertion, rate limits, upload reservations, affected-row expectations, and rollback behavior. Preserve the existing public server-function interfaces and design each Neon mutation so authorization, validation, data changes, and exactly one audit entry succeed or roll back together.
+Before implementation, inspect the existing signed-upload, Storage validation, compensation, and cleanup boundaries and plan Stage 11 from the completed Stage 10 transaction layer. Stage 11 should perform controlled rehearsal Storage-object testing without changing production or connecting the cleanup route prematurely.
 
-Do not commit or push the completed Stage 7–9 work until Kanu separately gives explicit approval. Once approved, create one combined Stage 7–9 commit and push only the personal `feat/neon-database-port` branch; do not create or modify a company PR.
+Do not begin Stage 11, commit, push, or interact with the company repository without a separate explicit request.

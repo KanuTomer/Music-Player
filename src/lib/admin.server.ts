@@ -7,6 +7,11 @@ import { createRequestSupabaseClient, requestAccessToken } from "./admin-auth.se
 import type { AdminOnboardingStatus } from "./admin-authorization";
 import { ambienceProcessing, type AmbienceRole } from "./ambience-processing";
 import { ambienceMp3, validateAmbienceMp3 } from "./mp3-audio";
+import { resolveAdminDataBackend } from "./admin-data";
+
+async function neonAdminData() {
+  return resolveAdminDataBackend() === "neon" ? import("./admin.neon.server") : null;
+}
 
 const serviceAdmin = supabaseAdmin;
 
@@ -299,6 +304,8 @@ export async function getAdminDashboard(since?: string): Promise<{
   identity: { email: string; displayName: string | null; avatarUrl: string | null };
 }> {
   const user = await requireAdmin();
+  const neon = await neonAdminData();
+  if (neon) return neon.getAdminDashboard(user, since);
   const scenes = await activeScenes();
   const { data: visits, error } = await admin.rpc("admin_room_analytics", {
     p_since: since ?? null,
@@ -365,6 +372,8 @@ export async function getAdminBootstrap(): Promise<{
   identity: { email: string; displayName: string | null; avatarUrl: string | null };
 }> {
   const user = await requireAdmin();
+  const neon = await neonAdminData();
+  if (neon) return neon.getAdminBootstrap(user);
   const [sceneResult, profileResult] = await Promise.all([
     admin
       .from("scenes")
@@ -423,7 +432,9 @@ export async function getAdminSongs(sceneId: string): Promise<{
   queueId: string;
   tracks: AdminTrack[];
 }> {
-  await requireAdmin();
+  const user = await requireAdmin();
+  const neon = await neonAdminData();
+  if (neon) return neon.getAdminSongs(user, sceneId);
   const { data: set, error: setError } = await admin
     .from("curated_sets")
     .select("id")
@@ -474,7 +485,9 @@ export async function getAdminSongs(sceneId: string): Promise<{
 }
 
 export async function getAdminAnalytics(since?: string): Promise<AnalyticsRow[]> {
-  await requireAdmin();
+  const user = await requireAdmin();
+  const neon = await neonAdminData();
+  if (neon) return neon.getAdminAnalytics(user, since);
   const [sceneResult, visitResult] = await Promise.all([
     admin.from("scenes").select("id, slug, title_en").eq("is_live", true).order("sort_order"),
     admin.rpc("admin_secured_room_analytics", { p_since: since ?? null }),
@@ -506,7 +519,9 @@ export async function getAdminAnalytics(since?: string): Promise<AnalyticsRow[]>
 export async function getAdminAmbience(sceneId: string): Promise<{
   ambience: AdminAmbience | null;
 }> {
-  await requireAdmin();
+  const user = await requireAdmin();
+  const neon = await neonAdminData();
+  if (neon) return neon.getAdminAmbience(user, sceneId);
   const [profileResult, stemResult] = await Promise.all([
     admin
       .from("ambience_profiles")
@@ -559,7 +574,9 @@ export async function getAdminAmbience(sceneId: string): Promise<{
 }
 
 export async function getAdminAmbienceAssets(): Promise<AdminAsset[]> {
-  await requireAdmin();
+  const user = await requireAdmin();
+  const neon = await neonAdminData();
+  if (neon) return neon.getAdminAmbienceAssets(user);
   const { data, error } = await admin
     .from("ambience_assets")
     .select("id, storage_path, byte_size, duration_seconds")
@@ -576,7 +593,9 @@ export async function getAdminAmbienceAssets(): Promise<AdminAsset[]> {
 }
 
 export async function getAdminBackground(sceneId: string): Promise<AdminBackground> {
-  await requireAdmin();
+  const user = await requireAdmin();
+  const neon = await neonAdminData();
+  if (neon) return neon.getAdminBackground(user, sceneId);
   const [sceneResult, lineResult] = await Promise.all([
     admin
       .from("scenes")
@@ -669,15 +688,27 @@ export async function saveAmbienceProfile(input: {
   fadeOutMs: number;
   audioTheme: unknown;
 }) {
-  await requireAdmin();
+  const user = await requireAdmin();
+  const validated = {
+    ...input,
+    sceneId: String(input.sceneId),
+    enabled: Boolean(input.enabled),
+    maxMasterGain: numberInRange(input.maxMasterGain, 0, 1, "master volume"),
+    musicDuckRatio: numberInRange(input.musicDuckRatio, 0, 1, "music volume"),
+    fadeInMs: Math.round(numberInRange(input.fadeInMs, 0, 10000, "fade in")),
+    fadeOutMs: Math.round(numberInRange(input.fadeOutMs, 0, 10000, "fade out")),
+    audioTheme: normalizeTheme(input.audioTheme),
+  };
+  const neon = await neonAdminData();
+  if (neon) return neon.saveAmbienceProfile(user, validated);
   const { error } = await admin.rpc("admin_secured_save_ambience_profile", {
-    p_scene_id: String(input.sceneId),
-    p_enabled: Boolean(input.enabled),
-    p_max_master_gain: numberInRange(input.maxMasterGain, 0, 1, "master volume"),
-    p_music_duck_ratio: numberInRange(input.musicDuckRatio, 0, 1, "music volume"),
-    p_fade_in_ms: Math.round(numberInRange(input.fadeInMs, 0, 10000, "fade in")),
-    p_fade_out_ms: Math.round(numberInRange(input.fadeOutMs, 0, 10000, "fade out")),
-    p_audio_theme: normalizeTheme(input.audioTheme),
+    p_scene_id: validated.sceneId,
+    p_enabled: validated.enabled,
+    p_max_master_gain: validated.maxMasterGain,
+    p_music_duck_ratio: validated.musicDuckRatio,
+    p_fade_in_ms: validated.fadeInMs,
+    p_fade_out_ms: validated.fadeOutMs,
+    p_audio_theme: validated.audioTheme,
   });
   if (error) throw new Error(error.message);
 }
@@ -699,7 +730,7 @@ export async function saveAmbienceStem(input: {
   eventMinSeconds: number | null;
   eventMaxSeconds: number | null;
 }) {
-  await requireAdmin();
+  const user = await requireAdmin();
   if (!input.name.trim() || !["base", "texture", "event"].includes(input.role))
     throw new Error("Invalid ambience sound");
   const minGain = numberInRange(input.minGain, 0, 1, "minimum volume");
@@ -718,6 +749,21 @@ export async function saveAmbienceStem(input: {
     input.role === "event" && input.eventMaxSeconds != null
       ? Math.round(numberInRange(input.eventMaxSeconds, eventMin ?? 5, 3600, "effect delay"))
       : null;
+  const validated = {
+    ...input,
+    name: input.name.trim(),
+    minGain,
+    maxGain,
+    defaultVolume,
+    loopStartSeconds: loopStart,
+    loopEndSeconds: loopEnd,
+    eventMinSeconds: eventMin,
+    eventMaxSeconds: eventMax,
+    sortOrder: Math.max(0, Math.round(Number(input.sortOrder) || 0)),
+    crossfadeMs: Math.round(numberInRange(input.crossfadeMs, 0, 10000, "crossfade")),
+  };
+  const neon = await neonAdminData();
+  if (neon) return neon.saveAmbienceStem(user, validated);
   const { error } = await admin.rpc("admin_secured_save_ambience_stem", {
     p_id: input.id ?? null,
     p_scene_id: input.sceneId,
@@ -729,7 +775,7 @@ export async function saveAmbienceStem(input: {
     p_default_volume: defaultVolume,
     p_min_gain: minGain,
     p_max_gain: maxGain,
-    p_crossfade_ms: Math.round(numberInRange(input.crossfadeMs, 0, 10000, "crossfade")),
+    p_crossfade_ms: validated.crossfadeMs,
     p_loop_start_seconds: loopStart,
     p_loop_end_seconds: loopEnd,
     p_event_min_seconds: eventMin,
@@ -739,7 +785,9 @@ export async function saveAmbienceStem(input: {
 }
 
 export async function deactivateAmbienceStem(stemId: string) {
-  await requireAdmin();
+  const user = await requireAdmin();
+  const neon = await neonAdminData();
+  if (neon) return neon.deactivateAmbienceStem(user, String(stemId));
   const { error } = await admin.rpc("admin_secured_deactivate_ambience_stem", {
     p_stem_id: String(stemId),
   });
@@ -747,7 +795,16 @@ export async function deactivateAmbienceStem(stemId: string) {
 }
 
 export async function reserveAmbienceUpload(sceneSlug: string) {
-  await requireAdmin();
+  const user = await requireAdmin();
+  const neon = await neonAdminData();
+  if (neon) {
+    const reservation = await neon.reserveAmbienceUpload(user, String(sceneSlug));
+    const { data, error } = await serviceAdmin.storage
+      .from("ambience-audio")
+      .createSignedUploadUrl(reservation.path);
+    if (error || !data) throw new Error(error?.message ?? "Unable to reserve audio upload");
+    return { ...reservation, token: data.token };
+  }
   const { data: scene, error: sceneError } = await admin
     .from("scenes")
     .select("id")
@@ -778,7 +835,16 @@ const BACKGROUND_PATH =
   /^rooms\/([a-z0-9-]+)\/background\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.webp$/i;
 
 export async function reserveBackgroundUpload(sceneId: string) {
-  await requireAdmin();
+  const user = await requireAdmin();
+  const neon = await neonAdminData();
+  if (neon) {
+    const reservation = await neon.reserveBackgroundUpload(user, String(sceneId));
+    const { data, error } = await serviceAdmin.storage
+      .from("scene-media")
+      .createSignedUploadUrl(reservation.path);
+    if (error || !data) throw new Error(error?.message ?? "Unable to reserve background upload");
+    return { ...reservation, token: data.token };
+  }
   const { data: rows, error: reservationError } = await admin.rpc(
     "admin_create_upload_reservation",
     { p_scene_id: sceneId, p_purpose: "background" },
@@ -802,7 +868,14 @@ export async function discardBackgroundUpload(
   path: string,
   reservationId: string,
 ) {
-  await requireAdmin();
+  const user = await requireAdmin();
+  const neon = await neonAdminData();
+  if (neon) {
+    await neon.discardReservation(user, String(sceneId), String(path), String(reservationId));
+    const { error } = await serviceAdmin.storage.from("scene-media").remove([path]);
+    if (error) throw new Error(error.message);
+    return;
+  }
   const { data: valid } = await admin.rpc("admin_check_upload_reservation", {
     p_reservation_id: reservationId,
     p_scene_id: sceneId,
@@ -864,7 +937,34 @@ export async function saveScenePresentation(input: {
     daypart: "all" | "morning" | "day" | "evening" | "night";
   }>;
 }) {
-  await requireAdmin();
+  const user = await requireAdmin();
+  if (!/^#[0-9A-Fa-f]{6}$/.test(input.foregroundTextColor))
+    throw new Error("Invalid foreground colour");
+  if (input.gagLabel.trim().length > 80 || input.oneliners.length > 100)
+    throw new Error("Invalid presentation content");
+  for (const line of input.oneliners) {
+    if (
+      !line.text.trim() ||
+      line.text.trim().length > 200 ||
+      !["all", "morning", "day", "evening", "night"].includes(line.daypart)
+    )
+      throw new Error("Invalid oneliner");
+  }
+  const neon = await neonAdminData();
+  if (neon) {
+    if (input.backgroundStoragePath && input.uploadReservationId) {
+      const { data: object, error } = await serviceAdmin.storage
+        .from("scene-media")
+        .download(input.backgroundStoragePath);
+      if (error || !object) throw new Error(error?.message ?? "Uploaded background is missing");
+      inspectPlaybackWebp(Buffer.from(await object.arrayBuffer()));
+    }
+    await neon.saveScenePresentation(user, {
+      ...input,
+      oneliners: input.oneliners.map((line) => ({ ...line, text: line.text.trim() })),
+    });
+    return neon.getAdminBackground(user, input.sceneId);
+  }
   const { data: scene, error: sceneError } = await admin
     .from("scenes")
     .select("slug, background_storage_path")
@@ -937,26 +1037,30 @@ export async function finalizeAmbienceUpload(input: {
   selectedStartSeconds: number;
   selectedDurationSeconds: number;
 }) {
-  await requireAdmin();
+  const user = await requireAdmin();
+  const neon = await neonAdminData();
   let removeUploadedObject = false;
   try {
     const pathMatch = input.path.match(
       /^rooms\/([a-z0-9-]+)\/ambience\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.mp3$/i,
     );
     if (!pathMatch) throw new Error("Invalid upload path");
-    const { data: validReservation } = await admin.rpc("admin_check_upload_reservation", {
-      p_reservation_id: input.reservationId,
-      p_scene_id: input.sceneId,
-      p_purpose: "ambience",
-      p_object_path: input.path,
-    });
-    if (!validReservation) throw new Error("Audio upload reservation is invalid or expired");
-    const { data: scene, error: sceneError } = await admin
-      .from("scenes")
-      .select("slug")
-      .eq("id", input.sceneId)
-      .single();
-    if (sceneError || !scene || scene.slug !== pathMatch[1]) throw new Error("Invalid upload path");
+    if (!neon) {
+      const { data: validReservation } = await admin.rpc("admin_check_upload_reservation", {
+        p_reservation_id: input.reservationId,
+        p_scene_id: input.sceneId,
+        p_purpose: "ambience",
+        p_object_path: input.path,
+      });
+      if (!validReservation) throw new Error("Audio upload reservation is invalid or expired");
+      const { data: scene, error: sceneError } = await admin
+        .from("scenes")
+        .select("slug")
+        .eq("id", input.sceneId)
+        .single();
+      if (sceneError || !scene || scene.slug !== pathMatch[1])
+        throw new Error("Invalid upload path");
+    }
     removeUploadedObject = true;
     const { data: object, error: downloadError } = await serviceAdmin.storage
       .from("ambience-audio")
@@ -969,6 +1073,28 @@ export async function finalizeAmbienceUpload(input: {
       ambienceProcessing.maxDurationSeconds[input.role],
     );
     const hash = createHash("sha256").update(bytes).digest("hex").toUpperCase();
+    if (neon) {
+      await neon.finalizeAmbienceUpload(user, {
+        sceneId: input.sceneId,
+        reservationId: input.reservationId,
+        path: input.path,
+        name: input.name.trim(),
+        role: input.role,
+        mimeType: ambienceMp3.mimeType,
+        byteSize: bytes.length,
+        durationSeconds: inspection.durationSeconds,
+        sha256: hash,
+        sourceUrl: input.sourceUrl?.trim() || null,
+        sourceTitle: input.sourceFilename.trim() || input.name.trim(),
+        sourceSha256: String(input.sourceSha256).toUpperCase(),
+        originalFilename: input.sourceFilename,
+        originalByteSize: Math.round(Number(input.sourceByteSize)),
+        originalDurationSeconds: Number(input.sourceDurationSeconds),
+        selectedStartSeconds: Number(input.selectedStartSeconds),
+        selectedDurationSeconds: Number(input.selectedDurationSeconds),
+      });
+      return;
+    }
     const { error: finalizeError } = await admin.rpc("admin_secured_finalize_ambience_asset", {
       p_scene_id: input.sceneId,
       p_reservation_id: input.reservationId,
@@ -990,9 +1116,11 @@ export async function finalizeAmbienceUpload(input: {
     });
     if (finalizeError) throw new Error(finalizeError.message);
   } catch (error) {
-    await admin.rpc("admin_secured_discard_upload_reservation", {
-      p_reservation_id: input.reservationId,
-    });
+    if (neon) await neon.discardAmbienceReservation(user, input.reservationId, input.path);
+    else
+      await admin.rpc("admin_secured_discard_upload_reservation", {
+        p_reservation_id: input.reservationId,
+      });
     if (removeUploadedObject)
       await serviceAdmin.storage.from("ambience-audio").remove([input.path]);
     throw error;
@@ -1009,9 +1137,7 @@ export type SongDraft = {
 };
 
 export async function previewSongs(inputs: string[]): Promise<SongDraft[]> {
-  await requireAdmin();
-  const { error: rateError } = await admin.rpc("admin_secured_consume_song_preview");
-  if (rateError) throw new Error(rateError.message);
+  const user = await requireAdmin();
   if (inputs.length < 1 || inputs.length > 50)
     throw new Error("Paste between 1 and 50 YouTube links");
   const unique = new Map<string, string>();
@@ -1019,6 +1145,12 @@ export async function previewSongs(inputs: string[]): Promise<SongDraft[]> {
     const videoId = youtubeVideoId(input);
     if (!videoId) throw new Error(`Invalid YouTube link: ${input}`);
     if (!unique.has(videoId)) unique.set(videoId, input);
+  }
+  const neon = await neonAdminData();
+  if (neon) await neon.consumeSongPreview(user, unique.size);
+  else {
+    const { error: rateError } = await admin.rpc("admin_secured_consume_song_preview");
+    if (rateError) throw new Error(rateError.message);
   }
   const entries = [...unique.entries()];
   const output = new Array<SongDraft>(entries.length);
@@ -1058,7 +1190,7 @@ export async function previewSongs(inputs: string[]): Promise<SongDraft[]> {
 }
 
 export async function addSongs(queueId: string, songs: SongDraft[]): Promise<void> {
-  await requireAdmin();
+  const user = await requireAdmin();
   if (!queueId || songs.length < 1 || songs.length > 50) throw new Error("Invalid song import");
   const payload = songs.map((song) => {
     const videoId = youtubeVideoId(song.input);
@@ -1073,6 +1205,13 @@ export async function addSongs(queueId: string, songs: SongDraft[]): Promise<voi
       provider_channel: song.providerChannel,
     };
   });
+  const neon = await neonAdminData();
+  if (neon)
+    return neon.addSongs(
+      user,
+      queueId,
+      payload.map((song, index) => ({ ...songs[index]!, videoId: song.video_id })),
+    );
   const { error } = await admin.rpc("admin_secured_append_queue_tracks", {
     p_curated_set_id: queueId,
     p_tracks: payload,
@@ -1081,7 +1220,11 @@ export async function addSongs(queueId: string, songs: SongDraft[]): Promise<voi
 }
 
 export async function removeSongs(queueId: string, membershipIds: string[]): Promise<void> {
-  await requireAdmin();
+  const user = await requireAdmin();
+  if (!queueId || membershipIds.length < 1 || membershipIds.length > 50)
+    throw new Error("Invalid song removal");
+  const neon = await neonAdminData();
+  if (neon) return neon.removeSongs(user, queueId, membershipIds);
   const { error } = await admin.rpc("admin_secured_remove_queue_tracks", {
     p_curated_set_id: queueId,
     p_membership_ids: membershipIds,
@@ -1097,9 +1240,19 @@ export async function updateSong(input: {
   source: string;
   scope: "shared" | "local";
 }): Promise<void> {
-  await requireAdmin();
+  const user = await requireAdmin();
+  if (!input.title.trim() || !["shared", "local"].includes(input.scope))
+    throw new Error("Invalid song update");
   const videoId = youtubeVideoId(input.source);
   if (!videoId) throw new Error("Enter a valid YouTube link or video ID");
+  const neon = await neonAdminData();
+  if (neon)
+    return neon.updateSong(user, {
+      ...input,
+      title: input.title.trim(),
+      artist: input.artist.trim(),
+      videoId,
+    });
   const { error } = await admin.rpc("admin_secured_update_queue_track", {
     p_membership_id: input.membershipId,
     p_title: input.title,

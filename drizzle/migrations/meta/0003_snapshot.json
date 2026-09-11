@@ -1,0 +1,2306 @@
+{
+  "id": "bf19884f-bf99-4a69-8023-11067e39b2aa",
+  "prevId": "f25d51b6-085a-4121-93e1-85025ed57287",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.admin_audit_log": {
+      "name": "admin_audit_log",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "admin_audit_log_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "actor_id": {
+          "name": "actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scene_id": {
+          "name": "scene_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "target_id": {
+          "name": "target_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "affected_count": {
+          "name": "affected_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "request_id": {
+          "name": "request_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "admin_audit_log_created_idx": {
+          "name": "admin_audit_log_created_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "admin_audit_log_actor_created_idx": {
+          "name": "admin_audit_log_actor_created_idx",
+          "columns": [
+            {
+              "expression": "actor_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "admin_audit_log_actor_id_fkey": {
+          "name": "admin_audit_log_actor_id_fkey",
+          "tableFrom": "admin_audit_log",
+          "tableTo": "app_admins",
+          "columnsFrom": ["actor_id"],
+          "columnsTo": ["user_id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "admin_audit_log_scene_id_fkey": {
+          "name": "admin_audit_log_scene_id_fkey",
+          "tableFrom": "admin_audit_log",
+          "tableTo": "scenes",
+          "columnsFrom": ["scene_id"],
+          "columnsTo": ["id"],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "admin_audit_log_action_check": {
+          "name": "admin_audit_log_action_check",
+          "value": "action ~ '^[a-z][a-z0-9_.-]{1,79}$'::text"
+        },
+        "admin_audit_log_affected_count_check": {
+          "name": "admin_audit_log_affected_count_check",
+          "value": "affected_count >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.admin_rate_limits": {
+      "name": "admin_rate_limits",
+      "schema": "",
+      "columns": {
+        "actor_id": {
+          "name": "actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bucket": {
+          "name": "bucket",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "window_started_at": {
+          "name": "window_started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_count": {
+          "name": "request_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {
+        "admin_rate_limits_window_idx": {
+          "name": "admin_rate_limits_window_idx",
+          "columns": [
+            {
+              "expression": "window_started_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "admin_rate_limits_actor_id_fkey": {
+          "name": "admin_rate_limits_actor_id_fkey",
+          "tableFrom": "admin_rate_limits",
+          "tableTo": "app_admins",
+          "columnsFrom": ["actor_id"],
+          "columnsTo": ["user_id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "admin_rate_limits_actor_id_bucket_window_started_at_pk": {
+          "name": "admin_rate_limits_actor_id_bucket_window_started_at_pk",
+          "columns": ["actor_id", "bucket", "window_started_at"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "admin_rate_limits_request_count_check": {
+          "name": "admin_rate_limits_request_count_check",
+          "value": "request_count > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.admin_storage_cleanup_queue": {
+      "name": "admin_storage_cleanup_queue",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "bucket": {
+          "name": "bucket",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "object_path": {
+          "name": "object_path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "attempts": {
+          "name": "attempts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "available_at": {
+          "name": "available_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_error": {
+          "name": "last_error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "admin_storage_cleanup_pending_idx": {
+          "name": "admin_storage_cleanup_pending_idx",
+          "columns": [
+            {
+              "expression": "available_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "completed_at IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "admin_storage_cleanup_queue_bucket_object_path_reason_key": {
+          "name": "admin_storage_cleanup_queue_bucket_object_path_reason_key",
+          "nullsNotDistinct": false,
+          "columns": ["bucket", "object_path", "reason"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "admin_storage_cleanup_queue_bucket_check": {
+          "name": "admin_storage_cleanup_queue_bucket_check",
+          "value": "bucket = ANY (ARRAY['ambience-audio'::text, 'scene-media'::text])"
+        },
+        "admin_storage_cleanup_queue_reason_check": {
+          "name": "admin_storage_cleanup_queue_reason_check",
+          "value": "reason = ANY (ARRAY['expired_upload'::text, 'discarded_upload'::text, 'replaced_object'::text])"
+        },
+        "admin_storage_cleanup_queue_attempts_check": {
+          "name": "admin_storage_cleanup_queue_attempts_check",
+          "value": "attempts >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.admin_upload_reservations": {
+      "name": "admin_upload_reservations",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "actor_id": {
+          "name": "actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scene_id": {
+          "name": "scene_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "purpose": {
+          "name": "purpose",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bucket": {
+          "name": "bucket",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "object_path": {
+          "name": "object_path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now() + interval '2 hours'"
+        },
+        "finalized_at": {
+          "name": "finalized_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "discarded_at": {
+          "name": "discarded_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "admin_upload_reservations_expiry_idx": {
+          "name": "admin_upload_reservations_expiry_idx",
+          "columns": [
+            {
+              "expression": "expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "finalized_at IS NULL AND discarded_at IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "admin_upload_reservations_actor_idx": {
+          "name": "admin_upload_reservations_actor_idx",
+          "columns": [
+            {
+              "expression": "actor_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "admin_upload_reservations_actor_id_fkey": {
+          "name": "admin_upload_reservations_actor_id_fkey",
+          "tableFrom": "admin_upload_reservations",
+          "tableTo": "app_admins",
+          "columnsFrom": ["actor_id"],
+          "columnsTo": ["user_id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "admin_upload_reservations_scene_id_fkey": {
+          "name": "admin_upload_reservations_scene_id_fkey",
+          "tableFrom": "admin_upload_reservations",
+          "tableTo": "scenes",
+          "columnsFrom": ["scene_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "admin_upload_reservations_object_path_key": {
+          "name": "admin_upload_reservations_object_path_key",
+          "nullsNotDistinct": false,
+          "columns": ["object_path"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "admin_upload_reservations_purpose_check": {
+          "name": "admin_upload_reservations_purpose_check",
+          "value": "purpose = ANY (ARRAY['ambience'::text, 'background'::text])"
+        },
+        "admin_upload_reservations_bucket_check": {
+          "name": "admin_upload_reservations_bucket_check",
+          "value": "bucket = ANY (ARRAY['ambience-audio'::text, 'scene-media'::text])"
+        },
+        "admin_upload_reservations_state_check": {
+          "name": "admin_upload_reservations_state_check",
+          "value": "finalized_at IS NULL OR discarded_at IS NULL"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "private.ambience_asset_provenance": {
+      "name": "ambience_asset_provenance",
+      "schema": "private",
+      "columns": {
+        "asset_source_id": {
+          "name": "asset_source_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "source_sha256": {
+          "name": "source_sha256",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "original_filename": {
+          "name": "original_filename",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "original_byte_size": {
+          "name": "original_byte_size",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "original_duration_seconds": {
+          "name": "original_duration_seconds",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "selected_start_seconds": {
+          "name": "selected_start_seconds",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "selected_duration_seconds": {
+          "name": "selected_duration_seconds",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "ambience_asset_provenance_asset_source_id_fkey": {
+          "name": "ambience_asset_provenance_asset_source_id_fkey",
+          "tableFrom": "ambience_asset_provenance",
+          "tableTo": "ambience_asset_sources",
+          "columnsFrom": ["asset_source_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "ambience_asset_provenance_source_sha256_check": {
+          "name": "ambience_asset_provenance_source_sha256_check",
+          "value": "source_sha256 ~ '^[A-F0-9]{64}$'::text"
+        },
+        "ambience_asset_provenance_original_byte_size_check": {
+          "name": "ambience_asset_provenance_original_byte_size_check",
+          "value": "original_byte_size IS NULL OR original_byte_size > 0"
+        },
+        "ambience_asset_provenance_original_duration_seconds_check": {
+          "name": "ambience_asset_provenance_original_duration_seconds_check",
+          "value": "original_duration_seconds IS NULL OR original_duration_seconds > 0"
+        },
+        "ambience_asset_provenance_selected_start_seconds_check": {
+          "name": "ambience_asset_provenance_selected_start_seconds_check",
+          "value": "selected_start_seconds IS NULL OR selected_start_seconds >= 0"
+        },
+        "ambience_asset_provenance_selected_duration_seconds_check": {
+          "name": "ambience_asset_provenance_selected_duration_seconds_check",
+          "value": "selected_duration_seconds IS NULL OR selected_duration_seconds > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.ambience_asset_sources": {
+      "name": "ambience_asset_sources",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "asset_id": {
+          "name": "asset_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_order": {
+          "name": "source_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_title": {
+          "name": "source_title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_sha256": {
+          "name": "source_sha256",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "original_filename": {
+          "name": "original_filename",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "original_byte_size": {
+          "name": "original_byte_size",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "original_duration_seconds": {
+          "name": "original_duration_seconds",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "selected_start_seconds": {
+          "name": "selected_start_seconds",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "selected_duration_seconds": {
+          "name": "selected_duration_seconds",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "ambience_asset_sources_asset_id_idx": {
+          "name": "ambience_asset_sources_asset_id_idx",
+          "columns": [
+            {
+              "expression": "asset_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "uuid_ops"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "ambience_asset_sources_asset_id_fkey": {
+          "name": "ambience_asset_sources_asset_id_fkey",
+          "tableFrom": "ambience_asset_sources",
+          "tableTo": "ambience_assets",
+          "columnsFrom": ["asset_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "ambience_asset_sources_asset_id_source_order_key": {
+          "name": "ambience_asset_sources_asset_id_source_order_key",
+          "nullsNotDistinct": false,
+          "columns": ["asset_id", "source_order"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "ambience_asset_sources_original_byte_size_check": {
+          "name": "ambience_asset_sources_original_byte_size_check",
+          "value": "(original_byte_size IS NULL) OR (original_byte_size > 0)"
+        },
+        "ambience_asset_sources_original_duration_seconds_check": {
+          "name": "ambience_asset_sources_original_duration_seconds_check",
+          "value": "(original_duration_seconds IS NULL) OR (original_duration_seconds > (0)::numeric)"
+        },
+        "ambience_asset_sources_selected_duration_seconds_check": {
+          "name": "ambience_asset_sources_selected_duration_seconds_check",
+          "value": "(selected_duration_seconds IS NULL) OR (selected_duration_seconds > (0)::numeric)"
+        },
+        "ambience_asset_sources_selected_start_seconds_check": {
+          "name": "ambience_asset_sources_selected_start_seconds_check",
+          "value": "(selected_start_seconds IS NULL) OR (selected_start_seconds >= (0)::numeric)"
+        },
+        "ambience_asset_sources_source_order_check": {
+          "name": "ambience_asset_sources_source_order_check",
+          "value": "source_order > 0"
+        },
+        "ambience_asset_sources_source_sha256_check": {
+          "name": "ambience_asset_sources_source_sha256_check",
+          "value": "source_sha256 ~ '^[A-F0-9]{64}$'::text"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.ambience_assets": {
+      "name": "ambience_assets",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "storage_path": {
+          "name": "storage_path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mime_type": {
+          "name": "mime_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'audio/wav'"
+        },
+        "byte_size": {
+          "name": "byte_size",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "duration_seconds": {
+          "name": "duration_seconds",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sha256": {
+          "name": "sha256",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "ambience_assets_active_idx": {
+          "name": "ambience_assets_active_idx",
+          "columns": [
+            {
+              "expression": "is_active",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "bool_ops"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "ambience_assets_storage_path_key": {
+          "name": "ambience_assets_storage_path_key",
+          "nullsNotDistinct": false,
+          "columns": ["storage_path"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "ambience_assets_byte_size_check": {
+          "name": "ambience_assets_byte_size_check",
+          "value": "(byte_size > 0) AND (byte_size <= 12582912)"
+        },
+        "ambience_assets_duration_seconds_check": {
+          "name": "ambience_assets_duration_seconds_check",
+          "value": "duration_seconds > (0)::numeric"
+        },
+        "ambience_assets_sha256_check": {
+          "name": "ambience_assets_sha256_check",
+          "value": "sha256 ~ '^[A-F0-9]{64}$'::text"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.ambience_profiles": {
+      "name": "ambience_profiles",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "scene_id": {
+          "name": "scene_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "enabled": {
+          "name": "enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "max_master_gain": {
+          "name": "max_master_gain",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0.30'"
+        },
+        "fade_out_ms": {
+          "name": "fade_out_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 700
+        },
+        "fade_in_ms": {
+          "name": "fade_in_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 900
+        },
+        "visual_theme": {
+          "name": "visual_theme",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "audio_theme": {
+          "name": "audio_theme",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "music_duck_ratio": {
+          "name": "music_duck_ratio",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0.40'"
+        }
+      },
+      "indexes": {
+        "ambience_profiles_scene_id_idx": {
+          "name": "ambience_profiles_scene_id_idx",
+          "columns": [
+            {
+              "expression": "scene_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "uuid_ops"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "ambience_profiles_scene_id_fkey": {
+          "name": "ambience_profiles_scene_id_fkey",
+          "tableFrom": "ambience_profiles",
+          "tableTo": "scenes",
+          "columnsFrom": ["scene_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "ambience_profiles_scene_id_key": {
+          "name": "ambience_profiles_scene_id_key",
+          "nullsNotDistinct": false,
+          "columns": ["scene_id"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "ambience_profiles_audio_theme_check": {
+          "name": "ambience_profiles_audio_theme_check",
+          "value": "jsonb_typeof(audio_theme) = 'object'::text"
+        },
+        "ambience_profiles_fade_in_ms_check": {
+          "name": "ambience_profiles_fade_in_ms_check",
+          "value": "(fade_in_ms >= 0) AND (fade_in_ms <= 10000)"
+        },
+        "ambience_profiles_fade_out_ms_check": {
+          "name": "ambience_profiles_fade_out_ms_check",
+          "value": "(fade_out_ms >= 0) AND (fade_out_ms <= 10000)"
+        },
+        "ambience_profiles_max_master_gain_check": {
+          "name": "ambience_profiles_max_master_gain_check",
+          "value": "(max_master_gain >= (0)::numeric) AND (max_master_gain <= (1)::numeric)"
+        },
+        "ambience_profiles_music_duck_ratio_check": {
+          "name": "ambience_profiles_music_duck_ratio_check",
+          "value": "(music_duck_ratio >= (0)::numeric) AND (music_duck_ratio <= (1)::numeric)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.app_admins": {
+      "name": "app_admins",
+      "schema": "",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.curated_set_tracks": {
+      "name": "curated_set_tracks",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "curated_set_id": {
+          "name": "curated_set_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "track_id": {
+          "name": "track_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "daypart_tag": {
+          "name": "daypart_tag",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'all'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "curated_set_tracks_track_idx": {
+          "name": "curated_set_tracks_track_idx",
+          "columns": [
+            {
+              "expression": "track_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "uuid_ops"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "curated_set_tracks_curated_set_id_fkey": {
+          "name": "curated_set_tracks_curated_set_id_fkey",
+          "tableFrom": "curated_set_tracks",
+          "tableTo": "curated_sets",
+          "columnsFrom": ["curated_set_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "curated_set_tracks_track_id_fkey": {
+          "name": "curated_set_tracks_track_id_fkey",
+          "tableFrom": "curated_set_tracks",
+          "tableTo": "tracks",
+          "columnsFrom": ["track_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "curated_set_tracks_curated_set_id_position_key": {
+          "name": "curated_set_tracks_curated_set_id_position_key",
+          "nullsNotDistinct": false,
+          "columns": ["curated_set_id", "position"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "curated_set_tracks_position_check": {
+          "name": "curated_set_tracks_position_check",
+          "value": "\"position\" > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.curated_sets": {
+      "name": "curated_sets",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "scene_id": {
+          "name": "scene_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "shuffle_start": {
+          "name": "shuffle_start",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "origin_provider": {
+          "name": "origin_provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "origin_external_id": {
+          "name": "origin_external_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "imported_at": {
+          "name": "imported_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "curated_sets_one_active_per_scene": {
+          "name": "curated_sets_one_active_per_scene",
+          "columns": [
+            {
+              "expression": "scene_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "uuid_ops"
+            }
+          ],
+          "isUnique": true,
+          "where": "is_active",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "curated_sets_scene_order_idx": {
+          "name": "curated_sets_scene_order_idx",
+          "columns": [
+            {
+              "expression": "scene_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "uuid_ops"
+            },
+            {
+              "expression": "sort_order",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "int4_ops"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "curated_sets_scene_id_fkey": {
+          "name": "curated_sets_scene_id_fkey",
+          "tableFrom": "curated_sets",
+          "tableTo": "scenes",
+          "columnsFrom": ["scene_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.oneliners": {
+      "name": "oneliners",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "scene_id": {
+          "name": "scene_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "text_en": {
+          "name": "text_en",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "text_hi": {
+          "name": "text_hi",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "daypart_tag": {
+          "name": "daypart_tag",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'all'"
+        },
+        "weight": {
+          "name": "weight",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {
+        "oneliners_scene_id_idx": {
+          "name": "oneliners_scene_id_idx",
+          "columns": [
+            {
+              "expression": "scene_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "uuid_ops"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "oneliners_scene_id_fkey": {
+          "name": "oneliners_scene_id_fkey",
+          "tableFrom": "oneliners",
+          "tableTo": "scenes",
+          "columnsFrom": ["scene_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.playback_source_failures": {
+      "name": "playback_source_failures",
+      "schema": "",
+      "columns": {
+        "source_id": {
+          "name": "source_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "error_code": {
+          "name": "error_code",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "failed_on": {
+          "name": "failed_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "current_date"
+        },
+        "occurrence_count": {
+          "name": "occurrence_count",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "first_seen_at": {
+          "name": "first_seen_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "last_seen_at": {
+          "name": "last_seen_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "playback_source_failures_source_id_fkey": {
+          "name": "playback_source_failures_source_id_fkey",
+          "tableFrom": "playback_source_failures",
+          "tableTo": "playback_sources",
+          "columnsFrom": ["source_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "playback_source_failures_source_id_error_code_failed_on_pk": {
+          "name": "playback_source_failures_source_id_error_code_failed_on_pk",
+          "columns": ["source_id", "error_code", "failed_on"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "playback_source_failures_error_code_check": {
+          "name": "playback_source_failures_error_code_check",
+          "value": "error_code = ANY (ARRAY[2, 5, 100, 101, 150, 153])"
+        },
+        "playback_source_failures_occurrence_count_check": {
+          "name": "playback_source_failures_occurrence_count_check",
+          "value": "occurrence_count > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.playback_sources": {
+      "name": "playback_sources",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "track_id": {
+          "name": "track_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_item_id": {
+          "name": "provider_item_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_title": {
+          "name": "provider_title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "provider_channel": {
+          "name": "provider_channel",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "priority": {
+          "name": "priority",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "validated_at": {
+          "name": "validated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "playback_sources_track_priority_idx": {
+          "name": "playback_sources_track_priority_idx",
+          "columns": [
+            {
+              "expression": "track_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "uuid_ops"
+            },
+            {
+              "expression": "is_active",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "bool_ops"
+            },
+            {
+              "expression": "priority",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "int4_ops"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "playback_sources_track_id_fkey": {
+          "name": "playback_sources_track_id_fkey",
+          "tableFrom": "playback_sources",
+          "tableTo": "tracks",
+          "columnsFrom": ["track_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "playback_sources_provider_provider_item_id_key": {
+          "name": "playback_sources_provider_provider_item_id_key",
+          "nullsNotDistinct": false,
+          "columns": ["provider", "provider_item_id"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "playback_sources_provider_check": {
+          "name": "playback_sources_provider_check",
+          "value": "provider = 'youtube'::text"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.profiles": {
+      "name": "profiles",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "avatar_url": {
+          "name": "avatar_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "region_pref": {
+          "name": "region_pref",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lang_pref": {
+          "name": "lang_pref",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "profiles_id_fkey": {
+          "name": "profiles_id_fkey",
+          "tableFrom": "profiles",
+          "tableTo": "app_admins",
+          "columnsFrom": ["id"],
+          "columnsTo": ["user_id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.room_visits": {
+      "name": "room_visits",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "scene_id": {
+          "name": "scene_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "first_played_at": {
+          "name": "first_played_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_heartbeat_at": {
+          "name": "last_heartbeat_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "listening_seconds": {
+          "name": "listening_seconds",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        }
+      },
+      "indexes": {
+        "room_visits_scene_started_idx": {
+          "name": "room_visits_scene_started_idx",
+          "columns": [
+            {
+              "expression": "scene_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "uuid_ops"
+            },
+            {
+              "expression": "started_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "first",
+              "opclass": "timestamptz_ops"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "room_visits_started_idx": {
+          "name": "room_visits_started_idx",
+          "columns": [
+            {
+              "expression": "started_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "first",
+              "opclass": "timestamptz_ops"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "room_visits_scene_id_fkey": {
+          "name": "room_visits_scene_id_fkey",
+          "tableFrom": "room_visits",
+          "tableTo": "scenes",
+          "columnsFrom": ["scene_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "room_visits_listening_seconds_check": {
+          "name": "room_visits_listening_seconds_check",
+          "value": "listening_seconds >= 0"
+        },
+        "room_visits_last_heartbeat_check": {
+          "name": "room_visits_last_heartbeat_check",
+          "value": "(last_heartbeat_at IS NULL) OR (last_heartbeat_at >= started_at)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.scenes": {
+      "name": "scenes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title_en": {
+          "name": "title_en",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title_hi": {
+          "name": "title_hi",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hook": {
+          "name": "hook",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "region": {
+          "name": "region",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "category": {
+          "name": "category",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'tier1'"
+        },
+        "palette": {
+          "name": "palette",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "art_key": {
+          "name": "art_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_dark": {
+          "name": "is_dark",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "is_live": {
+          "name": "is_live",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "sponsor_id": {
+          "name": "sponsor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "chat_mode": {
+          "name": "chat_mode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'open'"
+        },
+        "gag_label": {
+          "name": "gag_label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "tags": {
+          "name": "tags",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{\"\"}'"
+        },
+        "background_storage_path": {
+          "name": "background_storage_path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "foreground_text_color": {
+          "name": "foreground_text_color",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'#FFF3D6'"
+        }
+      },
+      "indexes": {
+        "scenes_sponsor_id_idx": {
+          "name": "scenes_sponsor_id_idx",
+          "columns": [
+            {
+              "expression": "sponsor_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "uuid_ops"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "scenes_sponsor_id_fkey": {
+          "name": "scenes_sponsor_id_fkey",
+          "tableFrom": "scenes",
+          "tableTo": "sponsors",
+          "columnsFrom": ["sponsor_id"],
+          "columnsTo": ["id"],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "scenes_slug_key": {
+          "name": "scenes_slug_key",
+          "nullsNotDistinct": false,
+          "columns": ["slug"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "scenes_background_storage_path_safe": {
+          "name": "scenes_background_storage_path_safe",
+          "value": "(background_storage_path IS NULL) OR (background_storage_path ~ '^rooms/[a-z0-9-]+/background/[0-9a-f-]+.webp$'::text)"
+        },
+        "scenes_foreground_text_color_hex": {
+          "name": "scenes_foreground_text_color_hex",
+          "value": "foreground_text_color ~ '^#[0-9A-Fa-f]{6}$'::text"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.sound_stems": {
+      "name": "sound_stems",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "scene_id": {
+          "name": "scene_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name_hi": {
+          "name": "name_hi",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "synth_key": {
+          "name": "synth_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'noise'"
+        },
+        "loop_url": {
+          "name": "loop_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "default_volume": {
+          "name": "default_volume",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0.4'"
+        },
+        "category": {
+          "name": "category",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'ambient'"
+        },
+        "asset_id": {
+          "name": "asset_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "min_gain": {
+          "name": "min_gain",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0.05'"
+        },
+        "max_gain": {
+          "name": "max_gain",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0.20'"
+        },
+        "crossfade_ms": {
+          "name": "crossfade_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 2500
+        },
+        "event_min_seconds": {
+          "name": "event_min_seconds",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "event_max_seconds": {
+          "name": "event_max_seconds",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "loop_start_seconds": {
+          "name": "loop_start_seconds",
+          "type": "numeric(8, 3)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "loop_end_seconds": {
+          "name": "loop_end_seconds",
+          "type": "numeric(8, 3)",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "sound_stems_active_scene_idx": {
+          "name": "sound_stems_active_scene_idx",
+          "columns": [
+            {
+              "expression": "scene_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "uuid_ops"
+            },
+            {
+              "expression": "is_active",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "bool_ops"
+            },
+            {
+              "expression": "sort_order",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "int4_ops"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "sound_stems_asset_id_idx": {
+          "name": "sound_stems_asset_id_idx",
+          "columns": [
+            {
+              "expression": "asset_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "uuid_ops"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "sound_stems_scene_id_idx": {
+          "name": "sound_stems_scene_id_idx",
+          "columns": [
+            {
+              "expression": "scene_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "uuid_ops"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "sound_stems_asset_id_fkey": {
+          "name": "sound_stems_asset_id_fkey",
+          "tableFrom": "sound_stems",
+          "tableTo": "ambience_assets",
+          "columnsFrom": ["asset_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "sound_stems_scene_id_fkey": {
+          "name": "sound_stems_scene_id_fkey",
+          "tableFrom": "sound_stems",
+          "tableTo": "scenes",
+          "columnsFrom": ["scene_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "sound_stems_loop_start_seconds_check": {
+          "name": "sound_stems_loop_start_seconds_check",
+          "value": "loop_start_seconds >= (0)::numeric"
+        },
+        "sound_stems_check": {
+          "name": "sound_stems_check",
+          "value": "(event_max_seconds IS NULL) OR (event_max_seconds >= event_min_seconds)"
+        },
+        "sound_stems_check1": {
+          "name": "sound_stems_check1",
+          "value": "(loop_end_seconds IS NULL) OR (loop_end_seconds > loop_start_seconds)"
+        },
+        "sound_stems_crossfade_ms_check": {
+          "name": "sound_stems_crossfade_ms_check",
+          "value": "(crossfade_ms >= 0) AND (crossfade_ms <= 10000)"
+        },
+        "sound_stems_event_min_seconds_check": {
+          "name": "sound_stems_event_min_seconds_check",
+          "value": "(event_min_seconds IS NULL) OR (event_min_seconds >= 5)"
+        },
+        "sound_stems_max_gain_check": {
+          "name": "sound_stems_max_gain_check",
+          "value": "(max_gain >= (0)::numeric) AND (max_gain <= (1)::numeric)"
+        },
+        "sound_stems_min_gain_check": {
+          "name": "sound_stems_min_gain_check",
+          "value": "(min_gain >= (0)::numeric) AND (min_gain <= (1)::numeric)"
+        },
+        "sound_stems_role_check": {
+          "name": "sound_stems_role_check",
+          "value": "role = ANY (ARRAY['base'::text, 'texture'::text, 'event'::text])"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.sponsors": {
+      "name": "sponsors",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "logo_url": {
+          "name": "logo_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "brand_palette": {
+          "name": "brand_palette",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'{}'::jsonb"
+        },
+        "campaign_config": {
+          "name": "campaign_config",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'{}'::jsonb"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.tracks": {
+      "name": "tracks",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "scene_id": {
+          "name": "scene_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "artist": {
+          "name": "artist",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "year": {
+          "name": "year",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "youtube_id": {
+          "name": "youtube_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "search_query": {
+          "name": "search_query",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "spotify_url": {
+          "name": "spotify_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ytmusic_url": {
+          "name": "ytmusic_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "daypart_tag": {
+          "name": "daypart_tag",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'all'"
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "catalogue_key": {
+          "name": "catalogue_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "tracks_catalogue_key_key": {
+          "name": "tracks_catalogue_key_key",
+          "columns": [
+            {
+              "expression": "catalogue_key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "tracks_scene_id_idx": {
+          "name": "tracks_scene_id_idx",
+          "columns": [
+            {
+              "expression": "scene_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "uuid_ops"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "tracks_scene_id_fkey": {
+          "name": "tracks_scene_id_fkey",
+          "tableFrom": "tracks",
+          "tableTo": "scenes",
+          "columnsFrom": ["scene_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {
+    "private": "private"
+  },
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
