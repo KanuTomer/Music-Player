@@ -22,6 +22,11 @@ dist-ssr
 .env.*
 !.env.example
 
+# Local migration credentials and generated deployment env
+neon production pooler*.txt
+supabase production direct connection string.txt
+vercel-production-neon.env.local
+
 # Deployment and linked-service state
 .vercel/
 supabase/.temp/

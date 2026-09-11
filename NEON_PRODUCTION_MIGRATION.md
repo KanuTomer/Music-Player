@@ -51,13 +51,13 @@ The first production release is intentionally hybrid:
 - [x] Stage 11 — Integrate Neon records with Supabase Storage.
 - [x] Stage 12 — Preserve chat and Realtime behavior.
 - [x] Stage 13 — Port cleanup and retention safely across both providers.
-- [ ] Stage 14 — Complete personal Vercel preview UAT. **Current stage**
-- [ ] Stage 15 — Test application and data rollback.
-- [ ] Stage 16 — Create the clean Neon production environment.
-- [ ] Stage 17 — Prepare the production maintenance window and backups.
-- [ ] Stage 18 — Export fresh production data from Supabase.
-- [ ] Stage 19 — Restore and reconcile production data in Neon.
-- [ ] Stage 20 — Configure and deploy Vercel Production.
+- [x] Stage 14 — Complete personal Vercel preview UAT.
+- [x] Stage 15 — Test application and data rollback.
+- [x] Stage 16 — Create the clean Neon production environment.
+- [x] Stage 17 — Prepare the production maintenance window and backups.
+- [x] Stage 18 — Export fresh production data from Supabase.
+- [x] Stage 19 — Restore and reconcile production data in Neon.
+- [ ] Stage 20 — Configure and deploy Vercel Production. **Current stage**
 - [ ] Stage 21 — Complete production public-read verification.
 - [ ] Stage 22 — Complete production administrator acceptance.
 - [ ] Stage 23 — Resume operations and monitor the observation period.
@@ -399,7 +399,7 @@ Combined automated verification (2026-09-11):
 
 Goal: validate the entire hybrid system outside production.
 
-Status: **In progress; preview defects corrected locally and awaiting a focused redeployment/UAT.**
+Status: **Completed on 2026-09-11.**
 
 Actions:
 
@@ -424,10 +424,14 @@ Implementation record (2026-09-11):
 - Initial runtime logs showed successful Supabase Realtime REST sends were treated as failures because `httpSend()` returns `{ success: true }`, not `"ok"`. The acknowledgement handling and deterministic tests were corrected.
 - All 21 active legacy ambience records in Neon were checked against rehearsal Supabase Storage and their objects are absent. Newly uploaded rehearsal ambience works, confirming this is incomplete disposable rehearsal Storage data rather than a Neon reader/player defect. No production objects were accessed or copied.
 - After the fixes: focused tests passed (4), the full Bun suite passed (169), targeted lint passed, and the production build passed. Repository-wide TypeScript retains the previously recorded baseline failures and introduced no error in the changed production files.
+- The fixes were committed as `bb6f97d` and pushed only to the personal `feat/neon-database-port` branch. Kanu confirmed that older-song deletion, administrator operations, and cross-tab refresh behavior passed in the redeployed preview.
+- Kanu reconfirmed that newly uploaded ambience plays. Legacy ambience remains unavailable only because the disposable rehearsal Supabase bucket lacks all 21 referenced legacy objects; this accepted fixture gap does not block Stage 14 and must be replaced by a complete Storage-reference inventory gate before production cutover.
 
 ### Stage 15 — Rollback rehearsal
 
 Goal: prove recovery before production changes.
+
+Status: **Completed on 2026-09-11.**
 
 Actions:
 
@@ -440,7 +444,29 @@ Completion gate:
 
 - Both the pre-write application rollback and post-write paired rollback have been rehearsed successfully.
 
+Rehearsed rollback procedure:
+
+1. Freeze administrator mutations and cleanup, record an exact cutover timestamp, and leave public listening/chat online.
+2. Run `scripts/neon-rollback-scope.mjs --since=<cutover timestamp>` with the direct Neon URL. Stop for any unknown audit action rather than silently omitting a mutation.
+3. Export complete current Neon aggregates for every audit-identified scene. Export operational deltas separately because room visits, listening heartbeats, and source failures are not administrator-audited. Include changed reservations, cleanup rows, and audit records.
+4. Load the export into temporary Supabase staging tables. Before mutation, require matching scene, queue, track, source, asset, and administrator IDs; production must preserve the IDs imported at cutover. Stop on any mismatch.
+5. While cleanup remains paused, verify every Storage path referenced by the staged state exists. Never remove an object during rollback and never replace Supabase Storage URLs.
+6. In one error-stopping Supabase transaction, lock affected aggregates, upsert parents before children, replace only affected ordered child collections, merge operational rows idempotently, carry reservation/cleanup state, and insert a dedicated rollback audit record.
+7. Compare affected counts, IDs, queue positions, provenance, references, and representative payloads before commit. On any mismatch, roll back and keep the Neon deployment active.
+8. After commit, deploy the previously tested Supabase selector configuration. Keep Neon and its recovery point intact until the fallback observation window passes.
+
+Rehearsal record:
+
+- Kanu switched all five Preview backend selectors to Supabase, redeployed, verified the fallback, restored every selector to Neon, redeployed, and confirmed the Neon path again.
+- Added a read-only rollback scope tool that summarizes affected scenes, audit actions, operational deltas, and Storage-reference counts without returning credentials or object paths. It fails closed for unknown administrator actions; its two deterministic tests and targeted lint passed.
+- The rehearsal scope identified `sainik-dhaba` as the only administrator-mutated scene in the selected window, alongside operational deltas that require separate reconciliation.
+- The manually assembled rehearsal databases do not share every historical UUID. A production-style blind ID merge was therefore correctly rejected; production reconciliation may proceed only after the clean import proves complete ID equality.
+- A staged, transactional presentation reconciliation was first applied and rolled back in rehearsal Supabase, proving the original value remained. The same Neon presentation was then committed to rehearsal Supabase with exactly one `stage15.rollback.reconcile` audit entry and read back successfully.
+- Storage-reference verification found both newly uploaded rehearsal ambience objects present. The three missing legacy objects are the already accepted disposable-fixture gap; production rollback cannot commit with any equivalent missing reference.
+
 ### Stage 16 — Clean Neon production environment
+
+Status: **completed on 2026-09-11.**
 
 Goal: create production from reviewed code, not rehearsal residue.
 
@@ -455,7 +481,18 @@ Completion gate:
 
 - The full schema is reproducible from empty and contains only expected objects.
 
+Implementation record:
+
+- Confirmed the new Singapore `neondb` database was empty before migration.
+- Applied tracked migrations `0000` through `0003` using the direct TLS connection; Drizzle records all four migrations.
+- Verified 19 public tables, one private provenance table, 20 foreign keys, 172 checks, and 50 indexes.
+- Created `music_app_runtime` with pooled TLS access, DML/sequence/schema-use privileges, and no superuser, database creation, role creation, replication, bypass-RLS, schema creation, or object ownership privileges.
+- Moved the three plaintext connection-string files outside the repository and created an ignored local migration environment file without exposing values.
+- Kanu created the non-expiring `pre-import-schema-20260911-104708Z` snapshot for the `production` branch and confirmed the requested project settings.
+
 ### Stage 17 — Maintenance and backups
+
+Status: **completed for the personal shadow deployment on 2026-09-11.**
 
 Goal: freeze the relevant write set and establish recovery points.
 
@@ -470,7 +507,17 @@ Completion gate:
 
 - All backups are readable, stored outside Git, and the approved writers are paused.
 
+Shadow-deployment record:
+
+- The company application was intentionally not paused; this is a point-in-time shadow copy, not the company cutover.
+- Captured one exported PostgreSQL snapshot at `2026-09-11T10:59:22.640Z`.
+- Stored the recovery/schema/data artifacts and sensitive inventories as a Windows CurrentUser DPAPI-encrypted archive outside Git.
+- Recorded plaintext and encrypted SHA-256 values, proved DPAPI round-trip integrity, inspected the recovery dump with PostgreSQL 17 `pg_restore`, and removed plaintext backup artifacts.
+- Confirmed the non-expiring pre-import Neon snapshot existed before importing data.
+
 ### Stage 18 — Fresh production export
+
+Status: **completed for the personal shadow deployment on 2026-09-11.**
 
 Goal: export current production data after the write freeze.
 
@@ -485,7 +532,17 @@ Completion gate:
 
 - The dump inventory contains exactly the approved tables and no managed Supabase schema or secret.
 
+Export record:
+
+- Created schema-only and complete `public`/`private` recovery dumps plus a separate custom-format data dump from the same exported snapshot.
+- The approved import contains exactly 20 Neon-owned tables, 19,718 rows, and one sequence state.
+- Excluded Auth, Storage, Realtime, Supabase migration history, chat, reactions, generated rooms, and saved rooms from the import dump.
+- Captured grants, functions, constraints, Supabase migration history, table metrics, Storage metadata, and Storage references in the encrypted recovery archive.
+- Verified 63 objects in the two scoped Storage buckets and zero missing database references at the snapshot time.
+
 ### Stage 19 — Production restore and reconciliation
+
+Status: **completed for the personal shadow deployment on 2026-09-11.**
 
 Goal: load and validate production Neon before application cutover.
 
@@ -500,13 +557,24 @@ Completion gate:
 
 - All reconciliation checks pass with no unexplained difference.
 
+Reconciliation record:
+
+- Restored the approved data to Neon in one transaction with error-stop, no-owner, and no-privileges behavior.
+- Ordered table data by foreign-key dependency; the first unordered attempt rolled back completely before this correction.
+- Matched all 20 table row counts, primary-key definitions, and canonical SHA-256 hashes to the exported snapshot.
+- Passed eight orphan, uniqueness, queue, provenance, and administrator-integrity checks with zero findings.
+- The limited pooled runtime role read seven live scenes, completed a rolled-back write probe, and was denied schema creation.
+- This Neon copy is current only through `2026-09-11T10:59:22.640Z`; a later company cutover requires a new frozen export or audited delta reconciliation.
+
 ### Stage 20 — Vercel Production deployment
+
+Status: **implementation verified; awaiting Kanu's Production environment import (2026-09-11).**
 
 Goal: deploy the tested hybrid backend without exposing secrets.
 
 Actions:
 
-1. Configure Production `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `DATA_BACKEND=neon`, and the existing `CRON_SECRET` in Vercel.
+1. Configure the least-privilege pooled Production `DATABASE_URL` and all five backend selectors in Vercel. Never configure `DATABASE_URL_UNPOOLED` in Vercel.
 2. Retain Supabase variables needed for Auth, Storage, Realtime, and server-side Storage work.
 3. Run Vercel Node.js Functions in a region close to Neon.
 4. Deploy the exact reviewed commit that passed personal preview UAT.
@@ -515,6 +583,16 @@ Actions:
 Completion gate:
 
 - Deployment health checks pass and no credential appears in the client bundle or logs.
+
+Verification record before deployment:
+
+- Added deterministic exported-snapshot backup, DPAPI protection, restore-order, reconciliation, and rollback-scope tooling.
+- Focused migration-tool tests pass (6 tests), and the complete Bun suite passes (175 tests).
+- Production build succeeds for Vercel Node.js 22; the existing client chunk-size advisory remains unchanged.
+- Targeted lint for the migration tooling passes.
+- Repository-wide lint remains blocked by 91 pre-existing formatting errors and 8 warnings in unrelated application files.
+- Repository-wide type-check remains blocked by pre-existing application typing and missing Bun test-type errors; the new runtime `.mjs` tools introduce no reported type-check error.
+- Remaining gate: import the ignored six-key environment file into personal Vercel Production, then fast-forward personal `main` and verify the new deployment.
 
 ### Stage 21 — Public production verification
 
@@ -575,8 +653,8 @@ Completion gate:
 
 ## Next Session
 
-Current stage: **Stage 14 — Personal preview UAT.**
+Current stage: **Stage 20 — Personal Vercel Production deployment.**
 
-Deploy the two Stage 14 fixes to the personal preview and have Kanu repeat the focused queue-removal and cross-tab Realtime checks. Treat legacy ambience as an unavailable rehearsal fixture unless replacement objects are uploaded; do not copy production Storage merely to repair disposable UAT data. Then verify Neon audit and Vercel runtime results. Do not begin Stage 15 until Stage 14 is accepted.
+Run the repository verification gates, create the ignored six-key Vercel update file, and wait for Kanu to import it into the personal `music-player` project's Production environment. Only then fast-forward personal `main` and verify the resulting deployment.
 
 Do not commit, push, or interact with the company repository without a separate explicit request.
