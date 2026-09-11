@@ -399,9 +399,11 @@ Combined automated verification (2026-09-11):
 
 Goal: validate the entire hybrid system outside production.
 
+Status: **In progress; awaiting personal Vercel preview configuration and UAT.**
+
 Actions:
 
-1. Configure the personal Vercel preview with the temporary branch's pooled/direct Neon variables and `DATA_BACKEND=neon`.
+1. Configure the personal Vercel preview with the temporary branch's pooled `DATABASE_URL` and all backend selectors set to `neon`; keep `DATABASE_URL_UNPOOLED` local-only for migrations, dumps, and reconciliation.
 2. Retain preview Supabase Auth, Storage, and Realtime configuration.
 3. Test every public room, playlists, playback, ambience, attribution, media, chat, reactions, presence, admin AAL2, mutations, audit entries, uploads, refresh broadcasts, and cleanup.
 4. Run focused tests, type-checking, linting, and the production build.
