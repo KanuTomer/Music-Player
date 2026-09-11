@@ -3,7 +3,10 @@ import { roomPresenceTopic } from "./room-presence";
 import type { RoomRefreshPayload } from "./room-refresh";
 
 type BroadcastChannel = {
-  httpSend(event: string, payload: RoomRefreshPayload): PromiseLike<unknown>;
+  httpSend(
+    event: string,
+    payload: RoomRefreshPayload,
+  ): PromiseLike<{ success: true } | { success: false; status: number; error: string }>;
 };
 
 export type RoomRefreshBroadcastClient = {
@@ -19,7 +22,7 @@ export async function sendRoomRefresh(
   const channel = client.channel(roomPresenceTopic(sceneSlug));
   try {
     const result = await channel.httpSend("room_refresh", payload);
-    if (result !== "ok") throw new Error("Realtime server did not acknowledge the refresh");
+    if (!result.success) throw new Error("Realtime server did not acknowledge the refresh");
   } finally {
     await client.removeChannel(channel);
   }

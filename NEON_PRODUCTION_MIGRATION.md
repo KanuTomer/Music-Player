@@ -399,7 +399,7 @@ Combined automated verification (2026-09-11):
 
 Goal: validate the entire hybrid system outside production.
 
-Status: **In progress; awaiting personal Vercel preview configuration and UAT.**
+Status: **In progress; preview defects corrected locally and awaiting a focused redeployment/UAT.**
 
 Actions:
 
@@ -412,6 +412,18 @@ Actions:
 Completion gate:
 
 - Preview behavior matches production expectations and all security/functional checks pass.
+
+Implementation record (2026-09-11):
+
+- Stages 12–13 were committed as `5200f3f` and pushed only to the personal `feat/neon-database-port` branch.
+- Vercel functions were pinned to Singapore region `sin1` in commit `5b3e00f`.
+- Personal Vercel preview deployment `dpl_FgPeJfXPAbvFfiVDHbkzK4UMLGvq` reached Ready for exact commit `5b3e00f`; its stable branch alias is `music-player-git-feat-neon-d-1f4d83-kanutomer123-6953s-projects.vercel.app`.
+- Build-error inspection was clean and the preview homepage returned HTTP 200. The only initial runtime finding was a non-failing PostgreSQL SSL-mode compatibility warning to review before production.
+- Local configuration validation confirmed the rehearsal Supabase project, pooled runtime URL, direct CLI URL, and all required secret names without printing their values.
+- Initial preview UAT found that deleting an older queue membership could violate the non-deferrable unique queue-position constraint. Queue compaction now uses a safe two-phase positive renumbering; the exact affected rehearsal queue passed a rolled-back 40-to-39-row transactional check with consecutive positions.
+- Initial runtime logs showed successful Supabase Realtime REST sends were treated as failures because `httpSend()` returns `{ success: true }`, not `"ok"`. The acknowledgement handling and deterministic tests were corrected.
+- All 21 active legacy ambience records in Neon were checked against rehearsal Supabase Storage and their objects are absent. Newly uploaded rehearsal ambience works, confirming this is incomplete disposable rehearsal Storage data rather than a Neon reader/player defect. No production objects were accessed or copied.
+- After the fixes: focused tests passed (4), the full Bun suite passed (169), targeted lint passed, and the production build passed. Repository-wide TypeScript retains the previously recorded baseline failures and introduced no error in the changed production files.
 
 ### Stage 15 — Rollback rehearsal
 
@@ -565,6 +577,6 @@ Completion gate:
 
 Current stage: **Stage 14 — Personal preview UAT.**
 
-Begin by reviewing the full hybrid preview configuration and defining the personal Vercel preview acceptance matrix. Reuse the rehearsed Neon branch and rehearsal Supabase project; do not point the preview at production resources.
+Deploy the two Stage 14 fixes to the personal preview and have Kanu repeat the focused queue-removal and cross-tab Realtime checks. Treat legacy ambience as an unavailable rehearsal fixture unless replacement objects are uploaded; do not copy production Storage merely to repair disposable UAT data. Then verify Neon audit and Vercel runtime results. Do not begin Stage 15 until Stage 14 is accepted.
 
-Do not begin Stage 14, commit, push, or interact with the company repository without a separate explicit request.
+Do not commit, push, or interact with the company repository without a separate explicit request.

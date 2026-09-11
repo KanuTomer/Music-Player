@@ -12,6 +12,7 @@ import type {
   SongDraft,
 } from "./admin.server";
 import type { AmbienceRole } from "./ambience-processing";
+import { normalizeQueuePositions } from "./queue-positions.neon.server";
 import {
   ambienceUploadStemDefaults,
   isAdminStorageBucket,
@@ -518,9 +519,7 @@ export async function removeSongs(identity: Identity, queueId: string, membershi
     )[0]!.n;
     if (count - unique.length < 1) throw new Error("A room must keep at least one song");
     await tx.execute(sql`delete from curated_set_tracks where id in (${membershipList})`);
-    await tx.execute(
-      sql`with ranked as(select id,row_number() over(order by position,id)::int p from curated_set_tracks where curated_set_id=${queueId}::uuid) update curated_set_tracks m set position=ranked.p from ranked where m.id=ranked.id`,
-    );
+    await normalizeQueuePositions(tx, queueId);
     await audit(tx, identity.id, "songs.bulk_remove", q[0]!.scene_id, queueId, unique.length);
     return q[0]!.scene_id;
   });
