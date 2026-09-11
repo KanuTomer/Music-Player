@@ -57,8 +57,8 @@ The first production release is intentionally hybrid:
 - [x] Stage 17 — Prepare the production maintenance window and backups.
 - [x] Stage 18 — Export fresh production data from Supabase.
 - [x] Stage 19 — Restore and reconcile production data in Neon.
-- [ ] Stage 20 — Configure and deploy Vercel Production. **Current stage**
-- [ ] Stage 21 — Complete production public-read verification.
+- [x] Stage 20 — Configure and deploy Vercel Production.
+- [ ] Stage 21 — Complete production public-read verification. **Current stage**
 - [ ] Stage 22 — Complete production administrator acceptance.
 - [ ] Stage 23 — Resume operations and monitor the observation period.
 
@@ -568,7 +568,7 @@ Reconciliation record:
 
 ### Stage 20 — Vercel Production deployment
 
-Status: **implementation verified; awaiting Kanu's Production environment import (2026-09-11).**
+Status: **completed for personal Vercel Production on 2026-09-11.**
 
 Goal: deploy the tested hybrid backend without exposing secrets.
 
@@ -592,7 +592,11 @@ Verification record before deployment:
 - Targeted lint for the migration tooling passes.
 - Repository-wide lint remains blocked by 91 pre-existing formatting errors and 8 warnings in unrelated application files.
 - Repository-wide type-check remains blocked by pre-existing application typing and missing Bun test-type errors; the new runtime `.mjs` tools introduce no reported type-check error.
-- Remaining gate: import the ignored six-key environment file into personal Vercel Production, then fast-forward personal `main` and verify the new deployment.
+- Kanu imported the ignored six-key environment file into personal Vercel Production without adding the unpooled owner URL; existing Supabase and cron variables remained in place.
+- The accidental manual redeploy rebuilt the previous personal `main` only and was superseded by the intended Git deployment.
+- Personal `main` was fast-forwarded to `73db948`; Vercel deployment `dpl_ACBjPCeGV4pNdER1MzVbB8AwJ5pm` reached `READY` with one Node.js function in `sin1`.
+- Build-error and runtime-error checks were clean; the homepage and `sainik-dhaba` route both returned HTTP 200.
+- Scanned 25 deployed JavaScript assets: no database URL, Neon hostname, unpooled key, or concrete Supabase secret key was present.
 
 ### Stage 21 — Public production verification
 
@@ -653,8 +657,8 @@ Completion gate:
 
 ## Next Session
 
-Current stage: **Stage 20 — Personal Vercel Production deployment.**
+Current stage: **Stage 21 — Personal Production public-read verification.**
 
-Run the repository verification gates, create the ignored six-key Vercel update file, and wait for Kanu to import it into the personal `music-player` project's Production environment. Only then fast-forward personal `main` and verify the resulting deployment.
+Kanu performs the browser, playback, chat, reactions, presence, and all-live-room UAT against personal Vercel Production. The agent may perform only read-only terminal/MCP verification and must not begin Stage 22 until Kanu reports Stage 21 acceptance.
 
 Do not commit, push, or interact with the company repository without a separate explicit request.
