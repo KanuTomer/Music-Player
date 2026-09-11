@@ -19,9 +19,27 @@ import {
   type UploadPurpose,
 } from "./admin-storage";
 import { adminStorage } from "./admin-storage.server";
+import { broadcastRoomRefresh } from "./room-refresh.server";
+import { afterCommittedRoomMutation } from "./room-refresh";
 
 async function neonAdminData() {
   return resolveAdminDataBackend() === "neon" ? import("./admin.neon.server") : null;
+}
+
+async function notifyNeonRoom(neon: NeonAdminData, sceneId: string) {
+  try {
+    const slug = await neon.getLiveSceneSlug(sceneId);
+    if (slug) await broadcastRoomRefresh(slug, sceneId);
+  } catch (error) {
+    console.warn("[room-refresh] preparation failed", {
+      sceneId,
+      error: error instanceof Error ? error.name : "UnknownError",
+    });
+  }
+}
+
+function commitNeonRoomMutation(neon: NeonAdminData, mutate: () => Promise<string>) {
+  return afterCommittedRoomMutation(mutate, (sceneId) => notifyNeonRoom(neon, sceneId));
 }
 
 type NeonAdminData = NonNullable<Awaited<ReturnType<typeof neonAdminData>>>;
@@ -738,7 +756,10 @@ export async function saveAmbienceProfile(input: {
     audioTheme: normalizeTheme(input.audioTheme),
   };
   const neon = await neonAdminData();
-  if (neon) return neon.saveAmbienceProfile(user, validated);
+  if (neon) {
+    await commitNeonRoomMutation(neon, () => neon.saveAmbienceProfile(user, validated));
+    return;
+  }
   const { error } = await admin.rpc("admin_secured_save_ambience_profile", {
     p_scene_id: validated.sceneId,
     p_enabled: validated.enabled,
@@ -801,7 +822,10 @@ export async function saveAmbienceStem(input: {
     crossfadeMs: Math.round(numberInRange(input.crossfadeMs, 0, 10000, "crossfade")),
   };
   const neon = await neonAdminData();
-  if (neon) return neon.saveAmbienceStem(user, validated);
+  if (neon) {
+    await commitNeonRoomMutation(neon, () => neon.saveAmbienceStem(user, validated));
+    return;
+  }
   const { error } = await admin.rpc("admin_secured_save_ambience_stem", {
     p_id: input.id ?? null,
     p_scene_id: input.sceneId,
@@ -825,7 +849,10 @@ export async function saveAmbienceStem(input: {
 export async function deactivateAmbienceStem(stemId: string) {
   const user = await requireAdmin();
   const neon = await neonAdminData();
-  if (neon) return neon.deactivateAmbienceStem(user, String(stemId));
+  if (neon) {
+    await commitNeonRoomMutation(neon, () => neon.deactivateAmbienceStem(user, String(stemId)));
+    return;
+  }
   const { error } = await admin.rpc("admin_secured_deactivate_ambience_stem", {
     p_stem_id: String(stemId),
   });
@@ -1003,11 +1030,13 @@ export async function saveScenePresentation(input: {
           validateBackgroundWebp(bytes);
         }
       }
-      await neon.saveScenePresentation(user, {
-        ...input,
-        backgroundStoragePath: nextPath,
-        oneliners: input.oneliners.map((line) => ({ ...line, text: line.text.trim() })),
-      });
+      await commitNeonRoomMutation(neon, () =>
+        neon.saveScenePresentation(user, {
+          ...input,
+          backgroundStoragePath: nextPath,
+          oneliners: input.oneliners.map((line) => ({ ...line, text: line.text.trim() })),
+        }),
+      );
       return neon.getAdminBackground(user, input.sceneId);
     } catch (error) {
       if (compensationInput)
@@ -1108,7 +1137,7 @@ export async function finalizeAmbienceUpload(input: {
         ambienceProcessing.maxDurationSeconds[validated.role],
       );
       const hash = createHash("sha256").update(bytes).digest("hex").toUpperCase();
-      await neon.finalizeAmbienceUpload(user, {
+      const finalized = await neon.finalizeAmbienceUpload(user, {
         sceneId: validated.sceneId,
         reservationId: validated.reservationId,
         path: validated.path,
@@ -1127,6 +1156,7 @@ export async function finalizeAmbienceUpload(input: {
         selectedStartSeconds: validated.selectedStartSeconds,
         selectedDurationSeconds: validated.selectedDurationSeconds,
       });
+      if (finalized === "finalized") await notifyNeonRoom(neon, validated.sceneId);
       return;
     } catch (error) {
       await compensateUploadedObject(uploadCompensation(neon, user, compensationInput));
@@ -1266,12 +1296,16 @@ export async function addSongs(queueId: string, songs: SongDraft[]): Promise<voi
     };
   });
   const neon = await neonAdminData();
-  if (neon)
-    return neon.addSongs(
-      user,
-      queueId,
-      payload.map((song, index) => ({ ...songs[index]!, videoId: song.video_id })),
+  if (neon) {
+    await commitNeonRoomMutation(neon, () =>
+      neon.addSongs(
+        user,
+        queueId,
+        payload.map((song, index) => ({ ...songs[index]!, videoId: song.video_id })),
+      ),
     );
+    return;
+  }
   const { error } = await admin.rpc("admin_secured_append_queue_tracks", {
     p_curated_set_id: queueId,
     p_tracks: payload,
@@ -1284,7 +1318,10 @@ export async function removeSongs(queueId: string, membershipIds: string[]): Pro
   if (!queueId || membershipIds.length < 1 || membershipIds.length > 50)
     throw new Error("Invalid song removal");
   const neon = await neonAdminData();
-  if (neon) return neon.removeSongs(user, queueId, membershipIds);
+  if (neon) {
+    await commitNeonRoomMutation(neon, () => neon.removeSongs(user, queueId, membershipIds));
+    return;
+  }
   const { error } = await admin.rpc("admin_secured_remove_queue_tracks", {
     p_curated_set_id: queueId,
     p_membership_ids: membershipIds,
@@ -1306,13 +1343,17 @@ export async function updateSong(input: {
   const videoId = youtubeVideoId(input.source);
   if (!videoId) throw new Error("Enter a valid YouTube link or video ID");
   const neon = await neonAdminData();
-  if (neon)
-    return neon.updateSong(user, {
-      ...input,
-      title: input.title.trim(),
-      artist: input.artist.trim(),
-      videoId,
-    });
+  if (neon) {
+    await commitNeonRoomMutation(neon, () =>
+      neon.updateSong(user, {
+        ...input,
+        title: input.title.trim(),
+        artist: input.artist.trim(),
+        videoId,
+      }),
+    );
+    return;
+  }
   const { error } = await admin.rpc("admin_secured_update_queue_track", {
     p_membership_id: input.membershipId,
     p_title: input.title,

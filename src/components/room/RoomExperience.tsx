@@ -25,6 +25,7 @@ import { useRoomAnalytics } from "@/hooks/useRoomAnalytics";
 import { supabase } from "@/integrations/supabase/client";
 import { isLightTextColor, sceneTextShadow, sceneTextStroke } from "@/lib/scene-presentation";
 import { useLiveScenes } from "@/hooks/useLiveScenes";
+import { useRoomRefresh } from "@/hooks/useRoomRefresh";
 
 export function RoomExperience({
   room,
@@ -53,6 +54,17 @@ export function RoomExperience({
     gag_label: presentation.gag_label,
   };
   const player = usePlayer();
+  useRoomRefresh(scene.slug, scene.id, (nextRoom) => {
+    setPresentation({
+      scene_id: nextRoom.scene.id,
+      background_storage_path: nextRoom.scene.background_storage_path,
+      background_url: nextRoom.scene.background_url,
+      foreground_text_color: nextRoom.scene.foreground_text_color,
+      gag_label: nextRoom.scene.gag_label,
+      oneliners: nextRoom.oneliners,
+    });
+    player.refreshRoom(nextRoom);
+  });
   useRoomAnalytics(scene.slug, player.isPlaying);
   const social = useRoomSocial(scene.slug);
   const sceneVideo = presentation.background_url ? null : videoForScene(scene.slug);

@@ -5,6 +5,7 @@ import {
   compensateUploadedObject,
   createSignedUploadWithCompensation,
   isAdminStorageBucket,
+  isMissingStorageError,
   validateAmbienceFinalization,
   validateBackgroundWebp,
   validateStoragePath,
@@ -58,6 +59,9 @@ describe("administrator Storage paths and provenance", () => {
     expect(isAdminStorageBucket("scene-media")).toBe(true);
     expect(isAdminStorageBucket("ambience-audio")).toBe(true);
     expect(isAdminStorageBucket("unknown-bucket")).toBe(false);
+    expect(isMissingStorageError({ statusCode: 404, message: "missing" })).toBe(true);
+    expect(isMissingStorageError({ message: "Object not found" })).toBe(true);
+    expect(isMissingStorageError({ statusCode: 500, message: "offline" })).toBe(false);
   });
 
   test("accepts bounded WebP dimensions and rejects invalid or oversized data", () => {

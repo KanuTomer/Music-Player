@@ -26,6 +26,16 @@ export function isAdminStorageBucket(value: string): value is AdminStorageBucket
   return value === "scene-media" || value === "ambience-audio";
 }
 
+export function isMissingStorageError(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+  const value = error as { status?: unknown; statusCode?: unknown; message?: unknown };
+  return (
+    value.status === 404 ||
+    value.statusCode === 404 ||
+    (typeof value.message === "string" && /not[ -]?found|does not exist/i.test(value.message))
+  );
+}
+
 export function validateBackgroundWebp(data: Buffer) {
   if (
     data.length < 16 ||

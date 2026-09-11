@@ -48,10 +48,10 @@ The first production release is intentionally hybrid:
 - [x] Stage 8 — Port low-risk operational writes.
 - [x] Stage 9 — Reuse Supabase JWT authentication for Neon-backed routes.
 - [x] Stage 10 — Port administrator RPC behavior to atomic Neon transactions.
-- [ ] Stage 11 — Integrate Neon records with Supabase Storage. **Current stage**
-- [ ] Stage 12 — Preserve chat and Realtime behavior.
-- [ ] Stage 13 — Port cleanup and retention safely across both providers.
-- [ ] Stage 14 — Complete personal Vercel preview UAT.
+- [x] Stage 11 — Integrate Neon records with Supabase Storage.
+- [x] Stage 12 — Preserve chat and Realtime behavior.
+- [x] Stage 13 — Port cleanup and retention safely across both providers.
+- [ ] Stage 14 — Complete personal Vercel preview UAT. **Current stage**
 - [ ] Stage 15 — Test application and data rollback.
 - [ ] Stage 16 — Create the clean Neon production environment.
 - [ ] Stage 17 — Prepare the production maintenance window and backups.
@@ -297,7 +297,7 @@ Completion gate:
 
 Goal: keep existing media in Supabase Storage while Neon owns its metadata and provenance.
 
-Status: **Implementation and automated rehearsal complete; awaiting Kanu's manual acceptance.**
+Status: **Completed and accepted on 2026-09-11.**
 
 Actions:
 
@@ -326,10 +326,13 @@ Implementation record (2026-09-11):
 - Transactional Neon checks passed and rolled back for reservation ownership/expiry, sanitized public provenance, genuine private provenance, role-specific stem defaults, exactly one finalization audit, and reference protection.
 - Focused Storage/media and administrator tests passed; the full Bun suite passed with 155 tests. Targeted Stage 11 lint and the production build passed.
 - Repository-wide lint remains blocked by 95 pre-existing formatting errors (plus 8 warnings). Repository-wide TypeScript remains blocked by the previously recorded UI strictness and missing `bun:test` declaration failures; Stage 11 production files introduce no TypeScript error.
+- Kanu accepted the rehearsal workflow and directed that the still-active disposable Stage 11 stem is not a completion blocker because rehearsal data will not be promoted. Commit: `c278fe0`.
 
 ### Stage 12 — Chat and Realtime
 
 Goal: keep social features on Supabase while Neon becomes authoritative for room configuration.
+
+Status: **Completed and manually accepted on 2026-09-11 together with Stage 13.**
 
 Actions:
 
@@ -344,9 +347,21 @@ Completion gate:
 - Connected clients refresh after Neon-backed admin changes.
 - Failed/rolled-back transactions do not broadcast a successful refresh.
 
+Implementation record (2026-09-11):
+
+- Added post-commit Supabase Realtime REST broadcasts on `room:scene:<slug>` with the `room_refresh` event and a marker-only `{ sceneId, committedAt }` payload.
+- Neon song, ambience, presentation, and oneliner mutations broadcast only after commit. Failed mutations, previews, reservations, discarded uploads, and Supabase fallback mutations do not emit the custom event.
+- The shared room channel now distributes refresh markers alongside presence and reactions. Clients validate the marker, coalesce events over 750 ms, allow one fetch in flight, and refetch the complete authoritative room payload.
+- Player refreshes preserve the room session, playback intent, volume, ambience preference, current membership and position when possible. Surviving queue entries keep their session order, updated metadata replaces stale data, and new entries append without reshuffling.
+- Chat persistence and broadcasts, contact/link blocking, reactions, presence, and the Supabase `postgres_changes` fallback remain unchanged.
+- Realtime, presence, mutation, queue reconciliation, chat, room-route, and related focused tests passed. Failed delivery removes its temporary channel and remains a sanitized best-effort warning.
+- Kanu manually confirmed that presentation, queue, and ambience changes reached the public room without a reload while preserving playback state. Chat, reactions, presence, URL/email blocking, and the Supabase administrator-data fallback also passed.
+
 ### Stage 13 — Cleanup and retention
 
 Goal: coordinate Neon references with Supabase Storage deletion safely.
+
+Status: **Completed and manually accepted on 2026-09-11 together with Stage 12.**
 
 Actions:
 
@@ -361,6 +376,24 @@ Completion gate:
 - Repeated cleanup runs are safe.
 - Referenced objects are never deleted.
 - Partial failures are recorded and recoverable.
+
+Implementation record (2026-09-11):
+
+- Added the independent, exact and case-sensitive `CLEANUP_BACKEND` selector, defaulting to Supabase, and documented its non-secret default in `.env.example`.
+- Neon retention queues expired unfinished reservations, removes audit rows older than 180 days and rate-limit rows older than two days, then atomically claims at most 100 due cleanup rows with `FOR UPDATE SKIP LOCKED` and a ten-minute lease.
+- Every Storage removal follows an immediate Neon reference check. Referenced items complete as `skipped_referenced`; unknown buckets and unavailable checks retry without contacting Storage; missing objects are accepted as idempotent success; failures use sanitized exponential backoff capped at 24 hours.
+- Chat purging runs in both backend modes and deletes only messages whose expiry is older than an additional 24 hours, in batches of 200 up to 1,000 rows per run.
+- Transactional Neon rehearsal checks passed and rolled back for expired reservation queueing, claims, leases, retries, completion, and reservation discard.
+- Controlled rehearsal cleanup preserved the referenced Stage 11 audio object and marked its queue item `skipped_referenced`; it removed the unreferenced replaced background and completed its queue item. Supabase chat fixtures confirmed old-expired deletion while recent-expired and active messages survived.
+- No schema migration was added or changed. Migration `0003_neon_admin_transactions` remains untouched.
+
+Combined automated verification (2026-09-11):
+
+- Focused Realtime, presence, cleanup, and Storage tests: 30 passed.
+- Full Bun suite: 167 passed, 0 failed.
+- Targeted lint: 0 errors and one existing Fast Refresh warning in `player.tsx`.
+- Production build passed. Repository-wide lint and TypeScript still report the previously recorded formatting, UI strictness, and missing `bun:test` declaration baseline failures; no Stage 12/13 production file introduced a TypeScript error.
+- Kanu accepted the combined manual UAT after all requested Realtime, playback-preservation, social-feature, chat-blocking, and fallback checks passed.
 
 ### Stage 14 — Personal preview UAT
 
@@ -528,8 +561,8 @@ Completion gate:
 
 ## Next Session
 
-Current stage: **Stage 11 — manual Storage acceptance.**
+Current stage: **Stage 14 — Personal preview UAT.**
 
-Kanu should complete the controlled ambience and background upload test against rehearsal Supabase Storage and Neon, without invoking cleanup or manually deleting objects. After Kanu reports success, run read-only CLI verification, mark Stage 11 complete, and make Stage 12 current. Preserve the test audio object and queued replaced background for Stage 13.
+Begin by reviewing the full hybrid preview configuration and defining the personal Vercel preview acceptance matrix. Reuse the rehearsed Neon branch and rehearsal Supabase project; do not point the preview at production resources.
 
-Do not begin Stage 12, commit, push, or interact with the company repository without a separate explicit request.
+Do not begin Stage 14, commit, push, or interact with the company repository without a separate explicit request.

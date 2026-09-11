@@ -31,6 +31,13 @@ type Identity = { id: string; email?: string };
 type Executor = { execute(query: ReturnType<typeof sql>): Promise<unknown> };
 const resultRows = <T>(result: unknown) => (result as { rows: T[] }).rows;
 
+export async function getLiveSceneSlug(sceneId: string) {
+  const rows = resultRows<{ slug: string }>(
+    await db.execute(sql`select slug from scenes where id=${sceneId}::uuid and is_live`),
+  );
+  return rows[0]?.slug ?? null;
+}
+
 async function adminTransaction<T>(
   operation: string,
   // Drizzle's transaction type is internal to the configured driver.
@@ -334,7 +341,7 @@ export async function saveAmbienceProfile(
     audioTheme: unknown;
   },
 ) {
-  await adminTransaction("save ambience profile", async (tx) => {
+  return adminTransaction("save ambience profile", async (tx) => {
     await authorize(tx, identity.id);
     await consumeRate(tx, identity.id, "ambience.profile");
     const scene = resultRows(
@@ -347,6 +354,7 @@ export async function saveAmbienceProfile(
       values(${input.sceneId}::uuid,${input.enabled},${input.maxMasterGain},${input.musicDuckRatio},${input.fadeInMs},${input.fadeOutMs},${JSON.stringify(input.audioTheme)}::jsonb)
       on conflict(scene_id) do update set enabled=excluded.enabled,max_master_gain=excluded.max_master_gain,music_duck_ratio=excluded.music_duck_ratio,fade_in_ms=excluded.fade_in_ms,fade_out_ms=excluded.fade_out_ms,audio_theme=excluded.audio_theme`);
     await audit(tx, identity.id, "ambience.profile.save", input.sceneId, input.sceneId, 1);
+    return input.sceneId;
   });
 }
 
@@ -368,7 +376,7 @@ export type StemInput = {
   eventMaxSeconds: number | null;
 };
 export async function saveAmbienceStem(identity: Identity, input: StemInput) {
-  await adminTransaction("save ambience stem", async (tx) => {
+  return adminTransaction("save ambience stem", async (tx) => {
     await authorize(tx, identity.id);
     await consumeRate(tx, identity.id, "ambience.stem");
     const scenes = resultRows(
@@ -399,11 +407,12 @@ export async function saveAmbienceStem(identity: Identity, input: StemInput) {
       id,
       1,
     );
+    return input.sceneId;
   });
 }
 
 export async function deactivateAmbienceStem(identity: Identity, stemId: string) {
-  await adminTransaction("deactivate ambience stem", async (tx) => {
+  return adminTransaction("deactivate ambience stem", async (tx) => {
     await authorize(tx, identity.id);
     await consumeRate(tx, identity.id, "ambience.stem");
     const rows = resultRows<{ scene_id: string }>(
@@ -413,6 +422,7 @@ export async function deactivateAmbienceStem(identity: Identity, stemId: string)
     );
     if (rows.length !== 1) throw new Error("Ambience sound not found");
     await audit(tx, identity.id, "ambience.stem.deactivate", rows[0]!.scene_id, stemId, 1);
+    return rows[0]!.scene_id;
   });
 }
 
@@ -429,7 +439,7 @@ export async function addSongs(
   queueId: string,
   songs: Array<SongDraft & { videoId: string }>,
 ) {
-  await adminTransaction("add songs", async (tx) => {
+  return adminTransaction("add songs", async (tx) => {
     await authorize(tx, identity.id);
     await consumeRate(tx, identity.id, "bulk.songs");
     const queues = resultRows<{ scene_id: string }>(
@@ -474,11 +484,12 @@ export async function addSongs(
         );
     }
     await audit(tx, identity.id, "songs.bulk_add", queues[0]!.scene_id, queueId, songs.length);
+    return queues[0]!.scene_id;
   });
 }
 
 export async function removeSongs(identity: Identity, queueId: string, membershipIds: string[]) {
-  await adminTransaction("remove songs", async (tx) => {
+  return adminTransaction("remove songs", async (tx) => {
     await authorize(tx, identity.id);
     await consumeRate(tx, identity.id, "bulk.songs");
     const q = resultRows<{ scene_id: string }>(
@@ -511,6 +522,7 @@ export async function removeSongs(identity: Identity, queueId: string, membershi
       sql`with ranked as(select id,row_number() over(order by position,id)::int p from curated_set_tracks where curated_set_id=${queueId}::uuid) update curated_set_tracks m set position=ranked.p from ranked where m.id=ranked.id`,
     );
     await audit(tx, identity.id, "songs.bulk_remove", q[0]!.scene_id, queueId, unique.length);
+    return q[0]!.scene_id;
   });
 }
 
@@ -525,7 +537,7 @@ export async function updateSong(
     scope: "shared" | "local";
   },
 ) {
-  await adminTransaction("update song", async (tx) => {
+  return adminTransaction("update song", async (tx) => {
     await authorize(tx, identity.id);
     await consumeRate(tx, identity.id, "songs.update");
     const rows = resultRows<{ track_id: string; scene_id: string }>(
@@ -571,6 +583,7 @@ export async function updateSong(
       );
     }
     await audit(tx, identity.id, "songs.update", current.scene_id, input.membershipId, 1);
+    return current.scene_id;
   });
 }
 
@@ -832,7 +845,7 @@ export async function saveScenePresentation(
     oneliners: Array<{ id?: string; text: string; daypart: AdminOneLiner["daypart"] }>;
   },
 ) {
-  await adminTransaction("save scene presentation", async (tx) => {
+  return adminTransaction("save scene presentation", async (tx) => {
     await authorize(tx, identity.id);
     await consumeRate(tx, identity.id, "bulk.presentation");
     const scenes = resultRows<{ background_storage_path: string | null }>(
@@ -889,6 +902,7 @@ export async function saveScenePresentation(
       input.sceneId,
       input.oneliners.length + 1,
     );
+    return input.sceneId;
   });
 }
 

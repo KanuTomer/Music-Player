@@ -1,6 +1,6 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { publicStorageUrl } from "./public-storage.server";
-import type { AdminStorageBucket } from "./admin-storage";
+import { isMissingStorageError, type AdminStorageBucket } from "./admin-storage";
 
 export const adminStorage = {
   publicUrl(bucket: AdminStorageBucket, path: string | null | undefined) {
@@ -18,6 +18,6 @@ export const adminStorage = {
   },
   async remove(bucket: AdminStorageBucket, path: string) {
     const { error } = await supabaseAdmin.storage.from(bucket).remove([path]);
-    if (error) throw new Error(error.message);
+    if (error && !isMissingStorageError(error)) throw new Error(error.message);
   },
 };

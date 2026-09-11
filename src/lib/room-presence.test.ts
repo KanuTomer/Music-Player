@@ -19,17 +19,19 @@ class FakeChannel implements RoomPresenceChannel {
   state: Record<string, readonly unknown[]> = {};
   private presenceCallback: (() => void) | null = null;
   private reactionCallback: ((message?: { payload?: unknown }) => void) | null = null;
+  private refreshCallback: ((message?: { payload?: unknown }) => void) | null = null;
   private statusCallback: ((status: string) => void) | null = null;
 
   on(
     type: "presence" | "broadcast",
-    _filter: { event: string },
+    filter: { event: string },
     callback: (message?: { payload?: unknown }) => void,
   ) {
     if (this.subscribed) throw new Error("callbacks registered after subscribe");
     this.onCalls += 1;
     if (type === "presence") this.presenceCallback = callback;
-    else this.reactionCallback = callback;
+    else if (filter.event === "reaction") this.reactionCallback = callback;
+    else this.refreshCallback = callback;
     return this;
   }
 
@@ -69,6 +71,10 @@ class FakeChannel implements RoomPresenceChannel {
 
   emitReaction(emoji: string) {
     this.reactionCallback?.({ payload: { emoji } });
+  }
+
+  emitRefresh(payload: unknown) {
+    this.refreshCallback?.({ payload });
   }
 }
 
@@ -128,7 +134,7 @@ describe("room presence", () => {
     await flush();
 
     expect(fake.channelCalls()).toBe(1);
-    expect(fake.channel.onCalls).toBe(2);
+    expect(fake.channel.onCalls).toBe(3);
     expect(fake.channel.subscribeCalls).toBe(1);
     expect(fake.channel.trackCalls).toBe(1);
 
@@ -161,16 +167,20 @@ describe("room presence", () => {
     const controller = createRoomPresenceController(fake.client);
     const snapshots: string[] = [];
     const reactions: string[] = [];
+    const refreshes: unknown[] = [];
     controller.acquire("sainik-dhaba", {
       onPresence: (snapshot) => snapshots.push(`${snapshot.status}:${snapshot.count}`),
       onReaction: (emoji) => reactions.push(emoji),
+      onRoomRefresh: (payload) => refreshes.push(payload),
     });
 
     fake.channel.emitPresence({ first: [{ opened_at: "one" }] });
     fake.channel.emitReaction("👏");
+    fake.channel.emitRefresh({ sceneId: "scene" });
     fake.channel.emitStatus("CHANNEL_ERROR");
 
     expect(snapshots).toEqual(["connecting:null", "ready:1", "unavailable:null"]);
     expect(reactions).toEqual(["👏"]);
+    expect(refreshes).toEqual([{ sceneId: "scene" }]);
   });
 });
