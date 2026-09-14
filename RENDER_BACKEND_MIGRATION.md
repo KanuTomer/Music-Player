@@ -2,7 +2,7 @@
 
 ## Architecture and Status
 
-- Repository: `KanuTomer/Music-Player`, branch `feat/neon-database-port`.
+- Repository: `KanuTomer/Music-Player`; personal `main` is the deployment branch.
 - Frontend: static Vite/TanStack Router application on personal Vercel.
 - Backend: Node API on Render Free in Singapore.
 - Database: existing Neon PostgreSQL in Singapore.
@@ -30,9 +30,10 @@ These rules apply to every stage below and every future plan derived from this r
 
 ## Tracker
 
-- [ ] Stage 1 — Separate the static frontend and Render API. **Current stage: implementation complete; awaiting Kanu's manual test.**
-- [ ] Stage 2 — Deploy personal Render and Vercel rehearsal.
-- [ ] Stage 3 — Accept and cut over personal Production.
+- [x] Stage 1 — Separate the static frontend and Render API; implementation commit `0e6d268`.
+- [ ] Stage 2 — Fast-forward the tested Render implementation to personal `main`. **Current stage: awaiting environment import.**
+- [ ] Stage 3 — Accept the personal Production deployment.
+- [ ] Stage 4 — Replace the remaining Supabase services after the Render cutover.
 
 ## Stage 1 — Separate Frontend and Render API
 
@@ -67,51 +68,42 @@ Automated results on 2026-09-12:
 - Repository-wide lint retains the previously known formatting errors and warnings in unrelated existing files. Targeted Stage 1 lint is clean.
 - Render CLI and a local YAML parser are unavailable; the Blueprint will receive Render's authoritative validation when Kanu connects it in Stage 2.
 
-## Stage 2 — Personal Render and Vercel Rehearsal
+## Stage 2 — Personal `main` Render Cutover
 
-Render configuration is tracked in `render.yaml`. It describes the rehearsal service `music-player-api-test`, Node 22.23.1, Bun 1.4.0, Singapore, Free plan, `/healthz`, and disabled automatic deployment. This service may run in the company Render workspace but remains connected only to the personal repository during rehearsal. The later company-repository deployment uses a separate properly named `music-player-api` service so its environment, URL, deployment history, and rollback path remain isolated.
+The existing Render service remains `music-player-api-test` in the confirmed `Litmustest` workspace. It uses the personal repository and must be switched from `feat/neon-database-port` to `main`; auto-deploy remains disabled. Personal `main` at `b47d788` is a clean fast-forward ancestor of Render implementation commit `0e6d268`.
 
-Dashboard handoff after Stage 1 acceptance:
+Generate two ignored, authoritative import files with `bun scripts/generate-render-env.mjs`:
 
-1. Push only after Kanu explicitly approves it; the Blueprint must exist on personal GitHub before Render can read it.
-2. Render Dashboard → **New** → **Blueprint** → select `KanuTomer/Music-Player` → branch `feat/neon-database-port`.
-3. Confirm Singapore, Free, `/healthz`, the tracked build/start commands, and auto-deploy off.
-4. Supply the secret variables from ignored `render-backend.env.local`; never add `DATABASE_URL_UNPOOLED`.
-5. Deploy and report the generated `https://…onrender.com` URL.
-6. Generate ignored `vercel-render-frontend.env.local` containing only `VITE_API_BASE_URL` and `RENDER_API_BASE_URL` for that Render URL.
-7. Import it into the personal Vercel project with Preview scope first. Preserve existing browser Supabase variables, `VITE_SITE_URL`, and `CRON_SECRET`.
+- `render-main.env.local`: the pooled `music_app_runtime` Neon URL, all five Neon selectors, temporary production Supabase server values, matching cron secret, production/main Vercel origins, and production mode. It never contains the unpooled URL.
+- `vercel-main-production.env.local`: Render API/relay URLs, temporary production Supabase browser values, personal canonical site URL, and matching cron secret. It never contains a database URL or Supabase server secret.
 
-Completion gate:
+Cutover sequence:
 
-- Render reports live; health and readiness pass; Vercel Preview uses the exact accepted commit; logs and client-bundle secret checks are clean.
-- Kanu accepts public rooms, admin MFA, a reversible presentation change, one temporary background workflow, Realtime refresh, cleanup relay, and cold/warm behavior.
+1. Kanu imports `vercel-main-production.env.local` into personal Vercel project `music-player`, scoped to **Production**.
+2. Kanu imports `render-main.env.local` into `music-player-api-test`, changes the Render branch to `main`, leaves auto-deploy off, and does not manually deploy yet.
+3. Commit the runbook/generator corrections on top of `0e6d268`, verify the staged secret scan, and push that exact commit directly to personal `main` only.
+4. Vercel builds personal Production from `main`; trigger Render from the same commit through the Render connector.
+5. Verify commit parity, `/healthz`, `/readyz`, CORS for the Production and main-alias origins, seven room reads, production Storage references, Neon activity, and a secret-free static bundle.
 
-## Stage 3 — Personal Production Cutover
+Keep legacy Vercel server variables until acceptance so deployment `b47d788` remains immediately restorable. After UAT, remove the obsolete Vercel database URLs, backend selectors, and Supabase server-only variables; retain only the static frontend and cron-relay variables.
 
-1. After explicit approval, commit the accepted feature branch changes and push only to the personal repository.
-2. Deploy the accepted Render commit.
-3. Scope the two Render URL variables to personal Vercel Production, then fast-forward and push personal `main`.
-4. Verify deployments, health, readiness, logs, Neon activity, Supabase integrations, cron forwarding, and bundle-secret safety through CLI or MCP.
-5. Kanu performs remaining Production UI/UAT checks.
-6. Observe the accepted deployment for two hours before closing this runbook.
+## Stage 3 — Personal Production Acceptance
 
-Rollback uses personal Vercel deployment `b47d788`, restoring the former Vercel-hosted Node backend. Render and Neon remain intact for diagnosis.
+Kanu verifies all seven rooms, music, old/new ambience, presentation, queue order, oneliners, attribution, chat blocking, reactions, and two-tab presence. Kanu then signs in with the disposable administrator, enrolls MFA, verifies dashboard reads, performs and reverts one gag-label change, confirms Realtime refresh, and compares one cold Render request with a warm request. Cleanup is invoked only through the protected relay and without adding new media.
 
-## Manual Stage 1 Test (Pending)
+On failure, restore personal Vercel deployment `b47d788` and redeploy Render commit `0e6d268`. Neon and Supabase remain unchanged. Observe an accepted deployment for two hours before closing Stage 3.
 
-1. Do not edit or share any values from `.env.local` or `.env.development.local`.
-2. Open PowerShell in `C:\Kanu\Kanu(D)\Music App\music-app-sync`.
-3. In terminal one run `bun run dev:api`. Wait for `[render-api] listening` on port `8787`.
-4. In terminal two run `bun run dev:web`. Open the printed local URL manually; it should normally be `http://localhost:5173`.
-5. Confirm the homepage loads the expected seven rooms and a missing room retains normal not-found behavior.
-6. Open at least one room using an older ambience asset and the room using the newly uploaded ambience asset. Confirm presentation, queue, music, ambience, oneliners, and attribution.
-7. Open one room in two tabs. Confirm chat, reactions, and presence still synchronize; confirm URL and email messages remain blocked.
-8. Sign out of administration, sign in again, complete MFA, and confirm bootstrap, analytics, songs, ambience, assets, and backgrounds load.
-9. Make and immediately revert one harmless gag-label change. Confirm the public room refreshes without a reload and the player keeps its play/pause state.
-10. Do not upload media and do not invoke cleanup during this Stage 1 test.
-11. Stop both processes with `Ctrl+C` after testing.
-12. Report pass/fail plus relevant browser or terminal errors without sharing credentials or tokens.
+## Stage 4 — Deferred Supabase Exit
+
+Supabase removal begins only after Stage 3:
+
+1. **Clerk Auth/MFA/JWT:** require email/password plus authenticator TOTP and backup codes. Render verifies Clerk JWT signature, issuer, expiry, authorized party, and recent second-factor verification. Add a Neon identity mapping from Clerk's string subject to the existing internal administrator UUID so audit and ownership foreign keys do not change. Recreate administrators and re-enroll MFA; never migrate passwords or TOTP secrets.
+2. **Cloudflare R2 media:** copy all referenced ambience/background objects with identical paths, MIME types, sizes, and hashes. Render issues path-scoped presigned uploads and owns downloads/removals; public reads use an R2 custom domain. Keep Supabase Storage unchanged until hash and reference reconciliation passes.
+3. **Neon chat:** add a tracked `chat_messages` migration, route validated inserts through Render, broadcast only after commit, and move retention cleanup to Neon. Expired Supabase chat history is not migrated.
+4. **Ably Realtime:** use one room channel for chat delivery, reactions, presence, and `room_refresh`. Render issues short-lived room-scoped tokens; clients never receive the Ably API key. Preserve refresh coalescing and player-state behavior.
+
+Use `AUTH_BACKEND`, `STORAGE_BACKEND`, and `REALTIME_BACKEND` rollback switches during their respective migrations. After final acceptance, remove `@supabase/supabase-js`, every Supabase environment variable, the old provider switches, and the disposable Supabase administrator.
 
 ## Next Session
 
-Wait for Kanu's Stage 1 manual result. Do not deploy, commit, push, or begin Stage 2 before manual acceptance passes.
+Kanu completes the two dashboard imports and changes `music-player-api-test` to branch `main` without deploying. After confirmation, push the prepared commit to personal `main`, deploy the identical commit on Render, and run the terminal/MCP verification gates before handing off Production UAT.

@@ -5,7 +5,7 @@ services:
     runtime: node
     region: singapore
     plan: free
-    branch: feat/neon-database-port
+    branch: main
     autoDeployTrigger: off
     healthCheckPath: /healthz
     buildCommand: npm install --global bun@1.4.0 && bun install --frozen-lockfile && bun run build:api
