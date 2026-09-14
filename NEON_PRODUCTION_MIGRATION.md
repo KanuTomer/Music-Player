@@ -58,9 +58,9 @@ The first production release is intentionally hybrid:
 - [x] Stage 18 — Export fresh production data from Supabase.
 - [x] Stage 19 — Restore and reconcile production data in Neon.
 - [x] Stage 20 — Configure and deploy Vercel Production.
-- [ ] Stage 21 — Complete production public-read verification. **Current stage**
-- [ ] Stage 22 — Complete production administrator acceptance.
-- [ ] Stage 23 — Resume operations and monitor the observation period.
+- [x] Stage 21 — Complete production public-read verification.
+- [x] Stage 22 — Complete production administrator acceptance.
+- [x] Stage 23 — Resume operations and monitor the observation period.
 
 ## Completed Work
 
@@ -594,13 +594,26 @@ Verification record before deployment:
 - Repository-wide type-check remains blocked by pre-existing application typing and missing Bun test-type errors; the new runtime `.mjs` tools introduce no reported type-check error.
 - Kanu imported the ignored six-key environment file into personal Vercel Production without adding the unpooled owner URL; existing Supabase and cron variables remained in place.
 - The accidental manual redeploy rebuilt the previous personal `main` only and was superseded by the intended Git deployment.
-- Personal `main` was fast-forwarded to `73db948`; Vercel deployment `dpl_ACBjPCeGV4pNdER1MzVbB8AwJ5pm` reached `READY` with one Node.js function in `sin1`.
-- Build-error and runtime-error checks were clean; the homepage and `sainik-dhaba` route both returned HTTP 200.
+- Personal Production was corrected and redeployed from commit `b47d788`; deployment `dpl_4xaA38VgZWAwqocF4sfRQMvH21mK` reached `READY` with one Node.js function in `sin1`.
+- Current-deployment build/runtime checks are clean; no TLS warning is present on the corrected deployment.
 - Scanned 25 deployed JavaScript assets: no database URL, Neon hostname, unpooled key, or concrete Supabase secret key was present.
 
 ### Stage 21 — Public production verification
 
 Goal: prove that public behavior survived the cutover before allowing administrator writes.
+
+Status: **Completed on 2026-09-11.**
+
+Read-only baseline captured on 2026-09-11:
+
+- Corrected Production deployment `dpl_4xaA38VgZWAwqocF4sfRQMvH21mK` is `READY` at commit `b47d788` in `sin1`.
+- Current-deployment logs contain no errors or warnings; recorded requests contain seven HTTP 200 responses and one redirect.
+- Homepage and all seven live room routes return HTTP 200; a deliberately missing room returns HTTP 404.
+- The first homepage probe took 2.079 seconds; subsequent live-room probes took 0.217–0.308 seconds.
+- Neon baseline: 34 audit rows, zero reservations, zero pending cleanup rows, 1,359 visits, and 82,229 accumulated listening seconds. Forty-three visits started in the preceding 24 hours.
+- `sainik-dhaba` baseline presentation is `Tadka Lagao 🔥` with a null Storage background path.
+- All 40 currently referenced Neon media paths exist in Supabase Storage; zero references are missing.
+- Kanu manually accepted all seven live rooms, missing-room behavior, playback and ambience, presentation and attribution, two-tab Realtime behavior, chat, reactions, presence, and URL/email blocking.
 
 Verify every live room, playlist order, playback source, ambience layer, attribution, image/video/audio URL, chat, reaction, and presence path. Inspect Vercel errors, Neon connections, and latency.
 
@@ -611,6 +624,21 @@ Completion gate:
 ### Stage 22 — Administrator production acceptance
 
 Goal: accept protected production writes deliberately.
+
+Status: **Completed on 2026-09-11.**
+
+Read-only baseline captured at `2026-09-11T17:28:07.560Z`:
+
+- Neon contains 34 audit rows, zero upload reservations, zero cleanup rows, and zero due cleanup rows.
+- `sainik-dhaba` uses gag label `Tadka Lagao 🔥`, foreground color `#FFF3D6`, and a null Storage background path.
+- All 40 currently referenced Neon media paths exist in Supabase Storage; zero references are missing.
+- Kanu completed the administrator AAL2, live presentation refresh, temporary WebP background, and bundled-background restoration tests.
+- Post-UAT preflight found exactly four `scene.presentation.save` audits and one `upload.reserve` audit; the single background reservation is finalized once and not discarded.
+- `sainik-dhaba` is restored to gag label `Tadka Lagao 🔥` with a null Storage background path.
+- Exactly one due `replaced_object` cleanup item exists. Its Storage object exists and is not referenced by Neon.
+- Protected cleanup returned HTTP 401 both before and after deployment `dpl_5vGmTtbFWLSXC9bhf8Rz1jNtBj9H` was created from commit `b47d788`. The Production alias targets that `READY` deployment, but its runtime secret still does not match the local 44-character `CRON_SECRET`. No cleanup was performed; stop retries until Kanu corrects the Vercel value and redeploys.
+- After Kanu synchronized the secret and redeployed, cleanup request `c3e6f206-12f7-4c67-848c-25673a73a408` succeeded through the Neon backend: one item claimed and removed, zero skipped, zero failed, and 97 eligible expired chat rows purged independently.
+- Final read-back shows 39 audit rows, one finalized and undiscarded background reservation, one completed cleanup item, zero pending cleanup rows, zero cleanup attempts/errors, no Neon reference to the removed object, and no remaining Storage object.
 
 Actions:
 
@@ -626,6 +654,28 @@ Completion gate:
 ### Stage 23 — Resume and monitor
 
 Goal: return to normal operation without removing the rollback path.
+
+Status: **Completed on 2026-09-12 after a clean observation from `2026-09-11T18:02:15Z` through `2026-09-12T03:44:31Z`.**
+
+Immediate checkpoint:
+
+- Production deployment `dpl_DKYnp7xnNk6Bmzpo1SZtPUcv9gVX` is `READY` at commit `b47d788` in `sin1`.
+- Current-deployment warning and error checks are clean after narrowing the log window.
+- Homepage and `sainik-dhaba` return HTTP 200 in 0.872 and 0.540 seconds respectively.
+- Neon contains 1,370 visits and 82,290 accumulated listening seconds; the latest visit began at `2026-09-11T17:51:13Z`.
+- Neon has 39 audit rows, zero expired unfinished reservations, and zero pending cleanup rows.
+- The temporary background is deleted, its queue item is completed without retry, and the original presentation remains restored.
+
+Final checkpoint:
+
+- Production deployment `dpl_DKYnp7xnNk6Bmzpo1SZtPUcv9gVX` remains `READY` at commit `b47d788` in `sin1`.
+- Deployment-scoped logs from the observation start contain no error/fatal entries and no TLS warning.
+- Three consecutive homepage checks returned HTTP 200 in 1.769, 0.662, and 0.567 seconds; three `sainik-dhaba` checks returned HTTP 200 in 0.332, 0.309, and 0.300 seconds.
+- Neon remains at the expected 39 audit rows, with no administrator audit added during observation, zero expired unfinished reservations, zero pending or failed cleanup rows, and zero orphaned room visits.
+- Neon contains 1,370 visits and 82,290 accumulated listening seconds; no new listening activity occurred after the immediate checkpoint, and no corresponding errors were logged.
+- All 40 Neon media references still exist in Supabase Storage; zero references are missing.
+- No new Supabase chat, reaction, Auth-session, or Storage rows were created during the quiet observation window; their Stage 21/22 manual acceptance remains the functional gate.
+- The rollback deployment, encrypted backup, Neon snapshot, and former Supabase application tables remain available.
 
 Actions:
 
@@ -657,8 +707,8 @@ Completion gate:
 
 ## Next Session
 
-Current stage: **Stage 21 — Personal Production public-read verification.**
+Current stage: **Stages 21–23 complete; the proposed Vercel Edge transfer was discarded in favor of the separate Render backend runbook.**
 
-Kanu performs the browser, playback, chat, reactions, presence, and all-live-room UAT against personal Vercel Production. The agent may perform only read-only terminal/MCP verification and must not begin Stage 22 until Kanu reports Stage 21 acceptance.
+The personal shadow-production deployment passed public UAT, reversible administrator/Storage acceptance, cleanup, and the observation period. Continue from `RENDER_BACKEND_MIGRATION.md`, beginning with the personal static-Vercel and Render-API separation. An actual company cutover remains separately approved and still requires a fresh source reconciliation.
 
 Do not commit, push, or interact with the company repository without a separate explicit request.

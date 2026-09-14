@@ -1,11 +1,7 @@
-import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { analyticsSince, type AnalyticsRange } from "./admin-analytics";
-import {
-  addSongs,
-  deactivateAmbienceStem,
-  discardBackgroundUpload,
-  finalizeAmbienceUpload,
+import { callApi } from "./api-client";
+import type {
   getAdminAmbience,
   getAdminAmbienceAssets,
   getAdminAnalytics,
@@ -14,18 +10,20 @@ import {
   getAdminOnboardingStatus,
   getAdminSongs,
   previewSongs,
-  removeSongs,
   reserveAmbienceUpload,
   reserveBackgroundUpload,
   saveAmbienceProfile,
   saveAmbienceStem,
+  deactivateAmbienceStem,
+  finalizeAmbienceUpload,
+  discardBackgroundUpload,
   saveScenePresentation,
-  updateSong,
 } from "./admin.server";
 
+type Result<T extends (...args: never[]) => unknown> = Awaited<ReturnType<T>>;
 const uuid = z.string().uuid();
-const sceneInput = z.object({ sceneId: uuid });
 const youtubeInput = z.string().trim().min(1).max(2048);
+const sceneInput = z.object({ sceneId: uuid });
 const songDraft = z.object({
   input: youtubeInput,
   title: z.string().trim().min(1).max(200),
@@ -35,226 +33,249 @@ const songDraft = z.object({
   providerChannel: z.string().max(300).optional(),
 });
 
-async function timedAdminOperation<T>(operation: string, run: () => Promise<T>): Promise<T> {
-  const startedAt = performance.now();
-  const requestId = crypto.randomUUID();
-  try {
-    const result = await run();
-    console.info("[admin-operation]", {
-      operation,
-      result: "success",
-      durationMs: Math.round(performance.now() - startedAt),
-      requestId,
-    });
-    return result;
-  } catch (error) {
-    console.error("[admin-operation]", {
-      operation,
-      result: "failure",
-      durationMs: Math.round(performance.now() - startedAt),
-      requestId,
-      error: error instanceof Error ? error.name : "UnknownError",
-    });
-    throw error;
-  }
+export function getAdminOnboarding(): Promise<Result<typeof getAdminOnboardingStatus>> {
+  return callApi("admin-onboarding", null, { authenticated: true, safeRead: true });
 }
 
-export const getAdminOnboarding = createServerFn({ method: "GET" }).handler(() =>
-  timedAdminOperation("onboarding.status", getAdminOnboardingStatus),
-);
+export function getAdminBootstrapData(): Promise<Result<typeof getAdminBootstrap>> {
+  return callApi("admin-bootstrap", null, { authenticated: true, safeRead: true });
+}
 
-export const getAdminBootstrapData = createServerFn({ method: "GET" }).handler(() =>
-  timedAdminOperation("bootstrap.read", getAdminBootstrap),
-);
+export function getAdminSongsData({
+  data,
+}: {
+  data: { sceneId: string };
+}): Promise<Result<typeof getAdminSongs>> {
+  return callApi("admin-songs", sceneInput.parse(data), { authenticated: true, safeRead: true });
+}
 
-export const getAdminSongsData = createServerFn({ method: "GET" })
-  .validator((data: { sceneId: string }) => sceneInput.parse(data))
-  .handler(({ data }) => timedAdminOperation("songs.read", () => getAdminSongs(data.sceneId)));
-
-export const getAdminAnalyticsData = createServerFn({ method: "GET" })
-  .validator((data: { range: AnalyticsRange }) => data)
-  .handler(({ data }) =>
-    timedAdminOperation("analytics.read", () => getAdminAnalytics(analyticsSince(data.range))),
+export function getAdminAnalyticsData({
+  data,
+}: {
+  data: { range: AnalyticsRange };
+}): Promise<Result<typeof getAdminAnalytics>> {
+  return callApi(
+    "admin-analytics",
+    { since: analyticsSince(data.range) },
+    { authenticated: true, safeRead: true },
   );
+}
 
-export const getAdminAmbienceData = createServerFn({ method: "GET" })
-  .validator((data: { sceneId: string }) => sceneInput.parse(data))
-  .handler(({ data }) =>
-    timedAdminOperation("ambience.read", () => getAdminAmbience(data.sceneId)),
-  );
+export function getAdminAmbienceData({
+  data,
+}: {
+  data: { sceneId: string };
+}): Promise<Result<typeof getAdminAmbience>> {
+  return callApi("admin-ambience", sceneInput.parse(data), { authenticated: true, safeRead: true });
+}
 
-export const getAdminAmbienceAssetsData = createServerFn({ method: "GET" }).handler(() =>
-  timedAdminOperation("ambience.assets.read", getAdminAmbienceAssets),
-);
+export function getAdminAmbienceAssetsData(): Promise<Result<typeof getAdminAmbienceAssets>> {
+  return callApi("admin-ambience-assets", null, { authenticated: true, safeRead: true });
+}
 
-export const getAdminBackgroundData = createServerFn({ method: "GET" })
-  .validator((data: { sceneId: string }) => sceneInput.parse(data))
-  .handler(({ data }) =>
-    timedAdminOperation("background.read", () => getAdminBackground(data.sceneId)),
-  );
+export function getAdminBackgroundData({
+  data,
+}: {
+  data: { sceneId: string };
+}): Promise<Result<typeof getAdminBackground>> {
+  return callApi("admin-background", sceneInput.parse(data), {
+    authenticated: true,
+    safeRead: true,
+  });
+}
 
-export const previewAdminSongs = createServerFn({ method: "POST" })
-  .validator((data: { inputs: string[] }) => ({
-    inputs: z.array(youtubeInput).min(1).max(50).parse(data.inputs),
-  }))
-  .handler(({ data }) => timedAdminOperation("songs.preview", () => previewSongs(data.inputs)));
+export function previewAdminSongs({
+  data,
+}: {
+  data: { inputs: string[] };
+}): Promise<Result<typeof previewSongs>> {
+  const parsed = { inputs: z.array(youtubeInput).min(1).max(50).parse(data.inputs) };
+  return callApi("admin-songs-preview", parsed, { authenticated: true });
+}
 
-export const addAdminSongs = createServerFn({ method: "POST" })
-  .validator(
-    (data: {
-      queueId: string;
-      songs: Array<{
-        input: string;
-        title: string;
-        artist: string;
-        year: number | null;
-        providerTitle?: string;
-        providerChannel?: string;
-      }>;
-    }) =>
-      z
-        .object({ queueId: uuid, songs: z.array(songDraft).min(1).max(50) })
-        .parse(data) as typeof data,
-  )
-  .handler(({ data }) =>
-    timedAdminOperation("songs.bulk_add", () => addSongs(data.queueId, data.songs)),
-  );
-
-export const removeAdminSongs = createServerFn({ method: "POST" })
-  .validator((data: { queueId: string; membershipIds: string[] }) =>
-    z.object({ queueId: uuid, membershipIds: z.array(uuid).min(1).max(50) }).parse(data),
-  )
-  .handler(({ data }) =>
-    timedAdminOperation("songs.bulk_remove", () => removeSongs(data.queueId, data.membershipIds)),
-  );
-
-export const updateAdminSong = createServerFn({ method: "POST" })
-  .validator(
-    (data: {
-      membershipId: string;
+export function addAdminSongs({
+  data,
+}: {
+  data: {
+    queueId: string;
+    songs: Array<{
+      input: string;
       title: string;
       artist: string;
       year: number | null;
-      source: string;
-      scope: "shared" | "local";
-    }) =>
-      z
-        .object({
-          membershipId: uuid,
-          title: z.string().trim().min(1).max(200),
-          artist: z.string().trim().max(200),
-          year: z.number().int().min(1900).max(2100).nullable(),
-          source: youtubeInput,
-          scope: z.enum(["shared", "local"]),
-        })
-        .parse(data) as typeof data,
-  )
-  .handler(({ data }) => timedAdminOperation("songs.update", () => updateSong(data)));
+      providerTitle?: string;
+      providerChannel?: string;
+    }>;
+  };
+}): Promise<void> {
+  const parsed = z.object({ queueId: uuid, songs: z.array(songDraft).min(1).max(50) }).parse(data);
+  return callApi("admin-songs-add", parsed, { authenticated: true });
+}
 
-export const saveAdminAmbienceProfile = createServerFn({ method: "POST" })
-  .validator(
-    (data: {
-      sceneId: string;
-      enabled: boolean;
-      maxMasterGain: number;
-      musicDuckRatio: number;
-      fadeInMs: number;
-      fadeOutMs: number;
-      audioTheme: unknown;
-    }) => data,
-  )
-  .handler(({ data }) =>
-    timedAdminOperation("ambience.profile.save", () => saveAmbienceProfile(data)),
+export function removeAdminSongs({
+  data,
+}: {
+  data: { queueId: string; membershipIds: string[] };
+}): Promise<void> {
+  const parsed = z
+    .object({ queueId: uuid, membershipIds: z.array(uuid).min(1).max(50) })
+    .parse(data);
+  return callApi("admin-songs-remove", parsed, { authenticated: true });
+}
+
+export function updateAdminSong({
+  data,
+}: {
+  data: {
+    membershipId: string;
+    title: string;
+    artist: string;
+    year: number | null;
+    source: string;
+    scope: "shared" | "local";
+  };
+}): Promise<void> {
+  const parsed = z
+    .object({
+      membershipId: uuid,
+      title: z.string().trim().min(1).max(200),
+      artist: z.string().trim().max(200),
+      year: z.number().int().min(1900).max(2100).nullable(),
+      source: youtubeInput,
+      scope: z.enum(["shared", "local"]),
+    })
+    .parse(data);
+  return callApi("admin-song-update", parsed, { authenticated: true });
+}
+
+export function saveAdminAmbienceProfile({
+  data,
+}: {
+  data: {
+    sceneId: string;
+    enabled: boolean;
+    maxMasterGain: number;
+    musicDuckRatio: number;
+    fadeInMs: number;
+    fadeOutMs: number;
+    audioTheme: unknown;
+  };
+}): Promise<Result<typeof saveAmbienceProfile>> {
+  return callApi("admin-ambience-profile-save", data, { authenticated: true });
+}
+
+export function saveAdminAmbienceStem({
+  data,
+}: {
+  data: {
+    id?: string;
+    sceneId: string;
+    name: string;
+    role: "base" | "texture" | "event";
+    assetId: string;
+    isActive: boolean;
+    sortOrder: number;
+    defaultVolume: number;
+    minGain: number;
+    maxGain: number;
+    crossfadeMs: number;
+    loopStartSeconds: number;
+    loopEndSeconds: number | null;
+    eventMinSeconds: number | null;
+    eventMaxSeconds: number | null;
+  };
+}): Promise<Result<typeof saveAmbienceStem>> {
+  return callApi("admin-ambience-stem-save", data, { authenticated: true });
+}
+
+export function removeAdminAmbienceStem({
+  data,
+}: {
+  data: { stemId: string };
+}): Promise<Result<typeof deactivateAmbienceStem>> {
+  return callApi(
+    "admin-ambience-stem-remove",
+    { stemId: String(data.stemId) },
+    { authenticated: true },
   );
+}
 
-export const saveAdminAmbienceStem = createServerFn({ method: "POST" })
-  .validator(
-    (data: {
+export function reserveAdminAmbienceUpload({
+  data,
+}: {
+  data: { sceneSlug: string };
+}): Promise<Result<typeof reserveAmbienceUpload>> {
+  return callApi(
+    "admin-ambience-upload-reserve",
+    { sceneSlug: String(data.sceneSlug) },
+    { authenticated: true },
+  );
+}
+
+export function finalizeAdminAmbienceUpload({
+  data,
+}: {
+  data: {
+    sceneId: string;
+    reservationId: string;
+    path: string;
+    name: string;
+    role: "base" | "texture" | "event";
+    sourceFilename: string;
+    sourceByteSize: number;
+    sourceDurationSeconds: number;
+    sourceSha256: string;
+    sourceUrl?: string;
+    selectedStartSeconds: number;
+    selectedDurationSeconds: number;
+  };
+}): Promise<Result<typeof finalizeAmbienceUpload>> {
+  return callApi("admin-ambience-upload-finalize", data, { authenticated: true });
+}
+
+export function reserveAdminBackgroundUpload({
+  data,
+}: {
+  data: { sceneId: string };
+}): Promise<Result<typeof reserveBackgroundUpload>> {
+  return callApi(
+    "admin-background-upload-reserve",
+    { sceneId: String(data.sceneId) },
+    { authenticated: true },
+  );
+}
+
+export function discardAdminBackgroundUpload({
+  data,
+}: {
+  data: { sceneId: string; path: string; reservationId: string };
+}): Promise<Result<typeof discardBackgroundUpload>> {
+  return callApi(
+    "admin-background-upload-discard",
+    {
+      sceneId: String(data.sceneId),
+      path: String(data.path),
+      reservationId: String(data.reservationId),
+    },
+    { authenticated: true },
+  );
+}
+
+export function saveAdminScenePresentation({
+  data,
+}: {
+  data: {
+    sceneId: string;
+    backgroundStoragePath: string | null;
+    uploadReservationId?: string;
+    foregroundTextColor: string;
+    gagLabel: string;
+    oneliners: Array<{
       id?: string;
-      sceneId: string;
-      name: string;
-      role: "base" | "texture" | "event";
-      assetId: string;
-      isActive: boolean;
-      sortOrder: number;
-      defaultVolume: number;
-      minGain: number;
-      maxGain: number;
-      crossfadeMs: number;
-      loopStartSeconds: number;
-      loopEndSeconds: number | null;
-      eventMinSeconds: number | null;
-      eventMaxSeconds: number | null;
-    }) => data,
-  )
-  .handler(({ data }) => timedAdminOperation("ambience.stem.save", () => saveAmbienceStem(data)));
-
-export const removeAdminAmbienceStem = createServerFn({ method: "POST" })
-  .validator((data: { stemId: string }) => ({ stemId: String(data.stemId) }))
-  .handler(({ data }) =>
-    timedAdminOperation("ambience.stem.deactivate", () => deactivateAmbienceStem(data.stemId)),
-  );
-
-export const reserveAdminAmbienceUpload = createServerFn({ method: "POST" })
-  .validator((data: { sceneSlug: string }) => ({ sceneSlug: String(data.sceneSlug) }))
-  .handler(({ data }) =>
-    timedAdminOperation("ambience.upload.reserve", () => reserveAmbienceUpload(data.sceneSlug)),
-  );
-
-export const finalizeAdminAmbienceUpload = createServerFn({ method: "POST" })
-  .validator(
-    (data: {
-      sceneId: string;
-      reservationId: string;
-      path: string;
-      name: string;
-      role: "base" | "texture" | "event";
-      sourceFilename: string;
-      sourceByteSize: number;
-      sourceDurationSeconds: number;
-      sourceSha256: string;
-      sourceUrl?: string;
-      selectedStartSeconds: number;
-      selectedDurationSeconds: number;
-    }) => data,
-  )
-  .handler(({ data }) =>
-    timedAdminOperation("ambience.upload.finalize", () => finalizeAmbienceUpload(data)),
-  );
-
-export const reserveAdminBackgroundUpload = createServerFn({ method: "POST" })
-  .validator((data: { sceneId: string }) => ({ sceneId: String(data.sceneId) }))
-  .handler(({ data }) =>
-    timedAdminOperation("background.upload.reserve", () => reserveBackgroundUpload(data.sceneId)),
-  );
-
-export const discardAdminBackgroundUpload = createServerFn({ method: "POST" })
-  .validator((data: { sceneId: string; path: string; reservationId: string }) => ({
-    sceneId: String(data.sceneId),
-    path: String(data.path),
-    reservationId: String(data.reservationId),
-  }))
-  .handler(({ data }) =>
-    timedAdminOperation("background.upload.discard", () =>
-      discardBackgroundUpload(data.sceneId, data.path, data.reservationId),
-    ),
-  );
-
-export const saveAdminScenePresentation = createServerFn({ method: "POST" })
-  .validator(
-    (data: {
-      sceneId: string;
-      backgroundStoragePath: string | null;
-      uploadReservationId?: string;
-      foregroundTextColor: string;
-      gagLabel: string;
-      oneliners: Array<{
-        id?: string;
-        text: string;
-        daypart: "all" | "morning" | "day" | "evening" | "night";
-      }>;
-    }) => data,
-  )
-  .handler(({ data }) =>
-    timedAdminOperation("background.presentation.save", () => saveScenePresentation(data)),
-  );
+      text: string;
+      daypart: "all" | "morning" | "day" | "evening" | "night";
+    }>;
+  };
+}): Promise<Result<typeof saveScenePresentation>> {
+  return callApi("admin-presentation-save", data, { authenticated: true });
+}

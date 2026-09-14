@@ -11,6 +11,8 @@ node_modules
 package-lock.json
 dist
 dist-ssr
+dist-web
+dist-render
 .output
 .vinxi
 .tanstack/**

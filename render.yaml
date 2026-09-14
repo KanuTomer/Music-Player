@@ -1,0 +1,41 @@
+# yaml-language-server: $schema=https://render.com/schema/render.yaml.json
+services:
+  - type: web
+    name: music-player-api-test
+    runtime: node
+    region: singapore
+    plan: free
+    branch: feat/neon-database-port
+    autoDeployTrigger: off
+    healthCheckPath: /healthz
+    buildCommand: npm install --global bun@1.4.0 && bun install --frozen-lockfile && bun run build:api
+    startCommand: node dist-render/server.mjs
+    envVars:
+      - key: NODE_VERSION
+        value: 22.23.1
+      - key: NODE_ENV
+        value: production
+      - key: DATA_BACKEND
+        value: neon
+      - key: OPERATIONAL_WRITE_BACKEND
+        value: neon
+      - key: ADMIN_AUTHORIZATION_BACKEND
+        value: neon
+      - key: ADMIN_DATA_BACKEND
+        value: neon
+      - key: CLEANUP_BACKEND
+        value: neon
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: SUPABASE_PROJECT_ID
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      - key: CRON_SECRET
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false

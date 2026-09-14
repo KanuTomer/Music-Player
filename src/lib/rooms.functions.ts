@@ -1,18 +1,10 @@
-import { createServerFn } from "@tanstack/react-start";
-import {
-  fetchRoom,
-  fetchRoomAmbience,
-  fetchRoomPresentation,
-  fetchScenes,
-  insertChatMessage,
-} from "./rooms.server";
-import { recordListening, recordSourceFailure, registerRoomVisit } from "./rooms.operations.server";
 import {
   normalizePlaybackSourceFailureInput,
   normalizeRoomListeningInput,
   normalizeRoomVisitInput,
 } from "./rooms.operations";
 import { validateChatMessageText } from "./chat-message";
+import { callApi } from "./api-client";
 
 export type Scene = {
   id: string;
@@ -142,60 +134,69 @@ export type RoomPayload = {
   ambience: AmbienceProfile | null;
 };
 
-export const listScenes = createServerFn({ method: "GET" }).handler(async () => {
-  return fetchScenes();
-});
+export function listScenes(): Promise<Scene[]> {
+  return callApi("list-scenes", null, { safeRead: true });
+}
 
-export const reportPlaybackSourceFailure = createServerFn({ method: "POST" })
-  .validator((data: { sourceId: string; errorCode: number }) =>
-    normalizePlaybackSourceFailureInput(data.sourceId, data.errorCode),
-  )
-  .handler(async ({ data }) => recordSourceFailure(data.sourceId, data.errorCode));
+export function reportPlaybackSourceFailure({
+  data,
+}: {
+  data: { sourceId: string; errorCode: number };
+}): Promise<void> {
+  const normalized = normalizePlaybackSourceFailureInput(data.sourceId, data.errorCode);
+  return callApi("report-playback-source-failure", normalized);
+}
 
-export const getRoom = createServerFn({ method: "GET" })
-  .validator((data: { slug: string }) => ({ slug: String(data.slug) }))
-  .handler(async ({ data }): Promise<RoomPayload | null> => {
-    return fetchRoom(data.slug);
-  });
+export function getRoom({ data }: { data: { slug: string } }): Promise<RoomPayload | null> {
+  return callApi("get-room", { slug: String(data.slug) }, { safeRead: true });
+}
 
-export const getRoomAmbience = createServerFn({ method: "GET" })
-  .validator((data: { sceneId: string }) => ({ sceneId: String(data.sceneId) }))
-  .handler(async ({ data }): Promise<AmbienceProfile | null> => {
-    return fetchRoomAmbience(data.sceneId);
-  });
+export function getRoomAmbience({
+  data,
+}: {
+  data: { sceneId: string };
+}): Promise<AmbienceProfile | null> {
+  return callApi("get-room-ambience", { sceneId: String(data.sceneId) }, { safeRead: true });
+}
 
-export const getRoomPresentation = createServerFn({ method: "GET" })
-  .validator((data: { sceneId: string }) => ({ sceneId: String(data.sceneId) }))
-  .handler(async ({ data }): Promise<RoomPresentation | null> => {
-    return fetchRoomPresentation(data.sceneId);
-  });
+export function getRoomPresentation({
+  data,
+}: {
+  data: { sceneId: string };
+}): Promise<RoomPresentation | null> {
+  return callApi("get-room-presentation", { sceneId: String(data.sceneId) }, { safeRead: true });
+}
 
-export const sendChatMessage = createServerFn({ method: "POST" })
-  .validator((data: { roomKey: string; displayName: string; text: string; id?: string }) => {
-    const roomKey = String(data.roomKey);
-    const displayName = String(data.displayName).trim();
-    const text = String(data.text).trim();
-    const id = data.id ? String(data.id) : undefined;
+export function sendChatMessage({
+  data,
+}: {
+  data: { roomKey: string; displayName: string; text: string; id?: string };
+}): Promise<unknown> {
+  const roomKey = String(data.roomKey);
+  const displayName = String(data.displayName).trim();
+  const text = String(data.text).trim();
+  const id = data.id ? String(data.id) : undefined;
+  if (!roomKey) throw new Error("Room key is required");
+  if (!displayName || displayName.length > 50) throw new Error("Invalid display name");
+  const textError = validateChatMessageText(text);
+  if (textError) throw new Error(textError);
+  return callApi("send-chat-message", { roomKey, displayName, text, id });
+}
 
-    if (!roomKey) throw new Error("Room key is required");
-    if (!displayName || displayName.length > 50) throw new Error("Invalid display name");
-    const textError = validateChatMessageText(text);
-    if (textError) throw new Error(textError);
+export function recordRoomVisit({
+  data,
+}: {
+  data: { visitId: string; sceneSlug: string };
+}): Promise<void> {
+  const normalized = normalizeRoomVisitInput(data.visitId, data.sceneSlug);
+  return callApi("record-room-visit", normalized);
+}
 
-    return { roomKey, displayName, text, id };
-  })
-  .handler(async ({ data }) =>
-    insertChatMessage(data.roomKey, data.displayName, data.text, data.id),
-  );
-
-export const recordRoomVisit = createServerFn({ method: "POST" })
-  .validator((data: { visitId: string; sceneSlug: string }) =>
-    normalizeRoomVisitInput(data.visitId, data.sceneSlug),
-  )
-  .handler(async ({ data }) => registerRoomVisit(data.visitId, data.sceneSlug));
-
-export const recordRoomListening = createServerFn({ method: "POST" })
-  .validator((data: { visitId: string; sceneSlug: string; seconds: number }) =>
-    normalizeRoomListeningInput(data.visitId, data.sceneSlug, data.seconds),
-  )
-  .handler(async ({ data }) => recordListening(data.visitId, data.sceneSlug, data.seconds));
+export function recordRoomListening({
+  data,
+}: {
+  data: { visitId: string; sceneSlug: string; seconds: number };
+}): Promise<void> {
+  const normalized = normalizeRoomListeningInput(data.visitId, data.sceneSlug, data.seconds);
+  return callApi("record-room-listening", normalized);
+}

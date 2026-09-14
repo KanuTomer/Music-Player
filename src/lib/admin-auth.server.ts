@@ -1,4 +1,3 @@
-import { getRequest } from "@tanstack/react-start/server";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import {
@@ -6,6 +5,7 @@ import {
   verifySupabaseIdentity,
   type VerifiedSupabaseIdentity,
 } from "./admin-auth";
+import { getRequestHeader } from "./request-context.server";
 
 function authConfiguration() {
   const url = process.env["SUPABASE_URL"];
@@ -15,7 +15,7 @@ function authConfiguration() {
 }
 
 export function requestAccessToken(): string {
-  return extractBearerToken(getRequest()?.headers.get("authorization"));
+  return extractBearerToken(getRequestHeader("authorization"));
 }
 
 export function createRequestSupabaseClient(token: string): SupabaseClient<Database> {
@@ -31,7 +31,7 @@ export async function verifyRequestSupabaseIdentity(): Promise<{
   token: string;
   client: SupabaseClient<Database>;
 }> {
-  const authorization = getRequest()?.headers.get("authorization");
+  const authorization = getRequestHeader("authorization");
   const token = extractBearerToken(authorization);
   const client = createRequestSupabaseClient(token);
   const { url } = authConfiguration();
