@@ -53,9 +53,37 @@ type YTPlayer = {
   getVideoData: () => { video_id?: string; title?: string; author?: string } | undefined;
   getPlayerState: () => number;
   destroy: () => void;
+  unMute?: () => void;
+  isMuted?: () => boolean;
+  getVideoUrl?: () => string;
 };
 type YTPlayerEvent = { target: YTPlayer };
 type YTPlayerStateEvent = YTPlayerEvent & { data: number };
+
+function getPlayerVideoId(player: YTPlayer | null | undefined): string | null {
+  if (!player) return null;
+  try {
+    const dataId = player.getVideoData()?.video_id;
+    if (dataId && typeof dataId === "string" && dataId.trim().length > 0) {
+      return dataId.trim();
+    }
+  } catch {
+    /* ignore */
+  }
+  try {
+    const url = player.getVideoUrl?.();
+    if (url && typeof url === "string") {
+      const match =
+        url.match(/[?&]v=([^&#]+)/) ||
+        url.match(/\/embed\/([^&#?]+)/) ||
+        url.match(/youtu\.be\/([^&#?]+)/);
+      if (match?.[1]) return match[1].trim();
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
 
 export type NowPlaying = {
   videoId: string | null;
@@ -123,27 +151,64 @@ declare global {
   }
 }
 
+let ytApiPromise: Promise<void> | null = null;
+
 function loadYouTubeApi() {
-  if (typeof window === "undefined" || window.YT?.Player) return Promise.resolve();
-  return new Promise<void>((resolve) => {
+  if (typeof window === "undefined") return Promise.resolve();
+  if (window.YT?.Player) return Promise.resolve();
+  if (ytApiPromise) return ytApiPromise;
+
+  ytApiPromise = new Promise<void>((resolve) => {
+    let settled = false;
+    let poll: number | null = null;
+    let timeout: number | null = null;
+
+    const cleanup = () => {
+      if (poll != null) {
+        window.clearInterval(poll);
+        poll = null;
+      }
+      if (timeout != null) {
+        window.clearTimeout(timeout);
+        timeout = null;
+      }
+    };
+
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve();
+    };
+
     if (!document.getElementById("yt-iframe-api")) {
       const script = document.createElement("script");
       script.id = "yt-iframe-api";
       script.src = "https://www.youtube.com/iframe_api";
+      script.async = true;
+      script.onerror = () => {
+        // Resolve so the app doesn't hang; musicBlocked indicates player unavailable
+        finish();
+      };
       document.head.appendChild(script);
     }
     const previous = window.onYouTubeIframeAPIReady;
     window.onYouTubeIframeAPIReady = () => {
       previous?.();
-      resolve();
+      finish();
     };
-    const poll = window.setInterval(() => {
+    poll = window.setInterval(() => {
       if (window.YT?.Player) {
-        window.clearInterval(poll);
-        resolve();
+        finish();
       }
-    }, 250);
+    }, 100);
+
+    timeout = window.setTimeout(() => {
+      finish();
+    }, 10000);
   });
+
+  return ytApiPromise;
 }
 
 export function PlayerProvider({ children }: { children: ReactNode }) {
@@ -161,6 +226,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const playRetryTimerRef = useRef<number | null>(null);
   const delayedAdvanceTimerRef = useRef<number | null>(null);
   const delayedAdvanceShouldPlayRef = useRef(false);
+  const buildRetryTimerRef = useRef<number | null>(null);
+  const buildRetryCountRef = useRef(0);
+  const buildPlayerRef = useRef<(autoplay: boolean) => void>(() => {});
   const themeTransitionRef = useRef(false);
   const queueRef = useRef<QueueItem[]>([]);
   const indexRef = useRef(0);
@@ -198,7 +266,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const setPlayerOutputVolume = useCallback((player: YTPlayer, value: number) => {
     const clamped = Math.min(1, Math.max(0, value));
     outputVolumeRef.current = clamped;
-    player.setVolume(Math.round(clamped * 100));
+    try {
+      if (clamped > 0 && player.isMuted?.()) {
+        player.unMute?.();
+      }
+      player.setVolume(Math.round(clamped * 100));
+    } catch {
+      /* detached */
+    }
   }, []);
   const rampMusicOutput = useCallback(
     (target: number, durationMs: number) => {
@@ -283,7 +358,17 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     indexRef.current = next;
     sourceIndexRef.current = 0;
     setIndexState(next);
-    setNowPlaying(emptyNowPlaying(next, queueRef.current.length));
+    const item = queueRef.current[next];
+    const source = item?.sources[0];
+    setNowPlaying({
+      videoId: source?.provider_item_id ?? null,
+      title: item?.track.title ?? null,
+      channel: item?.track.artist ?? null,
+      position: 0,
+      duration: 0,
+      index: next,
+      total: queueRef.current.length,
+    });
   }, []);
   const scheduleExpectedPlayback = useCallback((player: YTPlayer, videoId: string) => {
     if (playRetryTimerRef.current != null) window.clearTimeout(playRetryTimerRef.current);
@@ -296,9 +381,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         expectedVideoIdRef.current !== videoId
       )
         return;
-      const reportedVideoId = player.getVideoData()?.video_id;
+      const reportedVideoId = getPlayerVideoId(player);
       if (reportedVideoId && reportedVideoId !== videoId) return;
-      if (player.getPlayerState() !== 1) player.playVideo();
+      try {
+        if (player.isMuted?.()) player.unMute?.();
+        if (player.getPlayerState() !== 1) player.playVideo();
+      } catch {
+        /* player iframe busy */
+      }
     }, 180);
   }, []);
   const cueCurrent = useCallback(
@@ -313,18 +403,41 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       setIsPlaying(false);
       setMusicReady(false);
       setMusicBlocked(false);
-      setNowPlaying(emptyNowPlaying(indexRef.current, queueRef.current.length));
       const pendingRestore = pendingRestoreRef.current;
       const restorePosition =
         pendingRestore && queueItem?.id === pendingRestore.queueItemId
           ? clampPlaybackPosition(pendingRestore.positionSeconds)
           : 0;
       pendingRestoreRef.current = null;
-      player.loadVideoById(
-        restorePosition > 0
-          ? { videoId: source.provider_item_id, startSeconds: restorePosition }
-          : source.provider_item_id,
-      );
+      setNowPlaying({
+        videoId: source.provider_item_id,
+        title: queueItem?.track.title ?? null,
+        channel: queueItem?.track.artist ?? null,
+        position: restorePosition,
+        duration: 0,
+        index: indexRef.current,
+        total: queueRef.current.length,
+      });
+      try {
+        if (player.isMuted?.()) player.unMute?.();
+      } catch {
+        /* ignore */
+      }
+      try {
+        if (restorePosition > 0) {
+          player.loadVideoById({ videoId: source.provider_item_id, startSeconds: restorePosition });
+        } else {
+          player.loadVideoById(source.provider_item_id);
+        }
+      } catch {
+        try {
+          player.loadVideoById(source.provider_item_id);
+          if (restorePosition > 0) player.seekTo(restorePosition, true);
+        } catch {
+          buildPlayerRef.current(autoplay);
+          return false;
+        }
+      }
       const target = effectiveMusicVolume(
         volumeRef.current,
         ambienceActiveRef.current,
@@ -332,8 +445,21 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       );
       setPlayerOutputVolume(player, themeTransitionRef.current ? 0 : target);
       intendPlayRef.current = autoplay;
-      if (autoplay) scheduleExpectedPlayback(player, source.provider_item_id);
-      else player.pauseVideo();
+      if (autoplay) {
+        try {
+          if (player.isMuted?.()) player.unMute?.();
+        } catch {
+          /* ignore */
+        }
+        scheduleExpectedPlayback(player, source.provider_item_id);
+      } else {
+        themeTransitionRef.current = false;
+        try {
+          player.pauseVideo();
+        } catch {
+          /* ignore */
+        }
+      }
       if (autoplay && themeTransitionRef.current) {
         let step = 0;
         if (fadeTimerRef.current != null) window.clearInterval(fadeTimerRef.current);
@@ -356,7 +482,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       const next = circularIndex(indexRef.current, delta, queueRef.current.length);
       setIndex(next);
       const player = playerRef.current;
-      if (player && readyRef.current) cueCurrent(player, intendPlayRef.current);
+      if (player && readyRef.current) {
+        cueCurrent(player, intendPlayRef.current);
+      } else {
+        buildPlayerRef.current(intendPlayRef.current);
+      }
     },
     [cueCurrent, setIndex],
   );
@@ -445,7 +575,22 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const buildPlayer = useCallback(
     (autoplay: boolean) => {
       const host = hostRef.current;
-      if (!host || !window.YT?.Player || !queueRef.current.length) return;
+      if (!host || !queueRef.current.length) return;
+      if (!window.YT?.Player) {
+        if (buildRetryTimerRef.current != null) window.clearTimeout(buildRetryTimerRef.current);
+        buildRetryCountRef.current += 1;
+        if (buildRetryCountRef.current < 60) {
+          buildRetryTimerRef.current = window.setTimeout(() => {
+            buildPlayer(autoplay);
+          }, 100);
+        }
+        return;
+      }
+      if (buildRetryTimerRef.current != null) {
+        window.clearTimeout(buildRetryTimerRef.current);
+        buildRetryTimerRef.current = null;
+      }
+      buildRetryCountRef.current = 0;
       const generation = generationRef.current + 1;
       generationRef.current = generation;
       readyRef.current = false;
@@ -464,56 +609,111 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       host.appendChild(element);
       setMusicReady(false);
       setMusicBlocked(false);
-      setNowPlaying(emptyNowPlaying(indexRef.current, queueRef.current.length));
+      const currentItem = queueRef.current[indexRef.current];
+      const source = currentItem?.sources[sourceIndexRef.current];
+      setNowPlaying({
+        videoId: source?.provider_item_id ?? null,
+        title: currentItem?.track.title ?? null,
+        channel: currentItem?.track.artist ?? null,
+        position: 0,
+        duration: 0,
+        index: indexRef.current,
+        total: queueRef.current.length,
+      });
       const current = (candidate: YTPlayer) =>
         generationRef.current === generation && playerRef.current === candidate;
-      const created = new window.YT.Player(element, {
-        height: "1",
-        width: "1",
-        playerVars: { autoplay: autoplay ? 1 : 0, controls: 0, playsinline: 1 },
-        events: {
-          onReady: (event: YTPlayerEvent) => {
-            if (!current(event.target)) return;
-            readyRef.current = true;
-            setMusicReady(true);
-            try {
-              cueCurrent(event.target, intendPlayRef.current);
-            } catch {
-              setMusicBlocked(true);
-            }
+      try {
+        const created = new window.YT.Player(element, {
+          height: "200",
+          width: "200",
+          playerVars: {
+            autoplay: autoplay ? 1 : 0,
+            controls: 0,
+            playsinline: 1,
+            enablejsapi: 1,
+            origin: typeof window !== "undefined" ? window.location.origin : undefined,
+            rel: 0,
+            fs: 0,
+            disablekb: 1,
+            iv_load_policy: 3,
           },
-          onError: (event: YTPlayerStateEvent) => {
-            if (current(event.target)) handleSourceError(generation, event.target, event.data);
-          },
-          onStateChange: (event: YTPlayerStateEvent) => {
-            if (!current(event.target)) return;
-            const reportedVideoId = event.target.getVideoData()?.video_id;
-            if (!reportedVideoId || reportedVideoId !== expectedVideoIdRef.current) return;
-            if (event.data === 0) advance(1);
-            if (isConfirmedPlaying(event.data, reportedVideoId, expectedVideoIdRef.current)) {
-              setIsPlaying(true);
+          events: {
+            onReady: (event: YTPlayerEvent) => {
+              if (!current(event.target)) return;
+              readyRef.current = true;
               setMusicReady(true);
-              setMusicBlocked(false);
-            }
-            if (event.data === 2 && !intendPlayRef.current) setIsPlaying(false);
-            if ([2, 5].includes(event.data)) setMusicReady(true);
-            if (
-              shouldRetryExpectedPlayback(
-                intendPlayRef.current,
-                event.data,
-                reportedVideoId,
-                expectedVideoIdRef.current,
-              )
-            ) {
-              scheduleExpectedPlayback(event.target, reportedVideoId);
-            }
+              try {
+                if (event.target.isMuted?.()) event.target.unMute?.();
+                cueCurrent(event.target, intendPlayRef.current);
+              } catch {
+                setMusicBlocked(true);
+              }
+            },
+            onError: (event: YTPlayerStateEvent) => {
+              if (current(event.target)) handleSourceError(generation, event.target, event.data);
+            },
+            onStateChange: (event: YTPlayerStateEvent) => {
+              if (!current(event.target)) return;
+              if (!readyRef.current) {
+                readyRef.current = true;
+                setMusicReady(true);
+              }
+              const reportedVideoId = getPlayerVideoId(event.target);
+              // Only drop stale events from a previous video ID if reportedVideoId explicitly mismatches
+              if (
+                reportedVideoId &&
+                expectedVideoIdRef.current &&
+                reportedVideoId !== expectedVideoIdRef.current
+              ) {
+                return;
+              }
+              if (event.data === 0) {
+                advance(1);
+              } else if (event.data === 1) {
+                setIsPlaying(true);
+                setMusicReady(true);
+                setMusicBlocked(false);
+              } else if (event.data === 2) {
+                // Video is paused — isPlaying must be false so UI and ambience do not falsely play
+                setIsPlaying(false);
+                setMusicReady(true);
+                if (
+                  shouldRetryExpectedPlayback(
+                    intendPlayRef.current,
+                    event.data,
+                    reportedVideoId ?? expectedVideoIdRef.current ?? undefined,
+                    expectedVideoIdRef.current,
+                  )
+                ) {
+                  scheduleExpectedPlayback(
+                    event.target,
+                    expectedVideoIdRef.current ?? reportedVideoId ?? "",
+                  );
+                }
+              } else if (event.data === 3) {
+                // Buffering
+                setMusicReady(true);
+              } else if (event.data === 5) {
+                // Cued
+                setMusicReady(true);
+                if (intendPlayRef.current && expectedVideoIdRef.current) {
+                  scheduleExpectedPlayback(event.target, expectedVideoIdRef.current);
+                }
+              }
+            },
           },
-        },
-      });
-      playerRef.current = created;
+        });
+        playerRef.current = created;
+      } catch {
+        if (buildRetryTimerRef.current != null) window.clearTimeout(buildRetryTimerRef.current);
+        buildRetryTimerRef.current = window.setTimeout(() => {
+          buildPlayer(autoplay);
+        }, 200);
+      }
     },
     [advance, cueCurrent, handleSourceError, scheduleExpectedPlayback],
   );
+  buildPlayerRef.current = buildPlayer;
 
   useEffect(() => {
     let cancelled = false;
@@ -531,35 +731,51 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const timer = window.setInterval(() => {
       const player = playerRef.current;
+      if (room && queueRef.current.length > 0 && !player) {
+        buildPlayerRef.current(intendPlayRef.current);
+        return;
+      }
       if (!player || !readyRef.current) return;
       try {
         const data = player.getVideoData();
+        const activeVideoId = getPlayerVideoId(player) || expectedVideoIdRef.current;
+        const state = player.getPlayerState();
+        const currentItem = queueRef.current[indexRef.current];
         setNowPlaying({
-          videoId: data?.video_id ?? null,
-          title: data?.title ?? null,
-          channel: data?.author ?? null,
+          videoId: activeVideoId,
+          title: data?.title || currentItem?.track.title || null,
+          channel: data?.author || currentItem?.track.artist || null,
           position: player.getCurrentTime() || 0,
           duration: player.getDuration() || 0,
           index: indexRef.current,
           total: queueRef.current.length,
         });
+        if (state === 1) {
+          setIsPlaying(true);
+          setMusicReady(true);
+          setMusicBlocked(false);
+        } else if (state === 2 && isPlaying) {
+          setIsPlaying(false);
+        }
         if (
           intendPlayRef.current &&
           document.visibilityState === "visible" &&
-          data?.video_id === expectedVideoIdRef.current &&
-          ![1, 3].includes(player.getPlayerState())
-        )
+          (activeVideoId === expectedVideoIdRef.current || !activeVideoId) &&
+          ![1, 3].includes(state)
+        ) {
+          if (player.isMuted?.()) player.unMute?.();
           player.playVideo();
+        }
       } catch {
         /* not ready */
       }
     }, 500);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [isPlaying, room]);
 
   // ── Mobile tab-switch / browser-return resume ──
   // On mobile, switching tabs or minimising the browser causes the OS to pause
-  // the YouTube IFrame player.  The Web-Audio-API ambience engine resumes on
+  // the YouTube IFrame player. The Web-Audio-API ambience engine resumes on
   // its own (AudioContext.resume()), so users hear ambient sound but no music.
   //
   // Strategy:
@@ -609,6 +825,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           if (!p || !readyRef.current || !intendPlayRef.current) return;
 
           try {
+            if (p.isMuted?.()) p.unMute?.();
             const state = p.getPlayerState();
 
             // Already playing? Update state and stop retrying
@@ -623,21 +840,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
               const videoId = expectedVideoIdRef.current;
               if (videoId) {
                 p.loadVideoById(videoId);
-                // loadVideoById auto-plays; set state optimistically
-                setIsPlaying(true);
               }
               return;
             }
 
             // Paused or buffering — poke it
             p.playVideo();
-
-            // On the last retry, optimistically set playing state so the UI
-            // (reel, equalizer) reflects "playing" even if the onStateChange
-            // hasn't fired yet
-            if (i === retryDelays.length - 1) {
-              setIsPlaying(true);
-            }
           } catch {
             /* player iframe not responsive yet */
           }
@@ -679,6 +887,38 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       clearRetries();
     };
   }, [resumeAmbienceFromGesture, rampMusicOutput]);
+
+  // ── First user-interaction / autoplay unblock ──
+  // Modern browsers block unmuted autoplay on new visits until the user
+  // interacts with the page. Any touch/click or keydown unlocks playback immediately.
+  useEffect(() => {
+    const unlockOnGesture = () => {
+      const player = playerRef.current;
+      if (intendPlayRef.current) {
+        if (player && readyRef.current) {
+          try {
+            if (player.isMuted?.()) player.unMute?.();
+            const state = player.getPlayerState();
+            if (state !== 1 && state !== 3) {
+              player.playVideo();
+            }
+          } catch {
+            /* ignore */
+          }
+        } else if (room && queueRef.current.length > 0) {
+          buildPlayerRef.current(true);
+        }
+      }
+      void resumeAmbienceFromGesture();
+    };
+
+    window.addEventListener("pointerdown", unlockOnGesture, { capture: true });
+    window.addEventListener("keydown", unlockOnGesture, { capture: true });
+    return () => {
+      window.removeEventListener("pointerdown", unlockOnGesture, { capture: true });
+      window.removeEventListener("keydown", unlockOnGesture, { capture: true });
+    };
+  }, [resumeAmbienceFromGesture, room]);
 
   useEffect(() => {
     if (!room || !apiReady) return;
@@ -831,6 +1071,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         const player = playerRef.current;
         if (player && readyRef.current) {
           cueCurrent(player, true);
+        } else {
+          buildPlayerRef.current(true);
         }
       }
     },
@@ -840,15 +1082,44 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     void resumeAmbienceFromGesture();
     if (room?.ambience && !ambienceSuppressedRef.current) setAmbienceEnabled(true);
     intendPlayRef.current = true;
-    if (readyRef.current) playerRef.current?.playVideo();
+    const player = playerRef.current;
+    if (readyRef.current && player) {
+      try {
+        if (player.isMuted?.()) player.unMute?.();
+        player.playVideo();
+      } catch {
+        buildPlayerRef.current(true);
+      }
+    } else {
+      buildPlayerRef.current(true);
+    }
   }, [resumeAmbienceFromGesture, room?.ambience]);
   const toggle = useCallback(() => {
     if (!isPlaying) void resumeAmbienceFromGesture();
     if (!isPlaying && room?.ambience && !ambienceSuppressedRef.current) setAmbienceEnabled(true);
-    intendPlayRef.current = !isPlaying;
-    if (readyRef.current) {
-      if (isPlaying) playerRef.current?.pauseVideo();
-      else playerRef.current?.playVideo();
+    const nextPlayIntent = !isPlaying;
+    intendPlayRef.current = nextPlayIntent;
+    const player = playerRef.current;
+    if (readyRef.current && player) {
+      if (isPlaying) {
+        try {
+          player.pauseVideo();
+        } catch {
+          /* ignore */
+        }
+        setIsPlaying(false);
+      } else {
+        try {
+          if (player.isMuted?.()) player.unMute?.();
+          player.playVideo();
+        } catch {
+          buildPlayerRef.current(true);
+        }
+      }
+    } else {
+      if (nextPlayIntent) {
+        buildPlayerRef.current(true);
+      }
     }
   }, [isPlaying, resumeAmbienceFromGesture, room?.ambience]);
   const next = useCallback(
@@ -939,7 +1210,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       if (
         target instanceof Element &&
         target.closest(
-          'input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]), textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="searchbox"]',
+          'input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]), textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="searchbox"], [role="slider"]',
         )
       ) {
         return;
@@ -1019,6 +1290,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       window.clearTimeout(delayedAdvanceTimerRef.current);
       delayedAdvanceTimerRef.current = null;
     }
+    if (buildRetryTimerRef.current != null) {
+      window.clearTimeout(buildRetryTimerRef.current);
+      buildRetryTimerRef.current = null;
+    }
     delayedAdvanceShouldPlayRef.current = false;
     setMusicTransitioning(false);
     generationRef.current += 1;
@@ -1079,8 +1354,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     <PlayerContext.Provider value={value}>
       {children}
       <div
-        aria-hidden
-        className="pointer-events-none fixed -left-[9999px] top-0 h-px w-px overflow-hidden"
+        aria-hidden="true"
+        className="pointer-events-none fixed bottom-0 right-0 z-[-1] h-[200px] w-[200px] overflow-hidden opacity-[0.001]"
       >
         <div ref={hostRef} />
       </div>

@@ -9,7 +9,7 @@ import {
   Volume2,
   VolumeX,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
 import { getLiveEqualizerPresentation, getPlayerDisplay, clock } from "@/lib/player-display";
@@ -170,25 +170,73 @@ function LiveEqualizer({ isPlaying, status }: { isPlaying: boolean; status: stri
 function SeekBar({ compact = false }: { compact?: boolean }) {
   const player = usePlayer();
   const duration = player.nowPlaying.duration;
-  const progress = duration > 0 ? Math.min(100, (player.nowPlaying.position / duration) * 100) : 0;
+  const [seekingPosition, setSeekingPosition] = useState<number | null>(null);
+  const trackRef = useRef<HTMLButtonElement | null>(null);
+
+  const currentPosition = seekingPosition ?? player.nowPlaying.position;
+  const progress =
+    duration > 0 ? Math.min(100, Math.max(0, (currentPosition / duration) * 100)) : 0;
+
+  const seekFromPointer = useCallback(
+    (clientX: number, commit = false) => {
+      if (duration <= 0 || !trackRef.current) return;
+      const rect = trackRef.current.getBoundingClientRect();
+      const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / (rect.width || 1)));
+      const target = ratio * duration;
+      if (commit) {
+        setSeekingPosition(null);
+        player.seek(target);
+      } else {
+        setSeekingPosition(target);
+      }
+    },
+    [duration, player],
+  );
 
   return (
     <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
       {!compact ? (
         <span className="w-8 shrink-0 text-right font-mono text-[11px] font-bold tabular-nums text-white/90">
-          {clock(player.nowPlaying.position)}
+          {clock(currentPosition)}
         </span>
       ) : null}
       <button
+        ref={trackRef}
         type="button"
-        aria-label="Seek"
-        onClick={(event) => {
+        role="slider"
+        aria-label="Seek track position"
+        aria-valuemin={0}
+        aria-valuemax={Math.round(duration)}
+        aria-valuenow={Math.round(currentPosition)}
+        aria-valuetext={`${clock(currentPosition)} of ${clock(duration)}`}
+        onPointerDown={(e) => {
           if (duration <= 0) return;
-          const rect = event.currentTarget.getBoundingClientRect();
-          player.seek(((event.clientX - rect.left) / rect.width) * duration);
-          event.currentTarget.blur();
+          e.currentTarget.setPointerCapture(e.pointerId);
+          seekFromPointer(e.clientX, false);
         }}
-        className="group relative flex h-4 min-w-8 flex-1 cursor-pointer items-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ember"
+        onPointerMove={(e) => {
+          if (seekingPosition != null) {
+            seekFromPointer(e.clientX, false);
+          }
+        }}
+        onPointerUp={(e) => {
+          seekFromPointer(e.clientX, true);
+          if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+            e.currentTarget.releasePointerCapture(e.pointerId);
+          }
+        }}
+        onPointerCancel={() => setSeekingPosition(null)}
+        onKeyDown={(e) => {
+          if (duration <= 0) return;
+          if (e.key === "ArrowLeft") {
+            e.preventDefault();
+            player.seek(Math.max(0, currentPosition - 5));
+          } else if (e.key === "ArrowRight") {
+            e.preventDefault();
+            player.seek(Math.min(duration, currentPosition + 5));
+          }
+        }}
+        className="group relative flex h-4 min-w-8 flex-1 cursor-pointer items-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ember touch-none"
       >
         <span className="absolute inset-x-0 h-1 rounded-full bg-white/20" />
         <span
@@ -405,8 +453,28 @@ export function FullCassettePlayer() {
       {/* Expandable Volume Drawer */}
       <SmoothReveal open={showVolume} className="mt-2">
         <div className="flex items-center gap-2.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 backdrop-blur-sm">
-          <Volume2 className="size-3.5 shrink-0 text-ember" aria-hidden />
-          <span className="w-14 shrink-0 text-[11px] font-semibold text-cream/80">Volume</span>
+          <button
+            type="button"
+            onClick={() => {
+              if (player.musicVolume > 0) {
+                player.setMusicVolume(0);
+              } else {
+                player.setMusicVolume(0.7);
+              }
+            }}
+            aria-label={player.musicVolume === 0 ? "Unmute" : "Mute"}
+            title={player.musicVolume === 0 ? "Unmute" : "Mute"}
+            className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity"
+          >
+            {player.musicVolume === 0 ? (
+              <VolumeX className="size-3.5 shrink-0 text-red-400" aria-hidden />
+            ) : (
+              <Volume2 className="size-3.5 shrink-0 text-ember" aria-hidden />
+            )}
+            <span className="w-14 shrink-0 text-[11px] font-semibold text-cream/80 text-left">
+              {player.musicVolume === 0 ? "Muted" : "Volume"}
+            </span>
+          </button>
           <Slider
             value={[Math.round(player.musicVolume * 100)]}
             max={100}
@@ -416,18 +484,6 @@ export function FullCassettePlayer() {
             onPointerUp={() => {
               if (document.activeElement instanceof HTMLElement) {
                 document.activeElement.blur();
-              }
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
-                e.preventDefault();
-                const currentTime = player.nowPlaying.position;
-                const duration = player.nowPlaying.duration;
-                if (e.key === "ArrowLeft") {
-                  player.seek(Math.max(0, currentTime - 5));
-                } else {
-                  player.seek(Math.min(duration > 0 ? duration : currentTime + 5, currentTime + 5));
-                }
               }
             }}
             className="flex-1"
