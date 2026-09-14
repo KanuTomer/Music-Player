@@ -150,17 +150,34 @@ export function PlayerDetailsSheet({
                 {orderedQueue.slice(0, visibleCount).map((item, queueIndex) => (
                   <li
                     key={`${item.id}-${queueIndex}`}
-                    className={`rounded-xl border px-3 py-2 ${
+                    className={`rounded-xl border transition-colors ${
                       queueIndex === 0
                         ? "border-ember/55 bg-ember/10"
-                        : "border-cream/10 bg-night/25"
+                        : "border-cream/10 bg-night/25 hover:border-ember/40 hover:bg-night/45"
                     }`}
                   >
-                    <div className="flex items-start gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (queueIndex !== 0) {
+                          player.playTrack(item.track.id);
+                        } else if (!player.isPlaying) {
+                          player.toggle();
+                        }
+                      }}
+                      aria-label={
+                        queueIndex === 0
+                          ? player.isPlaying
+                            ? `${item.track.title} is playing`
+                            : `Resume ${item.track.title}`
+                          : `Play ${item.track.title}`
+                      }
+                      className="flex w-full items-start gap-3 px-3 py-2 text-left cursor-pointer"
+                    >
                       <span className="w-8 shrink-0 pt-0.5 text-[10px] font-bold tracking-wide text-ember uppercase">
                         {queueIndex === 0 ? "Now" : queueIndex === 1 ? "Next" : `+${queueIndex}`}
                       </span>
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-cream">
                           {item.track.title}
                         </p>
@@ -169,7 +186,7 @@ export function PlayerDetailsSheet({
                             "Artist unavailable"}
                         </p>
                       </div>
-                    </div>
+                    </button>
                   </li>
                 ))}
               </ol>
