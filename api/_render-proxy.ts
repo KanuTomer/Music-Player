@@ -30,7 +30,9 @@ export async function proxyToRender(
   const incoming = new URL(request.url ?? prefix, "https://proxy.invalid");
   const marker = incoming.pathname.indexOf(prefix);
   if (marker < 0) return response.status(404).json({ error: "Not found" });
-  return proxyToRenderPath(request, response, incoming.pathname.slice(marker));
+  const path = incoming.pathname.slice(marker);
+  if (!path.startsWith("/api/")) return response.status(404).json({ error: "Not found" });
+  return proxyToRenderPath(request, response, path as `/api/${string}`);
 }
 
 export async function proxyToRenderPath(
