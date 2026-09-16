@@ -31,7 +31,8 @@ This applies only to the personal repository and test deployment. The company re
 - [x] Replace active media URL/sign/download/remove operations with Vercel Blob.
 - [x] Create the public Blob store and copy every referenced Supabase object without deleting the source (40 objects, hash/size/MIME verified, 2026-09-17).
 - [x] Generate and import ignored Render and Vercel environment files (2026-09-17); deployment remains pending.
-- [x] Complete focused automated checks: 39 tests, targeted lint, frontend/API builds, client-bundle secret scan, and `git diff --check` (2026-09-17).
+- [x] Complete focused automated checks: 39 tests, targeted lint, frontend/API builds, client/Render-runtime secret scans, and `git diff --check` (2026-09-17).
+- [x] Commit and push the accepted implementation to personal `main`: `314323e` (2026-09-17). Render/Vercel deployment remains pending.
 - [ ] Complete Kanu's smoke test.
 - [ ] Accept the cutover and begin the seven-day Supabase rollback-retention period.
 
@@ -52,4 +53,4 @@ On failure, redeploy the last Supabase-backed Vercel and Render commits with the
 
 ## Next action
 
-With Kanu's explicit approval, commit and push only to `personal` (`KanuTomer/Music-Player`), deploy Render then Vercel from that same commit, and complete Kanu's manual smoke test.
+Deploy Render then Vercel from personal `main` commit `314323e`, then complete Kanu's manual smoke test.
