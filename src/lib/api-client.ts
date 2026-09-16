@@ -1,5 +1,3 @@
-import { supabase } from "@/integrations/supabase/client";
-
 type ApiErrorPayload = {
   error?: {
     code?: string;
@@ -20,27 +18,22 @@ type ApiRequestError = Error & {
 };
 
 function apiBaseUrl(): string {
-  const configured = import.meta.env["VITE_API_BASE_URL"]?.trim();
+  const configured = import.meta.env.VITE_API_BASE_URL?.trim();
   if (configured) return configured.replace(/\/$/, "");
-  if (import.meta.env.DEV) return "http://127.0.0.1:8787";
+  if (import.meta.env.DEV) return "http://127.0.0.1:8787/api/v1";
   throw new Error("VITE_API_BASE_URL is required");
-}
-
-async function accessToken(): Promise<string | null> {
-  const { data } = await supabase.auth.getSession();
-  return data.session?.access_token ?? null;
 }
 
 async function request<T>(operation: string, data: unknown, options: ApiCallOptions): Promise<T> {
   const headers = new Headers({ "content-type": "application/json" });
-  if (options.authenticated) {
-    const token = await accessToken();
-    if (token) headers.set("authorization", `Bearer ${token}`);
-  }
-
-  const response = await fetch(`${apiBaseUrl()}/api/v1/functions/${operation}`, {
+  const base = apiBaseUrl();
+  const endpoint = base.endsWith("/api/v1")
+    ? `${base}/functions/${operation}`
+    : `${base}/api/v1/functions/${operation}`;
+  const response = await fetch(endpoint, {
     method: "POST",
     headers,
+    credentials: "include",
     body: JSON.stringify({ data }),
   });
 

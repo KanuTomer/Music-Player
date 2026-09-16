@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import {
   DEMO_LISTENER_FALLBACK,
   DEMO_LISTENER_MAX,
@@ -106,11 +105,8 @@ export function useRoomSocial(sceneSlug: string | null) {
       push(emoji);
       if (navigator.vibrate) navigator.vibrate(12);
       void presenceHandleRef.current?.sendReaction(emoji);
-      if (roomKey) {
-        void supabase.from("reactions").insert({ room_key: roomKey, emoji });
-      }
     },
-    [push, roomKey],
+    [push],
   );
 
   return { listeners, floating, connected, react };

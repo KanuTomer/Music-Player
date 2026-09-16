@@ -29,6 +29,13 @@
       "when": 1789072619856,
       "tag": "0003_neon_admin_transactions",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789472715993,
+      "tag": "0004_supabase_exit_auth_chat",
+      "breakpoints": true
     }
   ]
 }

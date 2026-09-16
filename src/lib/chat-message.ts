@@ -1,6 +1,16 @@
 export const CHAT_CONTACT_BLOCKED_MESSAGE =
   "Links and email addresses aren't allowed in live chat.";
 
+export type ChatMessage = {
+  id: string;
+  room_key: string;
+  session_display_name: string;
+  text: string;
+  is_ai_host: boolean;
+  created_at: string;
+  expires_at: string;
+};
+
 const HTTP_OR_WWW_LINK = /(?:https?:\/\/|www\.)\S+/i;
 const MARKDOWN_LINK = /\[[^\]\r\n]*\]\(\s*[^\s)]+\s*\)/i;
 const BARE_DOMAIN =

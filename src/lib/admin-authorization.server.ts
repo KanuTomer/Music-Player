@@ -1,59 +1,68 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/integrations/supabase/types";
-import { verifyRequestSupabaseIdentity } from "./admin-auth.server";
-import type { VerifiedSupabaseIdentity } from "./admin-auth";
-import {
-  authorizeAdminIdentity,
-  requireReadyAdmin,
-  resolveAdminAuthorizationBackend,
-  type AdminOnboardingStatus,
-} from "./admin-authorization";
+import { and, eq } from "drizzle-orm";
+import { db } from "@/db/client.server";
+import { adminAuthIdentities, appAdmins } from "@/db/schema";
+import { getBetterAuth } from "./better-auth.server";
+import { getRequestHeader } from "./request-context.server";
+import type { AdminOnboardingStatus } from "./admin-authorization";
+import { classifyBetterAuthAdminSession } from "./better-auth-authorization";
 
-type NeonAuthorizationRepository = { isAdmin: (userId: string) => Promise<boolean> };
-
-async function supabaseOnboardingStatus(
-  client: SupabaseClient<Database>,
-): Promise<AdminOnboardingStatus> {
-  const { data, error } = await client.rpc("admin_onboarding_status");
-  if (error) throw new Error("Unable to verify administrator access");
-  return data as AdminOnboardingStatus;
-}
-
-async function loadNeonAuthorizationRepository(): Promise<NeonAuthorizationRepository> {
-  const { neonAdminAuthorizationRepository } = await import("./admin-authorization.neon.server");
-  return neonAdminAuthorizationRepository;
-}
+export type VerifiedAdminIdentity = {
+  userId: string;
+  authUserId: string;
+  aal: "aal2";
+  email?: string;
+};
 
 export async function getRequestAdminAuthorization(): Promise<{
-  identity: VerifiedSupabaseIdentity;
+  identity: VerifiedAdminIdentity | null;
   status: AdminOnboardingStatus;
 }> {
-  const verified = await verifyRequestSupabaseIdentity();
-  const backend = resolveAdminAuthorizationBackend();
-  const status = await authorizeAdminIdentity(
-    verified.identity,
-    {
-      supabaseStatus: () => supabaseOnboardingStatus(verified.client),
-      loadNeonRepository: loadNeonAuthorizationRepository,
-      nextAal: async () => {
-        const { data, error } = await verified.client.auth.mfa.getAuthenticatorAssuranceLevel(
-          verified.token,
-        );
-        if (error) throw new Error("Unable to verify administrator MFA status");
-        if (data.nextLevel === "aal2") return "aal2";
-        if (data.nextLevel === "aal1") return "aal1";
-        return null;
-      },
-    },
-    backend,
-  );
+  const headers = new Headers();
+  const cookie = getRequestHeader("cookie");
+  const authorization = getRequestHeader("authorization");
+  if (cookie) headers.set("cookie", cookie);
+  if (authorization) headers.set("authorization", authorization);
+  const session = await getBetterAuth().api.getSession({ headers });
+  if (!session) return { identity: null, status: "not_authorized" };
+
+  const mappings = await db
+    .select({ adminUserId: adminAuthIdentities.adminUserId })
+    .from(adminAuthIdentities)
+    .innerJoin(appAdmins, eq(appAdmins.userId, adminAuthIdentities.adminUserId))
+    .where(
+      and(
+        eq(adminAuthIdentities.authUserId, session.user.id),
+        eq(appAdmins.userId, adminAuthIdentities.adminUserId),
+      ),
+    )
+    .limit(1);
+  const authUser = session.user as typeof session.user & { twoFactorEnabled?: boolean };
+  const status = classifyBetterAuthAdminSession({
+    hasSession: true,
+    allowlisted: Boolean(mappings[0]),
+    twoFactorEnabled: Boolean(authUser.twoFactorEnabled),
+    sessionCreatedAt: new Date(session.session.createdAt),
+    userUpdatedAt: new Date(authUser.updatedAt),
+  });
+  if (status !== "ready" || !mappings[0]) return { identity: null, status };
   return {
-    identity: verified.identity,
-    status,
+    status: "ready",
+    identity: {
+      userId: mappings[0].adminUserId,
+      authUserId: session.user.id,
+      aal: "aal2",
+      ...(session.user.email ? { email: session.user.email } : {}),
+    },
   };
 }
 
-export async function requireRequestAdmin(): Promise<VerifiedSupabaseIdentity> {
+export async function requireRequestAdmin(): Promise<VerifiedAdminIdentity> {
   const authorization = await getRequestAdminAuthorization();
-  return requireReadyAdmin(authorization.identity, authorization.status);
+  if (authorization.status === "not_authorized") {
+    throw new Error("Administrator access is required");
+  }
+  if (authorization.status !== "ready" || !authorization.identity) {
+    throw new Error("Administrator MFA verification is required");
+  }
+  return authorization.identity;
 }

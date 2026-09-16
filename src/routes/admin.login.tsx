@@ -1,12 +1,13 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { FormEvent, useState } from "react";
+import { type FormEvent, useState } from "react";
 import { Loader2, ShieldCheck } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import QRCode from "qrcode";
+import { authClient } from "@/lib/better-auth.client";
 import { getAdminOnboarding } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/admin/login")({ component: AdminLogin });
 const ADMIN_SIGN_IN_NOTICE_KEY = "sainik-dhaba.admin.sign-in-notice";
-type MfaSetup = { factorId: string; qrCode?: string; secret?: string };
+type MfaSetup = { mode: "challenge" | "enroll"; qrCode?: string; backupCodes?: string[] };
 
 function consumeSignInNotice(): string {
   if (typeof window === "undefined") return "";
@@ -28,27 +29,18 @@ function AdminLogin() {
   async function prepareMfa() {
     const status = await getAdminOnboarding();
     if (status === "not_authorized") {
-      await supabase.auth.signOut();
+      await authClient.signOut();
       throw new Error("This account is not authorized for administration.");
     }
-    if (status === "ready") {
-      await navigate({ to: "/admin" });
-      return;
-    }
-    if (status === "mfa_challenge_required") {
-      const { data, error: listError } = await supabase.auth.mfa.listFactors();
-      if (listError) throw listError;
-      const factor = data.totp.find((item) => item.status === "verified");
-      if (!factor) throw new Error("No verified authenticator could be found.");
-      setMfa({ factorId: factor.id });
-      return;
-    }
-    const { data, error: enrollError } = await supabase.auth.mfa.enroll({
-      factorType: "totp",
-      friendlyName: "Sainik Dhaba admin",
+    if (status === "ready") return navigate({ to: "/admin" });
+    const enabled = await authClient.twoFactor.enable({ password });
+    if (enabled.error || !enabled.data || !("totpURI" in enabled.data))
+      throw new Error(enabled.error?.message ?? "Unable to set up an authenticator.");
+    setMfa({
+      mode: "enroll",
+      qrCode: await QRCode.toDataURL(enabled.data.totpURI),
+      backupCodes: enabled.data.backupCodes,
     });
-    if (enrollError) throw enrollError;
-    setMfa({ factorId: data.id, qrCode: data.totp.qr_code, secret: data.totp.secret });
   }
 
   async function submitPassword(event: FormEvent<HTMLFormElement>) {
@@ -56,13 +48,13 @@ function AdminLogin() {
     setBusy(true);
     setError("");
     try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-      if (signInError) throw signInError;
-      await prepareMfa();
-    } catch (signInError) {
-      setError(
-        signInError instanceof Error ? signInError.message : "Unable to sign in. Please try again.",
-      );
+      const result = await authClient.signIn.email({ email, password });
+      if (result.error) throw new Error(result.error.message);
+      if ((result.data as { twoFactorRedirect?: boolean } | null)?.twoFactorRedirect)
+        setMfa({ mode: "challenge" });
+      else await prepareMfa();
+    } catch (value) {
+      setError(value instanceof Error ? value.message : "Unable to sign in. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -74,19 +66,21 @@ function AdminLogin() {
     setBusy(true);
     setError("");
     try {
-      const { error: verifyError } = await supabase.auth.mfa.challengeAndVerify({
-        factorId: mfa.factorId,
-        code,
-      });
-      if (verifyError) throw verifyError;
-      if ((await getAdminOnboarding()) !== "ready") {
-        throw new Error("Authenticator verification did not complete.");
+      const result = await authClient.twoFactor.verifyTotp({ code, trustDevice: false });
+      if (result.error) throw new Error(result.error.message);
+      if (mfa.mode === "enroll") {
+        await authClient.signOut();
+        setMfa(null);
+        setCode("");
+        setPassword("");
+        setError("Authenticator enrolled. Sign in again to complete the MFA challenge.");
+        return;
       }
+      if ((await getAdminOnboarding()) !== "ready")
+        throw new Error("Authenticator verification did not complete.");
       await navigate({ to: "/admin" });
-    } catch (verifyError) {
-      setError(
-        verifyError instanceof Error ? verifyError.message : "That verification code was rejected.",
-      );
+    } catch (value) {
+      setError(value instanceof Error ? value.message : "That verification code was rejected.");
     } finally {
       setBusy(false);
     }
@@ -142,18 +136,20 @@ function AdminLogin() {
               <div className="space-y-3 rounded border border-zinc-700 bg-white p-3 text-zinc-950">
                 <p className="text-sm font-semibold">Set up an authenticator</p>
                 <p className="text-xs">
-                  Scan this QR code with your authenticator app, then enter the six-digit code.
+                  Scan this QR code, save the backup codes, then enter the six-digit code.
                 </p>
                 <img
                   className="mx-auto size-48"
                   src={mfa.qrCode}
                   alt="Authenticator enrollment QR code"
                 />
-                {mfa.secret ? (
+                {mfa.backupCodes?.length ? (
                   <details className="text-xs">
-                    <summary className="cursor-pointer">Can’t scan the code?</summary>
-                    <code className="mt-2 block break-all rounded bg-zinc-100 p-2">
-                      {mfa.secret}
+                    <summary className="cursor-pointer font-semibold">
+                      Backup codes — save these now
+                    </summary>
+                    <code className="mt-2 block whitespace-pre-wrap rounded bg-zinc-100 p-2">
+                      {mfa.backupCodes.join("\n")}
                     </code>
                   </details>
                 ) : null}
@@ -204,7 +200,7 @@ function AdminLogin() {
             type="button"
             className="w-full rounded border border-zinc-600 px-3 py-2 text-sm"
             onClick={() =>
-              void supabase.auth.signOut().finally(() => {
+              void authClient.signOut().finally(() => {
                 setMfa(null);
                 setCode("");
               })

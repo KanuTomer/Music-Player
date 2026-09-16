@@ -31,9 +31,9 @@ These rules apply to every stage below and every future plan derived from this r
 ## Tracker
 
 - [x] Stage 1 — Separate the static frontend and Render API; implementation commit `0e6d268`.
-- [ ] Stage 2 — Fast-forward the tested Render implementation to personal `main`. **Current stage: awaiting environment import.**
-- [ ] Stage 3 — Accept the personal Production deployment.
-- [ ] Stage 4 — Replace the remaining Supabase services after the Render cutover.
+- [x] Stage 2 — Fast-forward the tested Render implementation to personal `main`; accepted deployment commit `ce5e84b`.
+- [x] Stage 3 — Accept the personal Production deployment; completed on 2026-09-15.
+- [ ] Stage 4 — Replace the remaining Supabase services after the Render cutover. **Current stage.**
 
 ## Stage 1 — Separate Frontend and Render API
 
@@ -87,9 +87,28 @@ Cutover sequence:
 
 Keep legacy Vercel server variables until acceptance so deployment `b47d788` remains immediately restorable. After UAT, remove the obsolete Vercel database URLs, backend selectors, and Supabase server-only variables; retain only the static frontend and cron-relay variables.
 
+Completion recorded on 2026-09-15:
+
+- Kanu imported both generated environment files and changed `music-player-api-test` to personal `main` with automatic deployment disabled.
+- Personal `main`, Vercel Production deployment `dpl_B8EzJY8bgpvaksbrnxWzdNTojW9t`, and Render deployment `dep-dakcd7fqj5pc73alrdt0` use commit `ce5e84b957c5a5ba82755dfc4b26e26363c5a497`.
+- Vercel reports `READY`; Render reports `live`; Render `/healthz` and `/readyz` return HTTP 200.
+- Exact CORS checks passed for the personal Production domain and personal `main` alias.
+- The API returned all seven live Neon rooms in the expected order. Representative room media used only production Supabase Storage URLs, and every checked object returned HTTP 200.
+- The deployed frontend contains the Render API URL and production Supabase project reference, with no rehearsal project reference, PostgreSQL URL, runtime-role name, unpooled variable, or Supabase server-secret variable.
+- Vercel and Render reported no runtime errors after the accepted deployment. The cleanup-relay test was moved outside Vercel's reserved `/api` directory in `ce5e84b`, removing the former nonfatal `bun:test` function-build error.
+
 ## Stage 3 — Personal Production Acceptance
 
 Kanu verifies all seven rooms, music, old/new ambience, presentation, queue order, oneliners, attribution, chat blocking, reactions, and two-tab presence. Kanu then signs in with the disposable administrator, enrolls MFA, verifies dashboard reads, performs and reverts one gag-label change, confirms Realtime refresh, and compares one cold Render request with a warm request. Cleanup is invoked only through the protected relay and without adding new media.
+
+Manual acceptance reported by Kanu on 2026-09-15. The post-UAT read-only baseline at `2026-09-15T08:06:26Z` confirmed:
+
+- Seven live Neon scenes, two room visits since deployment, and current listening/visit activity.
+- The expected administrator audit activity, three allowlisted administrators, zero unfinished reservations, and zero pending cleanup rows.
+- No Render or Vercel runtime errors after deployment.
+- The personal homepage, Render liveness/readiness endpoints, and protected cleanup relay remained healthy.
+
+The required two-hour observation ran from `2026-09-15T08:06:26Z` to approximately `2026-09-15T10:09Z`. The one-hour and two-hour gates were clean: Render remained live, Vercel remained ready, all health checks returned HTTP 200, and there were zero Render/Vercel errors, repeated 5xx responses, invalid Neon visits, unfinished reservations, or pending cleanup rows. Stage 3 completed on 2026-09-15.
 
 On failure, restore personal Vercel deployment `b47d788` and redeploy Render commit `0e6d268`. Neon and Supabase remain unchanged. Observe an accepted deployment for two hours before closing Stage 3.
 
@@ -106,4 +125,4 @@ Use `AUTH_BACKEND`, `STORAGE_BACKEND`, and `REALTIME_BACKEND` rollback switches 
 
 ## Next Session
 
-Kanu completes the two dashboard imports and changes `music-player-api-test` to branch `main` without deploying. After confirmation, push the prepared commit to personal `main`, deploy the identical commit on Render, and run the terminal/MCP verification gates before handing off Production UAT.
+Stage 4 is current. Plan the first remaining Supabase replacement before implementation, retaining the accepted personal Render/Vercel/Neon deployment and rollback deployment `b47d788`. Do not remove legacy variables, commit, push, or begin a provider migration without a separate instruction.

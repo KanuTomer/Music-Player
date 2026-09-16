@@ -19,7 +19,6 @@ import {
   sourceFailureAction,
 } from "./queue";
 import {
-  getRoomAmbience,
   reportPlaybackSourceFailure,
   type QueueItem,
   type RoomPayload,
@@ -31,7 +30,6 @@ import {
   shouldEnableAvailableAmbience,
   type AmbienceStatus,
 } from "./ambience";
-import { supabase } from "@/integrations/supabase/client";
 import {
   PLAYBACK_CHECKPOINT_KEY,
   clampPlaybackPosition,
@@ -243,43 +241,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       500,
     );
   }, [activeMusicDuckRatio, ambience.active, rampMusicOutput]);
-
-  useEffect(() => {
-    const sceneId = room?.scene.id;
-    if (!sceneId) return;
-    const channel = supabase
-      .channel(`ambience-profile:${sceneId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "ambience_profiles",
-          filter: `scene_id=eq.${sceneId}`,
-        },
-        () => {
-          void getRoomAmbience({ data: { sceneId } })
-            .then((nextAmbience) => {
-              setRoom((current) =>
-                current?.scene.id === sceneId ? { ...current, ambience: nextAmbience } : current,
-              );
-              const nextEnabled = shouldEnableAvailableAmbience(
-                Boolean(nextAmbience),
-                ambienceSuppressedRef.current,
-              );
-              setAmbienceEnabled(nextEnabled);
-              if (nextEnabled) void resumeAmbienceFromGesture();
-            })
-            .catch(() => {
-              // Keep the last known state; the room loader will retry on navigation.
-            });
-        },
-      )
-      .subscribe();
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [room?.scene.id, resumeAmbienceFromGesture]);
 
   const setIndex = useCallback((next: number) => {
     indexRef.current = next;

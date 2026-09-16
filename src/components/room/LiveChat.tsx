@@ -1,14 +1,15 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MessageCircle, X } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { sendChatMessage } from "@/lib/rooms.functions";
-import { isAllowedChatMessageText, validateChatMessageText } from "@/lib/chat-message";
+import { getChatMessages, sendChatMessage } from "@/lib/rooms.functions";
+import {
+  isAllowedChatMessageText,
+  validateChatMessageText,
+  type ChatMessage,
+} from "@/lib/chat-message";
 import { randomDesiName } from "@/hooks/useRoomSocial";
-import type { Database } from "@/integrations/supabase/types";
-
-type ChatMessage = Database["public"]["Tables"]["chat_messages"]["Row"];
+import { roomPresenceController } from "@/lib/room-presence-runtime";
 
 interface LiveChatProps {
   roomKey: string;
@@ -47,8 +48,11 @@ export function LiveChat({ roomKey, roomName, inlineLauncher = false }: LiveChat
   const [messages, setMessagesState] = useState<ChatMessage[]>(() => {
     if (typeof window !== "undefined") {
       try {
-        const saved = sessionStorage.getItem("sainik_dhaba_local_chat_messages");
-        if (saved) return JSON.parse(saved);
+        const saved = sessionStorage.getItem("sainik_dhaba_neon_chat_v1");
+        if (saved)
+          return (JSON.parse(saved) as ChatMessage[]).filter(
+            (message) => message.room_key === roomKey,
+          );
       } catch (e) {
         console.error("Error reading from sessionStorage:", e);
       }
@@ -57,21 +61,21 @@ export function LiveChat({ roomKey, roomName, inlineLauncher = false }: LiveChat
   });
 
   // Custom setter to keep sessionStorage in sync
-  const setMessages = (update: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => {
-    setMessagesState((prev) => {
-      const next = typeof update === "function" ? update(prev) : update;
-      try {
-        // Store last 100 messages to keep storage light
-        sessionStorage.setItem(
-          "sainik_dhaba_local_chat_messages",
-          JSON.stringify(next.slice(-100)),
-        );
-      } catch (e) {
-        console.error("Error writing to sessionStorage:", e);
-      }
-      return next;
-    });
-  };
+  const setMessages = useCallback(
+    (update: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => {
+      setMessagesState((prev) => {
+        const next = typeof update === "function" ? update(prev) : update;
+        try {
+          // Store last 100 messages to keep storage light
+          sessionStorage.setItem("sainik_dhaba_neon_chat_v1", JSON.stringify(next.slice(-100)));
+        } catch (e) {
+          console.error("Error writing to sessionStorage:", e);
+        }
+        return next;
+      });
+    },
+    [],
+  );
 
   const [displayName, setDisplayName] = useState<string>(() => {
     if (typeof window !== "undefined") {
@@ -86,136 +90,74 @@ export function LiveChat({ roomKey, roomName, inlineLauncher = false }: LiveChat
     messagesEndRef.current?.scrollIntoView({ behavior });
   };
 
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const loadMessages = useCallback(async () => {
+    try {
+      const data = await getChatMessages({ data: { roomKey } });
+      if (data) {
+        // Merge database messages with existing local messages, strictly removing duplicates
+        setMessages((prev) => {
+          const combined = [...prev, ...data];
+          const seenIds = new Set<string>();
+          const deduped: ChatMessage[] = [];
+
+          for (const msg of combined) {
+            if (seenIds.has(msg.id)) continue;
+
+            // Also guard against stale temp messages matching a DB message
+            const isDuplicateContent = deduped.some(
+              (m) =>
+                m.session_display_name === msg.session_display_name &&
+                m.text === msg.text &&
+                Math.abs(new Date(m.created_at).getTime() - new Date(msg.created_at).getTime()) <
+                  45000,
+            );
+
+            if (!isDuplicateContent) {
+              seenIds.add(msg.id);
+              deduped.push(msg);
+            }
+          }
+
+          return deduped.sort(
+            (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+          );
+        });
+      }
+    } catch (err) {
+      console.error("Failed to fetch chat messages:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [roomKey, setMessages]);
 
   // Fetch initial messages
   useEffect(() => {
-    async function loadMessages() {
-      try {
-        const { data, error } = await supabase
-          .from("chat_messages")
-          .select("*")
-          .eq("room_key", roomKey)
-          .gt("expires_at", new Date().toISOString())
-          .order("created_at", { ascending: true });
+    void loadMessages();
+  }, [loadMessages]);
 
-        if (error) {
-          console.error("Error loading chat messages:", error);
-        } else if (data) {
-          // Merge database messages with existing local messages, strictly removing duplicates
-          setMessages((prev) => {
-            const combined = [...prev, ...data];
-            const seenIds = new Set<string>();
-            const deduped: ChatMessage[] = [];
-
-            for (const msg of combined) {
-              if (seenIds.has(msg.id)) continue;
-
-              // Also guard against stale temp messages matching a DB message
-              const isDuplicateContent = deduped.some(
-                (m) =>
-                  m.session_display_name === msg.session_display_name &&
-                  m.text === msg.text &&
-                  Math.abs(new Date(m.created_at).getTime() - new Date(msg.created_at).getTime()) <
-                    45000,
-              );
-
-              if (!isDuplicateContent) {
-                seenIds.add(msg.id);
-                deduped.push(msg);
-              }
-            }
-
-            return deduped.sort(
-              (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-            );
-          });
-        }
-      } catch (err) {
-        console.error("Failed to fetch chat messages:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadMessages();
-  }, [roomKey]);
-
-  // Subscribe to real-time additions (both DB inserts and realtime broadcasts)
+  // Subscribe to committed chat events from Render.
   useEffect(() => {
     if (!roomKey) return;
-
-    const channel = supabase
-      .channel(`chat_messages:${roomKey}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "chat_messages",
-          filter: `room_key=eq.${roomKey}`,
-        },
-        (payload) => {
-          const newMsg = payload.new as ChatMessage;
-          if (!isAllowedChatMessageText(newMsg.text)) return;
-
-          setMessages((prev) => {
-            // 1. Check if ID already exists (e.g. optimistic or broadcast already added it)
-            const existingIndex = prev.findIndex((m) => m.id === newMsg.id);
-            if (existingIndex >= 0) {
-              const updated = [...prev];
-              updated[existingIndex] = newMsg;
-              return updated;
-            }
-
-            // 2. Fallback deduplicate: check if there is an optimistic entry with same content
-            const matchingOptimisticIdx = prev.findIndex(
-              (m) =>
-                m.session_display_name === newMsg.session_display_name &&
-                m.text === newMsg.text &&
-                Math.abs(new Date(m.created_at).getTime() - new Date(newMsg.created_at).getTime()) <
-                  45000,
-            );
-            if (matchingOptimisticIdx >= 0) {
-              const updated = [...prev];
-              updated[matchingOptimisticIdx] = newMsg;
-              return updated;
-            }
-
-            return [...prev, newMsg];
-          });
-        },
-      )
-      .on("broadcast", { event: "chat_message" }, ({ payload }) => {
+    const sceneSlug = roomKey.replace(/^scene:/, "");
+    const handle = roomPresenceController.acquire(sceneSlug, {
+      trackViewer: false,
+      onChatMessage: (payload) => {
         const newMsg = payload as ChatMessage;
         if (!isAllowedChatMessageText(newMsg.text)) return;
-
         setMessages((prev) => {
-          // Guard against existing ID
-          if (prev.some((m) => m.id === newMsg.id)) return prev;
-
-          // Guard against duplicate content received via broadcast or DB
-          const isDuplicateContent = prev.some(
-            (m) =>
-              m.session_display_name === newMsg.session_display_name &&
-              m.text === newMsg.text &&
-              Math.abs(new Date(m.created_at).getTime() - new Date(newMsg.created_at).getTime()) <
-                30000,
-          );
-          if (isDuplicateContent) return prev;
-
+          const existingIndex = prev.findIndex((message) => message.id === newMsg.id);
+          if (existingIndex >= 0) {
+            const updated = [...prev];
+            updated[existingIndex] = newMsg;
+            return updated;
+          }
           return [...prev, newMsg];
         });
-      })
-      .subscribe();
-
-    channelRef.current = channel;
-
-    return () => {
-      channelRef.current = null;
-      void supabase.removeChannel(channel);
-    };
-  }, [roomKey]);
+      },
+      onReconnect: () => void loadMessages(),
+    });
+    return () => handle.release();
+  }, [loadMessages, roomKey, setMessages]);
 
   // Auto scroll to bottom
   useEffect(() => {
@@ -253,16 +195,7 @@ export function LiveChat({ roomKey, roomName, inlineLauncher = false }: LiveChat
       return [...prev, tempMsg];
     });
 
-    // 2. Broadcast immediately to other connected clients via WebSockets
-    if (channelRef.current) {
-      void channelRef.current.send({
-        type: "broadcast",
-        event: "chat_message",
-        payload: tempMsg,
-      });
-    }
-
-    // 3. Persist to database in background with matching client ID
+    // Persist first; Render broadcasts the committed row.
     try {
       await sendChatMessage({
         data: {
@@ -273,7 +206,8 @@ export function LiveChat({ roomKey, roomName, inlineLauncher = false }: LiveChat
         },
       });
     } catch (err) {
-      console.warn("DB save note (using realtime broadcast):", err);
+      setMessages((previous) => previous.filter((message) => message.id !== tempId));
+      toast.error(err instanceof Error ? err.message : "Message could not be sent");
     }
   };
 

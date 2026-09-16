@@ -37,6 +37,16 @@ function configuredOrigins(): Set<string> {
 
 const allowedOrigins = configuredOrigins();
 
+app.on(["GET", "POST"], "/api/auth/*", async (context) => {
+  const origin = context.req.header("origin")?.replace(/\/$/, "");
+  if (origin && !allowedOrigins.has(origin)) return context.json({ error: "Origin denied" }, 403);
+  if (context.req.path === "/api/auth/sign-up/email") {
+    return context.json({ error: "Public registration is disabled" }, 403);
+  }
+  const { getBetterAuth } = await import("@/lib/better-auth.server");
+  return getBetterAuth().handler(context.req.raw);
+});
+
 app.use("/api/*", async (context, next) => {
   const requestId = context.req.header("x-request-id")?.slice(0, 128) || crypto.randomUUID();
   context.header("x-request-id", requestId);
@@ -46,7 +56,8 @@ app.use("/api/*", async (context, next) => {
 app.use(
   "/api/v1/*",
   cors({
-    origin: (origin) => (allowedOrigins.has(origin.replace(/\/$/, "")) ? origin : undefined),
+    origin: (origin) =>
+      origin && allowedOrigins.has(origin.replace(/\/$/, "")) ? origin : undefined,
     allowHeaders: ["authorization", "content-type", "x-request-id"],
     allowMethods: ["POST", "OPTIONS"],
     maxAge: 600,
@@ -141,6 +152,7 @@ async function publicOperations(): Promise<Record<string, Operation>> {
     "get-room-ambience": async (data) => rooms.fetchRoomAmbience(stringValue(data, "sceneId")),
     "get-room-presentation": async (data) =>
       rooms.fetchRoomPresentation(stringValue(data, "sceneId")),
+    "get-chat-messages": async (data) => rooms.fetchChatMessages(stringValue(data, "roomKey")),
     "send-chat-message": async (data) => {
       const roomKey = stringValue(data, "roomKey");
       const displayName = stringValue(data, "displayName").trim();
@@ -244,6 +256,7 @@ const publicNames = new Set([
   "get-room",
   "get-room-ambience",
   "get-room-presentation",
+  "get-chat-messages",
   "send-chat-message",
   "record-room-visit",
   "record-room-listening",
@@ -342,6 +355,9 @@ export function startApiServer() {
   const server = serve({ fetch: app.fetch, port, hostname: "0.0.0.0" }, ({ port: boundPort }) => {
     console.info("[render-api] listening", { port: boundPort });
   });
+  void import("@/lib/room-realtime.server").then(({ attachRoomRealtime }) =>
+    attachRoomRealtime(server, allowedOrigins),
+  );
 
   async function shutdown(signal: string) {
     console.info("[render-api] shutting down", { signal });

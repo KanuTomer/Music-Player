@@ -1,23 +1,41 @@
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { publicStorageUrl } from "./public-storage.server";
+import { del } from "@vercel/blob";
+import { generateClientTokenFromReadWriteToken } from "@vercel/blob/client";
+import { blobPath, publicStorageUrl } from "./public-storage.server";
 import { isMissingStorageError, type AdminStorageBucket } from "./admin-storage";
+
+function blobToken() {
+  const token = process.env["BLOB_READ_WRITE_TOKEN"];
+  if (!token) throw new Error("Blob Storage configuration is unavailable");
+  return token;
+}
 
 export const adminStorage = {
   publicUrl(bucket: AdminStorageBucket, path: string | null | undefined) {
     return publicStorageUrl(bucket, path);
   },
   async createSignedUploadUrl(bucket: AdminStorageBucket, path: string) {
-    const { data, error } = await supabaseAdmin.storage.from(bucket).createSignedUploadUrl(path);
-    if (error || !data) throw new Error(error?.message ?? "Unable to create signed upload URL");
-    return { token: data.token };
+    const token = await generateClientTokenFromReadWriteToken({
+      token: blobToken(),
+      pathname: blobPath(bucket, path),
+      allowedContentTypes: [bucket === "scene-media" ? "image/webp" : "audio/mpeg"],
+      maximumSizeInBytes: bucket === "scene-media" ? 5 * 1024 * 1024 : 1024 * 1024,
+      validUntil: Date.now() + 10 * 60 * 1000,
+      addRandomSuffix: false,
+      allowOverwrite: false,
+      cacheControlMaxAge: 31_536_000,
+    });
+    return { token };
   },
   async download(bucket: AdminStorageBucket, path: string) {
-    const { data, error } = await supabaseAdmin.storage.from(bucket).download(path);
-    if (error || !data) throw new Error(error?.message ?? "Uploaded object is missing");
-    return Buffer.from(await data.arrayBuffer());
+    const response = await fetch(publicStorageUrl(bucket, path)!, { cache: "no-store" });
+    if (!response.ok) throw new Error("Uploaded object is missing");
+    return Buffer.from(await response.arrayBuffer());
   },
   async remove(bucket: AdminStorageBucket, path: string) {
-    const { error } = await supabaseAdmin.storage.from(bucket).remove([path]);
-    if (error && !isMissingStorageError(error)) throw new Error(error.message);
+    try {
+      await del(blobPath(bucket, path), { token: blobToken() });
+    } catch (error) {
+      if (!isMissingStorageError(error)) throw error;
+    }
   },
 };

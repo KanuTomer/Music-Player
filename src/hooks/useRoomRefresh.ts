@@ -23,6 +23,7 @@ export function useRoomRefresh(
         const payload = parseRoomRefreshPayload(value);
         if (payload?.sceneId === sceneId) scheduler.schedule();
       },
+      onReconnect: () => scheduler.schedule(),
     });
     return () => {
       disposed = true;

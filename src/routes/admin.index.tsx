@@ -6,7 +6,7 @@ import { DiscardChangesDialog } from "@/components/admin/AdminFormFeedback";
 import { AdminSecurityDialog } from "@/components/admin/AdminSecurityDialog";
 import { AmbienceAudioPanel } from "@/components/admin/AmbienceAudioPanel";
 import { BackgroundPanel } from "@/components/admin/BackgroundPanel";
-import { supabase } from "@/integrations/supabase/client";
+import { authClient } from "@/lib/better-auth.client";
 import { useAdminRoomPresence } from "@/hooks/useRoomPresence";
 import {
   retainComparedSceneIds,
@@ -146,10 +146,7 @@ function AdminPage() {
     enabled: clientReady,
   });
   const scenes = bootstrapQuery.data?.scenes ?? EMPTY_SCENES;
-  const livePresence = useAdminRoomPresence(
-    scenes,
-    clientReady && section === "analytics",
-  );
+  const livePresence = useAdminRoomPresence(scenes, clientReady && section === "analytics");
   const identity = bootstrapQuery.data?.identity ?? null;
   const currentSummary = scenes.find((scene) => scene.slug === selectedSlug) ?? scenes[0];
   const songsQuery = useQuery({
@@ -305,8 +302,8 @@ function AdminPage() {
   }
 
   useEffect(() => {
-    void supabase.auth.getSession().then(async ({ data }) => {
-      if (!data.session) {
+    void authClient.getSession().then(async ({ data }) => {
+      if (!data?.session) {
         void navigate({ to: "/admin/login" });
         return;
       }
@@ -352,7 +349,7 @@ function AdminPage() {
         ADMIN_SIGN_IN_NOTICE_KEY,
         "Your sign-in session expired. Please sign in again.",
       );
-      void supabase.auth.signOut().finally(() => navigate({ to: "/admin/login" }));
+      void authClient.signOut().finally(() => navigate({ to: "/admin/login" }));
     } else setMessage(text);
   }, [bootstrapQuery.error, navigate]);
 
@@ -366,7 +363,7 @@ function AdminPage() {
         ADMIN_SIGN_IN_NOTICE_KEY,
         "Your sign-in session expired. Please sign in again.",
       );
-      void supabase.auth.signOut().finally(() => navigate({ to: "/admin/login" }));
+      void authClient.signOut().finally(() => navigate({ to: "/admin/login" }));
     } else setMessage(text);
   }, [
     songsQuery.error,
@@ -513,7 +510,7 @@ function AdminPage() {
               className="mt-2 w-full rounded border border-zinc-600 px-3 py-2 text-sm"
               onClick={() =>
                 requestTransition(async () => {
-                  await supabase.auth.signOut();
+                  await authClient.signOut();
                   await navigate({ to: "/admin/login" });
                 })
               }
@@ -751,9 +748,7 @@ function AdminPage() {
                             <td className="p-3 font-medium">{row.title}</td>
                             <td className="p-3 font-semibold tabular-nums">
                               <LiveViewerCount
-                                snapshot={
-                                  livePresence[row.sceneId] ?? CONNECTING_ROOM_PRESENCE
-                                }
+                                snapshot={livePresence[row.sceneId] ?? CONNECTING_ROOM_PRESENCE}
                               />
                             </td>
                             <td className="p-3">{row.visits}</td>

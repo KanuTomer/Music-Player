@@ -1,13 +1,10 @@
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Database } from "@/integrations/supabase/types";
 import { getRequestAdminAuthorization, requireRequestAdmin } from "./admin-authorization.server";
-import { createRequestSupabaseClient, requestAccessToken } from "./admin-auth.server";
 import type { AdminOnboardingStatus } from "./admin-authorization";
 import { ambienceProcessing, type AmbienceRole } from "./ambience-processing";
 import { ambienceMp3, validateAmbienceMp3 } from "./mp3-audio";
-import { resolveAdminDataBackend } from "./admin-data";
 import {
   compensateUploadedObject,
   createSignedUploadWithCompensation,
@@ -23,7 +20,7 @@ import { broadcastRoomRefresh } from "./room-refresh.server";
 import { afterCommittedRoomMutation } from "./room-refresh";
 
 async function neonAdminData() {
-  return resolveAdminDataBackend() === "neon" ? import("./admin.neon.server") : null;
+  return import("./admin.neon.server");
 }
 
 async function notifyNeonRoom(neon: NeonAdminData, sceneId: string) {
@@ -69,24 +66,18 @@ function uploadCompensation(
   };
 }
 
-const serviceAdmin = supabaseAdmin;
-
-function requestAdminClient(): SupabaseClient<Database> {
-  const token = requestAccessToken();
-  return createRequestSupabaseClient(token);
-}
-
-// All database work in an admin request uses the caller's JWT, so grants and RLS
-// remain the final authorization boundary. Storage signing and inspection are the
-// only capabilities that continue to use the server-only secret client.
-const admin = new Proxy({} as SupabaseClient<Database>, {
-  get(_target, property) {
-    if (property === "storage") return serviceAdmin.storage;
-    const client = requestAdminClient() as unknown as Record<PropertyKey, unknown>;
-    const value = client[property];
-    return typeof value === "function" ? value.bind(client) : value;
+/**
+ * Retains the historical branch types while ensuring a stale fallback can never
+ * initialize an external database client. All active exports return through the
+ * Neon implementation above their legacy compatibility branches.
+ */
+const removedLegacyClient = new Proxy({} as SupabaseClient<Database>, {
+  get() {
+    throw new Error("Legacy database fallback is unavailable");
   },
 });
+const serviceAdmin = removedLegacyClient;
+const admin = removedLegacyClient;
 const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
 
 export type AdminTrack = {

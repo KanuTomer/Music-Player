@@ -3,7 +3,7 @@ import {
   normalizeRoomListeningInput,
   normalizeRoomVisitInput,
 } from "./rooms.operations";
-import { validateChatMessageText } from "./chat-message";
+import { validateChatMessageText, type ChatMessage } from "./chat-message";
 import { callApi } from "./api-client";
 
 export type Scene = {
@@ -181,6 +181,16 @@ export function sendChatMessage({
   const textError = validateChatMessageText(text);
   if (textError) throw new Error(textError);
   return callApi("send-chat-message", { roomKey, displayName, text, id });
+}
+
+export function getChatMessages({
+  data,
+}: {
+  data: { roomKey: string };
+}): Promise<ChatMessage[]> {
+  const roomKey = String(data.roomKey);
+  if (!/^scene:[a-z0-9-]+$/.test(roomKey)) throw new Error("Invalid room key");
+  return callApi("get-chat-messages", { roomKey }, { safeRead: true });
 }
 
 export function recordRoomVisit({
