@@ -1,4 +1,4 @@
-import { proxyToRenderPath } from "./_render-proxy";
+import { proxyToRenderPath } from "./_render-proxy.js";
 
 type RequestWithPath = Parameters<typeof proxyToRenderPath>[0] & {
   query?: Record<string, string | string[] | undefined>;
