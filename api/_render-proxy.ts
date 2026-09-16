@@ -30,7 +30,18 @@ export async function proxyToRender(
   const incoming = new URL(request.url ?? prefix, "https://proxy.invalid");
   const marker = incoming.pathname.indexOf(prefix);
   if (marker < 0) return response.status(404).json({ error: "Not found" });
-  const path = incoming.pathname.slice(marker);
+  return proxyToRenderPath(request, response, incoming.pathname.slice(marker));
+}
+
+export async function proxyToRenderPath(
+  request: ProxyRequest,
+  response: ProxyResponse,
+  path: `/api/${string}`,
+) {
+  const renderBase = process.env["RENDER_API_BASE_URL"]?.replace(/\/$/, "");
+  if (!renderBase) return response.status(503).json({ error: "API proxy is unavailable" });
+  const incoming = new URL(request.url ?? path, "https://proxy.invalid");
+  incoming.searchParams.delete("path");
   const headers = new Headers();
   for (const name of FORWARDED_HEADERS) {
     const value = request.headers[name];
@@ -62,7 +73,7 @@ export async function proxyToRender(
     response.send(Buffer.from(await upstream.arrayBuffer()));
   } catch (error) {
     console.error("[render-proxy] failed", {
-      path: prefix,
+      path,
       error: error instanceof Error ? error.name : "UnknownError",
     });
     response.status(502).json({ error: "API proxy failed" });
