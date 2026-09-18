@@ -3,12 +3,7 @@ import {
   normalizeRoomListeningInput,
   normalizeRoomVisitInput,
 } from "./rooms.operations";
-import type {
-  AmbienceProfile,
-  RoomPayload,
-  RoomPresentation,
-  Scene,
-} from "@developersshunyity/sainik-dabha-contracts/rooms";
+import type { AmbienceProfile, RoomPayload, RoomPresentation, Scene } from "./room.types";
 export type {
   AmbienceFilter,
   AmbienceProfile,
@@ -22,7 +17,7 @@ export type {
   RoomPayload,
   RoomPresentation,
   Scene,
-} from "@developersshunyity/sainik-dabha-contracts/rooms";
+} from "./room.types";
 import { validateChatMessageText, type ChatMessage } from "./chat-message";
 import { callApi } from "./api-client";
 

@@ -28,7 +28,7 @@ import {
   removeAdminSongs,
   updateAdminSong,
 } from "@/lib/admin.functions";
-import type { AdminSceneSummary } from "@developersshunyity/sainik-dabha-contracts/admin";
+import type { AdminSceneSummary } from "@/lib/admin.types";
 import {
   CONNECTING_ROOM_PRESENCE,
   roomPresenceLabel,

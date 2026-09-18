@@ -8,10 +8,7 @@ import {
   reserveAdminBackgroundUpload,
   saveAdminScenePresentation,
 } from "@/lib/admin.functions";
-import type {
-  AdminBackground,
-  AdminOneLiner,
-} from "@developersshunyity/sainik-dabha-contracts/admin";
+import type { AdminBackground, AdminOneLiner } from "@/lib/admin.types";
 import { artFor } from "@/lib/scene-art";
 import {
   DARK_SCENE_TEXT,

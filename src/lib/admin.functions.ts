@@ -9,7 +9,7 @@ import type {
   AdminUploadReservation,
   AnalyticsRow,
   SongDraft,
-} from "@developersshunyity/sainik-dabha-contracts/admin";
+} from "./admin.types";
 import { analyticsSince, type AnalyticsRange } from "./admin-analytics";
 import { callApi } from "./api-client";
 const uuid = z.string().uuid();
