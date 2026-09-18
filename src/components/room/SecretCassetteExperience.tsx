@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { AmbienceControl } from "@/components/player/AmbienceControl";
@@ -9,14 +9,20 @@ import { backgroundFor } from "@/lib/scene-art";
 import { isLightTextColor } from "@/lib/scene-presentation";
 import { usePlayer } from "@/lib/player";
 import type { RoomPayload, Scene } from "@/lib/rooms.functions";
+import { useRoomRefresh } from "@/hooks/useRoomRefresh";
 
 export function SecretCassetteExperience({ room, scenes }: { room: RoomPayload; scenes: Scene[] }) {
   const player = usePlayer();
   const openRoom = player.openRoom;
+  const [currentRoom, setCurrentRoom] = useState(room);
   const liveScenes = useLiveScenes(scenes);
-  const scene = liveScenes.find((item) => item.id === room.scene.id) ?? room.scene;
+  const scene = liveScenes.find((item) => item.id === currentRoom.scene.id) ?? currentRoom.scene;
   const lightText = isLightTextColor(scene.foreground_text_color);
   useRoomPresenceTracker(scene.slug);
+  useRoomRefresh(scene.slug, scene.id, (nextRoom) => {
+    setCurrentRoom(nextRoom);
+    player.refreshRoom(nextRoom);
+  });
 
   useEffect(() => {
     openRoom(room);

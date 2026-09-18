@@ -14,7 +14,6 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as GenerateRouteImport } from './routes/generate'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
-import { Route as ApiAdminCleanupRouteImport } from './routes/api.admin-cleanup'
 import { Route as RoomSlugRouteImport } from './routes/room.$slug'
 import { Route as RoomSlugIndexRouteImport } from './routes/room.$slug.index'
 import { Route as RoomSlugCassetteRouteImport } from './routes/room.$slug.cassette'
@@ -44,11 +43,6 @@ const AdminLoginRoute = AdminLoginRouteImport.update({
   path: '/login',
   getParentRoute: () => AdminRoute,
 } as any)
-const ApiAdminCleanupRoute = ApiAdminCleanupRouteImport.update({
-  id: '/api/admin-cleanup',
-  path: '/api/admin-cleanup',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const RoomSlugRoute = RoomSlugRouteImport.update({
   id: '/room/$slug',
   path: '/room/$slug',
@@ -70,7 +64,6 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/generate': typeof GenerateRoute
   '/admin/login': typeof AdminLoginRoute
-  '/api/admin-cleanup': typeof ApiAdminCleanupRoute
   '/room/$slug': typeof RoomSlugRouteWithChildren
   '/admin/': typeof AdminIndexRoute
   '/room/$slug/cassette': typeof RoomSlugCassetteRoute
@@ -80,7 +73,6 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/generate': typeof GenerateRoute
   '/admin/login': typeof AdminLoginRoute
-  '/api/admin-cleanup': typeof ApiAdminCleanupRoute
   '/admin': typeof AdminIndexRoute
   '/room/$slug/cassette': typeof RoomSlugCassetteRoute
   '/room/$slug': typeof RoomSlugIndexRoute
@@ -91,7 +83,6 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/generate': typeof GenerateRoute
   '/admin/login': typeof AdminLoginRoute
-  '/api/admin-cleanup': typeof ApiAdminCleanupRoute
   '/room/$slug': typeof RoomSlugRouteWithChildren
   '/admin/': typeof AdminIndexRoute
   '/room/$slug/cassette': typeof RoomSlugCassetteRoute
@@ -104,7 +95,6 @@ export interface FileRouteTypes {
     | '/admin'
     | '/generate'
     | '/admin/login'
-    | '/api/admin-cleanup'
     | '/room/$slug'
     | '/admin/'
     | '/room/$slug/cassette'
@@ -114,7 +104,6 @@ export interface FileRouteTypes {
     | '/'
     | '/generate'
     | '/admin/login'
-    | '/api/admin-cleanup'
     | '/admin'
     | '/room/$slug/cassette'
     | '/room/$slug'
@@ -124,7 +113,6 @@ export interface FileRouteTypes {
     | '/admin'
     | '/generate'
     | '/admin/login'
-    | '/api/admin-cleanup'
     | '/room/$slug'
     | '/admin/'
     | '/room/$slug/cassette'
@@ -135,7 +123,6 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
   GenerateRoute: typeof GenerateRoute
-  ApiAdminCleanupRoute: typeof ApiAdminCleanupRoute
   RoomSlugRoute: typeof RoomSlugRouteWithChildren
 }
 
@@ -175,13 +162,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/login'
       preLoaderRoute: typeof AdminLoginRouteImport
       parentRoute: typeof AdminRoute
-    }
-    '/api/admin-cleanup': {
-      id: '/api/admin-cleanup'
-      path: '/api/admin-cleanup'
-      fullPath: '/api/admin-cleanup'
-      preLoaderRoute: typeof ApiAdminCleanupRouteImport
-      parentRoute: typeof rootRouteImport
     }
     '/room/$slug': {
       id: '/room/$slug'
@@ -237,19 +217,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   GenerateRoute: GenerateRoute,
-  ApiAdminCleanupRoute: ApiAdminCleanupRoute,
   RoomSlugRoute: RoomSlugRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

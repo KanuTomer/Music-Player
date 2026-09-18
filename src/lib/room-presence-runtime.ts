@@ -1,9 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
-import {
-  createRoomPresenceController,
-  type RoomPresenceClient,
-} from "@/lib/room-presence";
+import { createRoomPresenceController } from "@/lib/room-presence";
+import { renderRealtimeClient } from "@/lib/render-realtime.client";
 
-export const roomPresenceController = createRoomPresenceController(
-  supabase as unknown as RoomPresenceClient,
-);
+export const roomPresenceController = createRoomPresenceController(renderRealtimeClient);

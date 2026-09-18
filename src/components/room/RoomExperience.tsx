@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Compass, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  getRoomPresentation,
   type RoomPayload,
   type RoomPresentation,
   type Scene,
@@ -22,9 +21,9 @@ import { LiveChat } from "@/components/room/LiveChat";
 import { AmbienceEventButton } from "@/components/room/AmbienceEventButton";
 import { useSupportAutoPrompt } from "@/hooks/useSupportPrompt";
 import { useRoomAnalytics } from "@/hooks/useRoomAnalytics";
-import { supabase } from "@/integrations/supabase/client";
 import { isLightTextColor, sceneTextShadow, sceneTextStroke } from "@/lib/scene-presentation";
 import { useLiveScenes } from "@/hooks/useLiveScenes";
+import { useRoomRefresh } from "@/hooks/useRoomRefresh";
 
 export function RoomExperience({
   room,
@@ -53,6 +52,17 @@ export function RoomExperience({
     gag_label: presentation.gag_label,
   };
   const player = usePlayer();
+  useRoomRefresh(scene.slug, scene.id, (nextRoom) => {
+    setPresentation({
+      scene_id: nextRoom.scene.id,
+      background_storage_path: nextRoom.scene.background_storage_path,
+      background_url: nextRoom.scene.background_url,
+      foreground_text_color: nextRoom.scene.foreground_text_color,
+      gag_label: nextRoom.scene.gag_label,
+      oneliners: nextRoom.oneliners,
+    });
+    player.refreshRoom(nextRoom);
+  });
   useRoomAnalytics(scene.slug, player.isPlaying);
   const social = useRoomSocial(scene.slug);
   const sceneVideo = presentation.background_url ? null : videoForScene(scene.slug);
@@ -71,39 +81,6 @@ export function RoomExperience({
     player.openRoom(room, initialTrackId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room.scene.slug, initialTrackId]);
-
-  useEffect(() => {
-    const refresh = () => {
-      void getRoomPresentation({ data: { sceneId: scene.id } })
-        .then((next) => {
-          if (next) setPresentation(next);
-        })
-        .catch(() => undefined);
-    };
-    const channel = supabase
-      .channel(`room-presentation:${scene.id}`)
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "scenes", filter: `id=eq.${scene.id}` },
-        refresh,
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "oneliners",
-        },
-        (payload) => {
-          const record = payload.eventType === "DELETE" ? payload.old : payload.new;
-          if (record["scene_id"] === scene.id) refresh();
-        },
-      )
-      .subscribe();
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [scene.id]);
 
   useEffect(() => {
     const video = sceneVideoRef.current;

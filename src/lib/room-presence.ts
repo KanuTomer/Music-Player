@@ -51,6 +51,9 @@ export type RoomPresenceConsumer = {
   trackViewer?: boolean;
   onPresence?: (snapshot: RoomPresenceSnapshot) => void;
   onReaction?: (emoji: string) => void;
+  onRoomRefresh?: (payload: unknown) => void;
+  onChatMessage?: (payload: unknown) => void;
+  onReconnect?: () => void;
 };
 
 export type RoomPresenceHandle = {
@@ -100,6 +103,18 @@ export function createRoomPresenceController(
     for (const consumer of entry.consumers) consumer.onReaction?.(emoji);
   };
 
+  const emitRoomRefresh = (entry: ChannelEntry, payload: unknown) => {
+    for (const consumer of entry.consumers) consumer.onRoomRefresh?.(payload);
+  };
+
+  const emitChatMessage = (entry: ChannelEntry, payload: unknown) => {
+    for (const consumer of entry.consumers) consumer.onChatMessage?.(payload);
+  };
+
+  const emitReconnect = (entry: ChannelEntry) => {
+    for (const consumer of entry.consumers) consumer.onReconnect?.();
+  };
+
   const wantsTracking = (entry: ChannelEntry) =>
     Array.from(entry.consumers).some((consumer) => consumer.trackViewer);
 
@@ -147,6 +162,18 @@ export function createRoomPresenceController(
             emitReaction(entry, (payload as { emoji: string }).emoji);
           }
         })
+        .on("broadcast", { event: "room_refresh" }, (message) => {
+          if (entry.channel !== channel || entry.closing) return;
+          emitRoomRefresh(entry, message?.payload);
+        })
+        .on("broadcast", { event: "chat_message" }, (message) => {
+          if (entry.channel !== channel || entry.closing) return;
+          emitChatMessage(entry, message?.payload);
+        })
+        .on("broadcast", { event: "reconnect" }, () => {
+          if (entry.channel !== channel || entry.closing) return;
+          emitReconnect(entry);
+        })
         .subscribe((status) => {
           if (entry.channel !== channel || entry.closing) return;
           if (status === "SUBSCRIBED") {
@@ -155,11 +182,7 @@ export function createRoomPresenceController(
               emitPresence(entry, { ...CONNECTING_ROOM_PRESENCE });
             }
             reconcileTracking(entry);
-          } else if (
-            status === "CHANNEL_ERROR" ||
-            status === "TIMED_OUT" ||
-            status === "CLOSED"
-          ) {
+          } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
             entry.subscribed = false;
             entry.tracked = false;
             emitPresence(entry, { count: null, status: "unavailable" });

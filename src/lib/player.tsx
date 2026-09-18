@@ -19,7 +19,6 @@ import {
   sourceFailureAction,
 } from "./queue";
 import {
-  getRoomAmbience,
   reportPlaybackSourceFailure,
   type QueueItem,
   type RoomPayload,
@@ -31,7 +30,6 @@ import {
   shouldEnableAvailableAmbience,
   type AmbienceStatus,
 } from "./ambience";
-import { supabase } from "@/integrations/supabase/client";
 import {
   PLAYBACK_CHECKPOINT_KEY,
   clampPlaybackPosition,
@@ -40,6 +38,7 @@ import {
   readPlaybackCheckpoint,
   type PlaybackCheckpoint,
 } from "./player-checkpoint";
+import { reconcileRefreshedQueue } from "./room-refresh";
 
 type YTPlayer = {
   loadVideoById: (id: string | { videoId: string; startSeconds?: number }) => void;
@@ -125,6 +124,7 @@ type PlayerState = {
   ambienceEventReady: boolean;
   ambienceEventPlaying: boolean;
   openRoom: (room: RoomPayload, initialTrackId?: string) => void;
+  refreshRoom: (room: RoomPayload) => void;
   playTrack: (trackId: string) => void;
   toggle: () => void;
   next: (options?: TrackChangeOptions) => void;
@@ -316,43 +316,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       500,
     );
   }, [activeMusicDuckRatio, ambience.active, rampMusicOutput]);
-
-  useEffect(() => {
-    const sceneId = room?.scene.id;
-    if (!sceneId) return;
-    const channel = supabase
-      .channel(`ambience-profile:${sceneId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "ambience_profiles",
-          filter: `scene_id=eq.${sceneId}`,
-        },
-        () => {
-          void getRoomAmbience({ data: { sceneId } })
-            .then((nextAmbience) => {
-              setRoom((current) =>
-                current?.scene.id === sceneId ? { ...current, ambience: nextAmbience } : current,
-              );
-              const nextEnabled = shouldEnableAvailableAmbience(
-                Boolean(nextAmbience),
-                ambienceSuppressedRef.current,
-              );
-              setAmbienceEnabled(nextEnabled);
-              if (nextEnabled) void resumeAmbienceFromGesture();
-            })
-            .catch(() => {
-              // Keep the last known state; the room loader will retry on navigation.
-            });
-        },
-      )
-      .subscribe();
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [room?.scene.id, resumeAmbienceFromGesture]);
 
   const setIndex = useCallback((next: number) => {
     indexRef.current = next;
@@ -920,8 +883,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     };
   }, [resumeAmbienceFromGesture, room]);
 
+  const activeRoomSlug = room?.scene.slug;
   useEffect(() => {
-    if (!room || !apiReady) return;
+    if (!activeRoomSlug || !apiReady) return;
     const player = playerRef.current;
     if (!player) {
       buildPlayer(intendPlayRef.current);
@@ -929,7 +893,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
     if (!readyRef.current) return;
     cueCurrent(player, intendPlayRef.current);
-  }, [apiReady, buildPlayer, cueCurrent, room]);
+  }, [activeRoomSlug, apiReady, buildPlayer, cueCurrent]);
 
   const openRoom = useCallback(
     (nextRoom: RoomPayload, initialTrackId?: string) => {
@@ -967,7 +931,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       setIsPlaying(false);
       setMusicReady(false);
       setMusicBlocked(false);
-      const shouldEnableAmbience = Boolean(nextRoom.ambience) && (checkpoint?.ambienceEnabled ?? true);
+      const shouldEnableAmbience =
+        Boolean(nextRoom.ambience) && (checkpoint?.ambienceEnabled ?? true);
       setAmbienceEnabled(shouldEnableAmbience);
       if (shouldEnableAmbience && intendPlayRef.current) void resumeAmbienceFromGesture();
       if (checkpoint) {
@@ -1026,11 +991,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       }
       const checkpointIndex = findCheckpointQueueIndex(snapshot, checkpoint, initialTrackId);
       if (checkpoint && checkpointIndex === null) {
-        const matchingQueueItem = nextRoom.queue.find(
-          (item) => item.id === checkpoint.queueItemId,
-        ) ?? nextRoom.queue.find(
-          (item) => item.track.id === checkpoint.trackId,
-        );
+        const matchingQueueItem =
+          nextRoom.queue.find((item) => item.id === checkpoint.queueItemId) ??
+          nextRoom.queue.find((item) => item.track.id === checkpoint.trackId);
         if (matchingQueueItem) {
           snapshot = [
             matchingQueueItem,
@@ -1059,6 +1022,45 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       setRoom(nextRoom);
     },
     [cueCurrent, resumeAmbienceFromGesture, room, setIndex],
+  );
+  const refreshRoom = useCallback(
+    (nextRoom: RoomPayload) => {
+      if (room?.scene.slug !== nextRoom.scene.slug) {
+        openRoom(nextRoom);
+        return;
+      }
+      const currentIndex = indexRef.current;
+      const currentId = queueRef.current[currentIndex]?.id ?? null;
+      const incoming = snapshotQueue(nextRoom.queue, currentDaypart());
+      const reconciled = reconcileRefreshedQueue(queueRef.current, incoming, currentId);
+      const nextIndex =
+        reconciled.preservedIndex >= 0
+          ? reconciled.preservedIndex
+          : Math.min(currentIndex, Math.max(0, reconciled.playlist.length - 1));
+      queueRef.current = reconciled.playlist;
+      shuffledQueuesRef.current.set(nextRoom.scene.slug, reconciled.playlist);
+      indexRef.current = nextIndex;
+      setPlaylist(reconciled.playlist);
+      setIndexState(nextIndex);
+      setNowPlaying((current) => ({
+        ...current,
+        index: nextIndex,
+        total: reconciled.playlist.length,
+      }));
+      setRoom(nextRoom);
+      if (!nextRoom.ambience) setAmbienceEnabled(false);
+      else if (!room.ambience && !ambienceSuppressedRef.current) setAmbienceEnabled(true);
+
+      if (reconciled.preservedIndex < 0) {
+        failedSourcesRef.current.clear();
+        failedItemsRef.current.clear();
+        const activePlayer = playerRef.current;
+        if (activePlayer && readyRef.current && reconciled.playlist.length) {
+          cueCurrent(activePlayer, intendPlayRef.current);
+        }
+      }
+    },
+    [cueCurrent, openRoom, room],
   );
   const playTrack = useCallback(
     (trackId: string) => {
@@ -1337,6 +1339,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     ambienceEventReady: ambience.eventReady,
     ambienceEventPlaying: ambience.eventPlaying,
     openRoom,
+    refreshRoom,
     playTrack,
     toggle,
     next,

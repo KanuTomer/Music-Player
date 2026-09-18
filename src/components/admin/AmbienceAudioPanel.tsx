@@ -7,7 +7,7 @@ import {
 } from "@/components/admin/AdminFormFeedback";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { supabase } from "@/integrations/supabase/client";
+import { put } from "@vercel/blob/client";
 import {
   finalizeAdminAmbienceUpload,
   removeAdminAmbienceStem,
@@ -25,7 +25,11 @@ import {
   type DecodedWav,
 } from "@/lib/ambience-processing";
 import { ambienceMp3, validateAmbienceMp3, type Mp3Inspection } from "@/lib/mp3-audio";
-import type { AdminAmbience, AdminAsset, AdminAmbienceStem } from "@/lib/admin.server";
+import type {
+  AdminAmbience,
+  AdminAsset,
+  AdminAmbienceStem,
+} from "@developersshunyity/sainik-dabha-contracts/admin";
 import { sameAdminDraft } from "@/lib/admin-drafts";
 
 type Scene = { id: string; slug: string; title: string; ambience: AdminAmbience | null };
@@ -302,8 +306,7 @@ export function AmbienceAudioPanel({ scene, assets, onChanged, onDirtyChange }: 
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError")
         setMessage("Audio preparation canceled.");
-      else
-        setMessage(error instanceof Error ? error.message : "Unable to prepare preview");
+      else setMessage(error instanceof Error ? error.message : "Unable to prepare preview");
     } finally {
       setBusy(null);
     }
@@ -324,13 +327,11 @@ export function AmbienceAudioPanel({ scene, assets, onChanged, onDirtyChange }: 
         : await prepareMp3();
       const originalHash = await sha256Hex(sourceFile);
       const reserved = await reserveAdminAmbienceUpload({ data: { sceneSlug: scene.slug } });
-      const { error } = await supabase.storage
-        .from("ambience-audio")
-        .uploadToSignedUrl(reserved.path, reserved.token, prepared.blob, {
-          cacheControl: "31536000",
-          contentType: ambienceMp3.mimeType,
-        });
-      if (error) throw new Error(error.message);
+      await put(`ambience-audio/${reserved.path}`, prepared.blob, {
+        access: "public",
+        token: reserved.token,
+        contentType: ambienceMp3.mimeType,
+      });
       await finalizeAdminAmbienceUpload({
         data: {
           sceneId: scene.id,
@@ -679,8 +680,7 @@ export function AmbienceAudioPanel({ scene, assets, onChanged, onDirtyChange }: 
             <h3 className="font-semibold">Prepare local audio</h3>
           </div>
           <p className="mt-1 text-xs text-zinc-400">
-            The original remains on this device. The published file is a 32 kHz mono MP3 at 64
-            kbps.
+            The original remains on this device. The published file is a 32 kHz mono MP3 at 64 kbps.
           </p>
           <div className="mt-3 grid gap-3 md:grid-cols-3">
             <label className="text-sm">

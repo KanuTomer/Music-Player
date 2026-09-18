@@ -1,9 +1,24 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "bun run build:web",
+  "outputDirectory": "dist-web",
+  "functions": {
+    "api/admin-cleanup.ts": {
+      "maxDuration": 300
+    }
+  },
   "crons": [
     {
       "path": "/api/admin-cleanup",
       "schedule": "30 2 * * *"
     }
+  ],
+  "rewrites": [
+    { "source": "/api/v1/:path*", "destination": "/api/render-v1?path=:path*" },
+    { "source": "/api/auth/:path*", "destination": "/api/render-auth?path=:path*" },
+    { "source": "/", "destination": "/index.html" },
+    { "source": "/room/:path*", "destination": "/index.html" },
+    { "source": "/admin/:path*", "destination": "/index.html" },
+    { "source": "/generate", "destination": "/index.html" }
   ]
 }

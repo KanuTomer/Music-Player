@@ -16,9 +16,7 @@ export const DEFAULT_PUBLISHER = "Sainik Dhaba";
 
 export function getSiteUrl(): string {
   const envUrl =
-    (typeof import.meta !== "undefined" && import.meta.env
-      ? (import.meta.env as Record<string, string | undefined>)["VITE_SITE_URL"]
-      : undefined) ||
+    (typeof import.meta !== "undefined" ? import.meta.env.VITE_SITE_URL : undefined) ||
     (typeof process !== "undefined" && process.env
       ? process.env["SITE_URL"] || process.env["VITE_SITE_URL"]
       : undefined) ||

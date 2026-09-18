@@ -1,28 +1,61 @@
-// @lovable.dev/vite-tanstack-config already includes the following — do NOT add them manually
-// or the app will break with duplicate plugins:
-//   - TanStack devtools (dev-only, first), tanstackStart, viteReact, tailwindcss, tsConfigPaths,
-//     nitro (build-only using cloudflare as a default target), VITE_* env injection, @ path alias,
-//     React/TanStack dedupe, error logger plugins, and sandbox detection (port/host/strictPort).
-// You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
-import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import tailwindcss from "@tailwindcss/vite";
+import { tanstackRouter } from "@tanstack/router-plugin/vite";
+import react from "@vitejs/plugin-react";
+import { defineConfig } from "vite";
+
+const renderApiBaseUrl = process.env["RENDER_API_BASE_URL"]?.replace(/\/$/, "");
+const localRenderProxy = renderApiBaseUrl
+  ? {
+      "/api/auth": {
+        target: renderApiBaseUrl,
+        changeOrigin: true,
+        ws: true,
+        configure: (proxy: {
+          on: (
+            event: string,
+            listener: (request: { removeHeader: (name: string) => void }) => void,
+          ) => void;
+        }) => {
+          proxy.on("proxyReq", (request) => request.removeHeader("origin"));
+          proxy.on("proxyReqWs", (request) => request.removeHeader("origin"));
+        },
+      },
+      "/api/v1": {
+        target: renderApiBaseUrl,
+        changeOrigin: true,
+        ws: true,
+        configure: (proxy: {
+          on: (
+            event: string,
+            listener: (request: { removeHeader: (name: string) => void }) => void,
+          ) => void;
+        }) => {
+          proxy.on("proxyReq", (request) => request.removeHeader("origin"));
+          proxy.on("proxyReqWs", (request) => request.removeHeader("origin"));
+        },
+      },
+    }
+  : undefined;
 
 export default defineConfig({
-  vite: {
-    define: {
-      "import.meta.env.VITE_ENABLE_AMBIENCE_SOLO_PREVIEW": JSON.stringify(
-        process.env["VITE_ENABLE_AMBIENCE_SOLO_PREVIEW"] === "true" ||
-          process.env["VERCEL_ENV"] === "preview"
-          ? "true"
-          : "false",
-      ),
-    },
+  plugins: [tanstackRouter({ target: "react", autoCodeSplitting: true }), react(), tailwindcss()],
+  resolve: {
+    tsconfigPaths: true,
   },
-  nitro: {
-    preset: "vercel",
+  define: {
+    "import.meta.env.VITE_ENABLE_AMBIENCE_SOLO_PREVIEW": JSON.stringify(
+      process.env["VITE_ENABLE_AMBIENCE_SOLO_PREVIEW"] === "true" ||
+        process.env["VERCEL_ENV"] === "preview"
+        ? "true"
+        : "false",
+    ),
   },
-  tanstackStart: {
-    // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
-    // nitro/vite builds from this
-    server: { entry: "server" },
+  build: {
+    outDir: "dist-web",
+    sourcemap: false,
+  },
+  server: {
+    port: 5173,
+    proxy: localRenderProxy,
   },
 });

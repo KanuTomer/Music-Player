@@ -2,13 +2,16 @@ import { useEffect, useMemo, useState } from "react";
 import { ImagePlus, Loader2, Plus, Trash2 } from "lucide-react";
 import { InfoTip, UnsavedChangesBar } from "./AdminFormFeedback";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { supabase } from "@/integrations/supabase/client";
+import { put } from "@vercel/blob/client";
 import {
   discardAdminBackgroundUpload,
   reserveAdminBackgroundUpload,
   saveAdminScenePresentation,
 } from "@/lib/admin.functions";
-import type { AdminBackground, AdminOneLiner } from "@/lib/admin.server";
+import type {
+  AdminBackground,
+  AdminOneLiner,
+} from "@developersshunyity/sainik-dabha-contracts/admin";
 import { artFor } from "@/lib/scene-art";
 import {
   DARK_SCENE_TEXT,
@@ -189,12 +192,11 @@ export function BackgroundPanel({
         const reservation = await reserveAdminBackgroundUpload({
           data: { sceneId: data.scene.id },
         });
-        const upload = await supabase.storage
-          .from("scene-media")
-          .uploadToSignedUrl(reservation.path, reservation.token, prepared.blob, {
-            contentType: "image/webp",
-          });
-        if (upload.error) throw upload.error;
+        await put(`scene-media/${reservation.path}`, prepared.blob, {
+          access: "public",
+          token: reservation.token,
+          contentType: "image/webp",
+        });
         path = reservation.path;
         uploadedPath = reservation.path;
         uploadReservationId = reservation.reservationId;
