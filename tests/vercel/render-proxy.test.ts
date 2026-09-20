@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { proxyToRenderPath } from "./_render-proxy";
+import { proxyToRenderPath } from "../../api/_render-proxy";
 
 const originalFetch = globalThis.fetch;
 const originalRenderUrl = process.env["RENDER_API_BASE_URL"];
@@ -50,14 +50,12 @@ describe("Render API proxy", () => {
       forwarded = new Request(input, init);
       return Response.json({ data: "ok" });
     }) as typeof fetch;
-
     const fixture = responseFixture();
     await proxyToRenderPath(
       requestFixture("POST", "/api/render-v1?path=functions/list-scenes&scope=live", '{"x":1}'),
       fixture.response,
       "/api/v1/functions/list-scenes",
     );
-
     expect(forwarded?.url).toBe("https://api.example.test/api/v1/functions/list-scenes?scope=live");
     expect(forwarded?.headers.get("cookie")).toBe("session=test");
     expect(await forwarded?.text()).toBe('{"x":1}');

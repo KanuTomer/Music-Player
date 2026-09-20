@@ -20,6 +20,7 @@ export type {
 } from "./room.types";
 import { validateChatMessageText, type ChatMessage } from "./chat-message";
 import { callApi } from "./api-client";
+import { isSceneChatRoomKey } from "./chat-room";
 
 export function listScenes(): Promise<Scene[]> {
   return callApi("list-scenes", null, { safeRead: true });
@@ -63,7 +64,7 @@ export function sendChatMessage({
   const displayName = String(data.displayName).trim();
   const text = String(data.text).trim();
   const id = data.id ? String(data.id) : undefined;
-  if (!roomKey) throw new Error("Room key is required");
+  if (!isSceneChatRoomKey(roomKey)) throw new Error("Invalid room key");
   if (!displayName || displayName.length > 50) throw new Error("Invalid display name");
   const textError = validateChatMessageText(text);
   if (textError) throw new Error(textError);
@@ -72,7 +73,7 @@ export function sendChatMessage({
 
 export function getChatMessages({ data }: { data: { roomKey: string } }): Promise<ChatMessage[]> {
   const roomKey = String(data.roomKey);
-  if (!/^scene:[a-z0-9-]+$/.test(roomKey)) throw new Error("Invalid room key");
+  if (!isSceneChatRoomKey(roomKey)) throw new Error("Invalid room key");
   return callApi("get-chat-messages", { roomKey }, { safeRead: true });
 }
 

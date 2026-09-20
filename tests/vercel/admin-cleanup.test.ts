@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import handler from "./admin-cleanup";
+import handler from "../../api/admin-cleanup";
 
 const originalFetch = globalThis.fetch;
 const originalSecret = process.env["CRON_SECRET"];
