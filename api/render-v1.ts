@@ -1,5 +1,7 @@
 import { proxyToRenderPath } from "./_render-proxy.js";
 
+export const config = { api: { bodyParser: false } };
+
 type RequestWithPath = Parameters<typeof proxyToRenderPath>[0] & {
   query?: Record<string, string | string[] | undefined>;
 };

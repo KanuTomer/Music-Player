@@ -1,26 +1,17 @@
 import { z } from "zod";
+import type {
+  AdminAmbienceResult,
+  AdminAsset,
+  AdminBackground,
+  AdminBootstrap,
+  AdminOnboardingStatus,
+  AdminSongs,
+  AdminUploadReservation,
+  AnalyticsRow,
+  SongDraft,
+} from "./admin.types";
 import { analyticsSince, type AnalyticsRange } from "./admin-analytics";
 import { callApi } from "./api-client";
-import type {
-  getAdminAmbience,
-  getAdminAmbienceAssets,
-  getAdminAnalytics,
-  getAdminBackground,
-  getAdminBootstrap,
-  getAdminOnboardingStatus,
-  getAdminSongs,
-  previewSongs,
-  reserveAmbienceUpload,
-  reserveBackgroundUpload,
-  saveAmbienceProfile,
-  saveAmbienceStem,
-  deactivateAmbienceStem,
-  finalizeAmbienceUpload,
-  discardBackgroundUpload,
-  saveScenePresentation,
-} from "./admin.server";
-
-type Result<T extends (...args: never[]) => unknown> = Awaited<ReturnType<T>>;
 const uuid = z.string().uuid();
 const youtubeInput = z.string().trim().min(1).max(2048);
 const sceneInput = z.object({ sceneId: uuid });
@@ -33,19 +24,15 @@ const songDraft = z.object({
   providerChannel: z.string().max(300).optional(),
 });
 
-export function getAdminOnboarding(): Promise<Result<typeof getAdminOnboardingStatus>> {
+export function getAdminOnboarding(): Promise<AdminOnboardingStatus> {
   return callApi("admin-onboarding", null, { authenticated: true, safeRead: true });
 }
 
-export function getAdminBootstrapData(): Promise<Result<typeof getAdminBootstrap>> {
+export function getAdminBootstrapData(): Promise<AdminBootstrap> {
   return callApi("admin-bootstrap", null, { authenticated: true, safeRead: true });
 }
 
-export function getAdminSongsData({
-  data,
-}: {
-  data: { sceneId: string };
-}): Promise<Result<typeof getAdminSongs>> {
+export function getAdminSongsData({ data }: { data: { sceneId: string } }): Promise<AdminSongs> {
   return callApi("admin-songs", sceneInput.parse(data), { authenticated: true, safeRead: true });
 }
 
@@ -53,7 +40,7 @@ export function getAdminAnalyticsData({
   data,
 }: {
   data: { range: AnalyticsRange };
-}): Promise<Result<typeof getAdminAnalytics>> {
+}): Promise<AnalyticsRow[]> {
   return callApi(
     "admin-analytics",
     { since: analyticsSince(data.range) },
@@ -65,11 +52,11 @@ export function getAdminAmbienceData({
   data,
 }: {
   data: { sceneId: string };
-}): Promise<Result<typeof getAdminAmbience>> {
+}): Promise<AdminAmbienceResult> {
   return callApi("admin-ambience", sceneInput.parse(data), { authenticated: true, safeRead: true });
 }
 
-export function getAdminAmbienceAssetsData(): Promise<Result<typeof getAdminAmbienceAssets>> {
+export function getAdminAmbienceAssetsData(): Promise<AdminAsset[]> {
   return callApi("admin-ambience-assets", null, { authenticated: true, safeRead: true });
 }
 
@@ -77,18 +64,14 @@ export function getAdminBackgroundData({
   data,
 }: {
   data: { sceneId: string };
-}): Promise<Result<typeof getAdminBackground>> {
+}): Promise<AdminBackground> {
   return callApi("admin-background", sceneInput.parse(data), {
     authenticated: true,
     safeRead: true,
   });
 }
 
-export function previewAdminSongs({
-  data,
-}: {
-  data: { inputs: string[] };
-}): Promise<Result<typeof previewSongs>> {
+export function previewAdminSongs({ data }: { data: { inputs: string[] } }): Promise<SongDraft[]> {
   const parsed = { inputs: z.array(youtubeInput).min(1).max(50).parse(data.inputs) };
   return callApi("admin-songs-preview", parsed, { authenticated: true });
 }
@@ -160,7 +143,7 @@ export function saveAdminAmbienceProfile({
     fadeOutMs: number;
     audioTheme: unknown;
   };
-}): Promise<Result<typeof saveAmbienceProfile>> {
+}): Promise<void> {
   return callApi("admin-ambience-profile-save", data, { authenticated: true });
 }
 
@@ -184,15 +167,11 @@ export function saveAdminAmbienceStem({
     eventMinSeconds: number | null;
     eventMaxSeconds: number | null;
   };
-}): Promise<Result<typeof saveAmbienceStem>> {
+}): Promise<void> {
   return callApi("admin-ambience-stem-save", data, { authenticated: true });
 }
 
-export function removeAdminAmbienceStem({
-  data,
-}: {
-  data: { stemId: string };
-}): Promise<Result<typeof deactivateAmbienceStem>> {
+export function removeAdminAmbienceStem({ data }: { data: { stemId: string } }): Promise<void> {
   return callApi(
     "admin-ambience-stem-remove",
     { stemId: String(data.stemId) },
@@ -204,7 +183,7 @@ export function reserveAdminAmbienceUpload({
   data,
 }: {
   data: { sceneSlug: string };
-}): Promise<Result<typeof reserveAmbienceUpload>> {
+}): Promise<AdminUploadReservation> {
   return callApi(
     "admin-ambience-upload-reserve",
     { sceneSlug: String(data.sceneSlug) },
@@ -229,7 +208,7 @@ export function finalizeAdminAmbienceUpload({
     selectedStartSeconds: number;
     selectedDurationSeconds: number;
   };
-}): Promise<Result<typeof finalizeAmbienceUpload>> {
+}): Promise<void> {
   return callApi("admin-ambience-upload-finalize", data, { authenticated: true });
 }
 
@@ -237,7 +216,7 @@ export function reserveAdminBackgroundUpload({
   data,
 }: {
   data: { sceneId: string };
-}): Promise<Result<typeof reserveBackgroundUpload>> {
+}): Promise<AdminUploadReservation> {
   return callApi(
     "admin-background-upload-reserve",
     { sceneId: String(data.sceneId) },
@@ -249,7 +228,7 @@ export function discardAdminBackgroundUpload({
   data,
 }: {
   data: { sceneId: string; path: string; reservationId: string };
-}): Promise<Result<typeof discardBackgroundUpload>> {
+}): Promise<void> {
   return callApi(
     "admin-background-upload-discard",
     {
@@ -276,6 +255,6 @@ export function saveAdminScenePresentation({
       daypart: "all" | "morning" | "day" | "evening" | "night";
     }>;
   };
-}): Promise<Result<typeof saveScenePresentation>> {
+}): Promise<AdminBackground> {
   return callApi("admin-presentation-save", data, { authenticated: true });
 }

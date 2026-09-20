@@ -25,7 +25,7 @@ import {
   type DecodedWav,
 } from "@/lib/ambience-processing";
 import { ambienceMp3, validateAmbienceMp3, type Mp3Inspection } from "@/lib/mp3-audio";
-import type { AdminAmbience, AdminAsset, AdminAmbienceStem } from "@/lib/admin.server";
+import type { AdminAmbience, AdminAsset, AdminAmbienceStem } from "@/lib/admin.types";
 import { sameAdminDraft } from "@/lib/admin-drafts";
 
 type Scene = { id: string; slug: string; title: string; ambience: AdminAmbience | null };

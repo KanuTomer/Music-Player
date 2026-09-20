@@ -20,6 +20,10 @@ export default async function handler(
   request: RelayRequest,
   response: RelayResponse,
 ): Promise<void> {
+  if (process.env["CUTOVER_MAINTENANCE"] === "true") {
+    response.status(503).json({ error: "Cleanup is temporarily paused" });
+    return;
+  }
   const secret = process.env["CRON_SECRET"];
   const renderBaseUrl = process.env["RENDER_API_BASE_URL"]?.replace(/\/$/, "");
   if (!secret || authorizationHeader(request) !== `Bearer ${secret}`) {

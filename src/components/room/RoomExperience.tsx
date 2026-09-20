@@ -1,16 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Compass, Share2 } from "lucide-react";
 import { toast } from "sonner";
-import {
-  type RoomPayload,
-  type RoomPresentation,
-  type Scene,
-} from "@/lib/rooms.functions";
+import { type RoomPayload, type RoomPresentation, type Scene } from "@/lib/rooms.functions";
 import { backgroundFor } from "@/lib/scene-art";
 import { videoForScene } from "@/lib/scene-media";
 import { usePlayer } from "@/lib/player";
 import { forDaypart } from "@/lib/dayparts";
 import { useRoomSocial } from "@/hooks/useRoomSocial";
+import { sceneChatRoomKey } from "@/lib/chat-room";
 import { FullCassettePlayer } from "@/components/player/CassettePlayers";
 import { OneLinerCaption } from "@/components/room/OneLinerCaption";
 import { JagahExplorer } from "@/components/JagahExplorer";
@@ -240,7 +237,11 @@ export function RoomExperience({
 
           {/* Right: live chat, support and share */}
           <div className="pointer-events-auto flex shrink-0 items-center gap-1 sm:gap-2 ml-3.5 sm:ml-0">
-            <LiveChat roomKey="global-chat" roomName={scene.title_en} inlineLauncher />
+            <LiveChat
+              roomKey={sceneChatRoomKey(scene.slug)}
+              roomName={scene.title_en}
+              inlineLauncher
+            />
 
             <button
               type="button"

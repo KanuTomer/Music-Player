@@ -13,6 +13,7 @@ class RenderRoomChannel implements RoomPresenceChannel {
   private socket: WebSocket | null = null;
   private closed = false;
   private tracked = false;
+  private serverReady = false;
   private retry = 0;
   private readonly handlers = new Map<string, Set<Handler>>();
   private statusHandler: ((status: string) => void) | null = null;
@@ -42,9 +43,6 @@ class RenderRoomChannel implements RoomPresenceChannel {
     this.socket = socket;
     socket.addEventListener("open", () => {
       this.retry = 0;
-      this.statusHandler?.("SUBSCRIBED");
-      this.emit("reconnect");
-      if (this.tracked) socket.send(JSON.stringify({ type: "presence_track" }));
     });
     socket.addEventListener("message", (event) => {
       try {
@@ -53,7 +51,12 @@ class RenderRoomChannel implements RoomPresenceChannel {
           count?: number;
           payload?: unknown;
         };
-        if (message.type === "presence" && Number.isInteger(message.count)) {
+        if (message.type === "ready") {
+          if (this.socket !== socket || this.closed) return;
+          this.serverReady = true;
+          this.statusHandler?.("SUBSCRIBED");
+          this.emit("reconnect");
+        } else if (message.type === "presence" && Number.isInteger(message.count)) {
           this.presenceCount = Math.max(0, message.count as number);
           this.emit("sync");
         } else if (message.type === "reaction") this.emit("reaction", message.payload);
@@ -65,6 +68,7 @@ class RenderRoomChannel implements RoomPresenceChannel {
     });
     socket.addEventListener("close", () => {
       if (this.socket === socket) this.socket = null;
+      this.serverReady = false;
       if (this.closed) return;
       this.statusHandler?.("CLOSED");
       window.setTimeout(() => this.connect(), Math.min(10_000, 500 * 2 ** this.retry++));
@@ -76,12 +80,12 @@ class RenderRoomChannel implements RoomPresenceChannel {
   }
   async track() {
     this.tracked = true;
-    if (this.socket?.readyState === WebSocket.OPEN)
+    if (this.serverReady && this.socket?.readyState === WebSocket.OPEN)
       this.socket.send(JSON.stringify({ type: "presence_track" }));
   }
   async untrack() {
     this.tracked = false;
-    if (this.socket?.readyState === WebSocket.OPEN)
+    if (this.serverReady && this.socket?.readyState === WebSocket.OPEN)
       this.socket.send(JSON.stringify({ type: "presence_untrack" }));
   }
   async send(payload: { type: "broadcast"; event: string; payload: unknown }) {

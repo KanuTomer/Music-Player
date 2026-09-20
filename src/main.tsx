@@ -15,8 +15,19 @@ declare module "@tanstack/react-router" {
 const root = document.getElementById("root");
 if (!root) throw new Error("Application root element is missing");
 
+const maintenance = import.meta.env["VITE_CUTOVER_MAINTENANCE"] === "true";
+
 createRoot(root).render(
   <StrictMode>
-    <RouterProvider router={router} />
+    {maintenance ? (
+      <main className="flex min-h-screen items-center justify-center bg-background px-6 text-center text-foreground">
+        <div>
+          <h1 className="text-xl font-semibold">We’ll be back shortly</h1>
+          <p className="mt-2 text-sm text-muted-foreground">A scheduled update is in progress.</p>
+        </div>
+      </main>
+    ) : (
+      <RouterProvider router={router} />
+    )}
   </StrictMode>,
 );

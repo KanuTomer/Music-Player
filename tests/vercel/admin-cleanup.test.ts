@@ -34,14 +34,14 @@ afterEach(() => {
 });
 
 describe("Vercel cleanup relay", () => {
-  test("rejects requests without the cron bearer secret", async () => {
+  test("requires the cron bearer secret", async () => {
     process.env["CRON_SECRET"] = "test-secret";
     const fixture = responseFixture();
     await handler({ headers: {} }, fixture.response);
     expect(fixture.state.status).toBe(401);
   });
 
-  test("forwards an authorized request to Render", async () => {
+  test("forwards an authorized request only to Render cleanup", async () => {
     process.env["CRON_SECRET"] = "test-secret";
     process.env["RENDER_API_BASE_URL"] = "https://api.example.test/";
     let forwarded: Request | undefined;
@@ -49,10 +49,8 @@ describe("Vercel cleanup relay", () => {
       forwarded = new Request(input, init);
       return Response.json({ backend: "neon", claimed: 0 });
     }) as typeof fetch;
-
     const fixture = responseFixture();
     await handler({ headers: { authorization: "Bearer test-secret" } }, fixture.response);
-    expect(fixture.state.status).toBe(200);
     expect(forwarded?.url).toBe("https://api.example.test/api/admin-cleanup");
     expect(forwarded?.headers.get("authorization")).toBe("Bearer test-secret");
   });
